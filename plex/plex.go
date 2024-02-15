@@ -1,10 +1,11 @@
-package main
+package plex
 
 import (
 	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
+	types "tphoney/plex-lookup/types"
 )
 
 type MediaContainer struct {
@@ -98,7 +99,7 @@ type MediaContainer struct {
 	} `xml:"Video"`
 }
 
-func getMovies(ipAddress, libraryId, resolution, plexToken string) (movieList []Movie) {
+func GetPlexMovies(ipAddress, libraryId, resolution, plexToken string) (movieList []types.Movie) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/resolution/%s", ipAddress, libraryId, resolution)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -129,7 +130,7 @@ func getMovies(ipAddress, libraryId, resolution, plexToken string) (movieList []
 	return movieList
 }
 
-func extractMovies(xmlString string) (movieList []Movie) {
+func extractMovies(xmlString string) (movieList []types.Movie) {
 	var container MediaContainer
 	err := xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
@@ -138,7 +139,7 @@ func extractMovies(xmlString string) (movieList []Movie) {
 	}
 
 	for _, video := range container.Video {
-		movieList = append(movieList, Movie{Title: video.Title, Year: video.Year})
+		movieList = append(movieList, types.Movie{Title: video.Title, Year: video.Year})
 	}
 	return movieList
 }

@@ -32,14 +32,14 @@ func SearchCinemaParadiso(title, year string) (hit bool, returnURL string, forma
 
 	if err != nil {
 		fmt.Println("Error creating request:", err)
-		return
+		return false, "", nil
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("Error sending request:", err)
-		return
+		return false, "", nil
 	}
 
 	defer resp.Body.Close()
@@ -47,7 +47,7 @@ func SearchCinemaParadiso(title, year string) (hit bool, returnURL string, forma
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response body:", err)
-		return
+		return false, "", nil
 	}
 	rawData := string(body)
 	moviesFound := findMoviesInResponse(rawData)
@@ -114,10 +114,10 @@ func matchTitle(title, year string, results []searchResult) (hit bool, returnURL
 	for _, result := range results {
 		// normally a match if the year is within 1 year of each other
 		resultYear := yearToDate(result.year)
-		if result.title == title && (resultYear.Year() == expectedYear.Year() || resultYear.Year() == expectedYear.Year()-1 || resultYear.Year() == expectedYear.Year()+1) {
+		if result.title == title && (resultYear.Year() == expectedYear.Year() ||
+			resultYear.Year() == expectedYear.Year()-1 || resultYear.Year() == expectedYear.Year()+1) {
 			return true, result.url, result.formats
 		}
-
 	}
 	return false, "", nil
 }

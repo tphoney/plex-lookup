@@ -42,14 +42,14 @@ func performCinemaParadisoLookup() {
 	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryID, "576", plexToken)...)
 	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryID, "720", plexToken)...)
 
-	fmt.Printf("There are a total of %d movies in the library.", len(allMovies))
+	fmt.Printf("\nThere are a total of %d movies in the library.\n\nMovies available:\n", len(allMovies))
 
 	// lets search movies in cinemaparadiso
 	for _, movie := range allMovies {
 		hit, url, formats := cinemaparadiso.SearchCinemaParadiso(movie.Title, movie.Year)
 		// if hit, and contains any format that isnt dvd, print the movie
-		if hit && !slices.Contains(formats, "DVD") {
-			fmt.Printf("\n%s %v: %s\n", movie.Title, formats, url)
+		if hit && (slices.Contains(formats, "Blu-ray") || slices.Contains(formats, "4K Blu-ray")) {
+			fmt.Printf("%s %v: %s\n", movie.Title, formats, url)
 		}
 	}
 }

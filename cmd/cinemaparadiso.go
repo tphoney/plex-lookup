@@ -3,9 +3,10 @@ package cmd
 import (
 	"fmt"
 	"slices"
-	"tphoney/plex-lookup/cinemaparadiso"
-	"tphoney/plex-lookup/plex"
-	"tphoney/plex-lookup/types"
+
+	"github.com/tphoney/plex-lookup/cinemaparadiso"
+	"github.com/tphoney/plex-lookup/plex"
+	"github.com/tphoney/plex-lookup/types"
 
 	"github.com/spf13/cobra"
 )

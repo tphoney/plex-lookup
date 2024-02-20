@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	types "tphoney/plex-lookup/types"
+
+	types "github.com/tphoney/plex-lookup/types"
 )
 
 type MediaContainer struct {

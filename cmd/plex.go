@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"fmt"
-	"tphoney/plex-lookup/plex"
+
+	"github.com/tphoney/plex-lookup/plex"
 
 	"github.com/spf13/cobra"
 )

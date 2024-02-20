@@ -1,7 +1,7 @@
 package main
 
 import (
-	"tphoney/plex-lookup/cmd"
+	"github.com/tphoney/plex-lookup/cmd"
 )
 
 func main() {

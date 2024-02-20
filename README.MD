@@ -2,23 +2,38 @@
 
 ## Description
 
-A tool to compare your plex library of movies to what is available on cinemaparadiso. 
+A tool to compare your plex librarys with other physical media rental / purchasing services.
 
 ## Table of Contents
 
 - [Installation](#installation)
 - [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Installation
 
-Instructions on how to install and set up the project.
+Build the binary.
+
+```bash
+go build
+```
 
 ## Usage
 
-Instructions on how to use the project and any relevant examples.
+```bash
+  plex-lookup [command]
 
-## Contributing
+Available Commands:
+  cinema-paradiso compare movies in your plex library with cinema paradiso
+  completion      Generate the autocompletion script for the specified shell
+  help            Help about any command
+  plex-libraries  list out the libraries in your plex server
+  version         Print the version number of plex-lookup
 
-Guidelines on how to contribute to the project.
+Flags:
+  -h, --help                   help for plex-lookup
+      --plexIP string          Plex IP Address
+      --plexLibraryID string   Plex Library ID
+      --plexToken string       Plex Token
+
+Use "plex-lookup [command] --help" for more information about a command.
+```

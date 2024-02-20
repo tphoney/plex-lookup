@@ -16,7 +16,7 @@ func init() {
 
 var cinemaParadisoCmd = &cobra.Command{
 	Use:   "cinema-paradiso",
-	Short: "compare movies in your plex library with cinema paradiso",
+	Short: "Compare movies in your plex library with cinema paradiso",
 	Long:  `This command will compare movies in your plex library with cinema paradiso and print out the movies that of higher quality than DVD.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		doStuff()
@@ -27,11 +27,23 @@ func doStuff() {
 	ipAddress := rootCmd.PersistentFlags().Lookup("plexIP").Value.String()
 	libraryId := rootCmd.PersistentFlags().Lookup("plexLibraryID").Value.String()
 	plexToken := rootCmd.PersistentFlags().Lookup("plexToken").Value.String()
+
+	// validate the input
+	if ipAddress == "" {
+		panic("plexIP Address is required")
+	}
+	if libraryId == "" {
+		panic("plexLibraryID is required")
+	}
+	if plexToken == "" {
+		panic("plexToken is required")
+	}
+
 	var allMovies []types.Movie
 	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryId, "sd", plexToken)...)
-	// allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryId, "480", plexToken)...)
-	// allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryId, "576", plexToken)...)
-	// allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryId, "720", plexToken)...)
+	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryId, "480", plexToken)...)
+	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryId, "576", plexToken)...)
+	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryId, "720", plexToken)...)
 
 	fmt.Printf("There are a total of %d movies in the library.", len(allMovies))
 

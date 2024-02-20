@@ -99,6 +99,42 @@ type MediaContainer struct {
 	} `xml:"Video"`
 }
 
+type LibraryContainer struct {
+	XMLName   xml.Name `xml:"MediaContainer"`
+	Text      string   `xml:",chardata"`
+	Size      string   `xml:"size,attr"`
+	AllowSync string   `xml:"allowSync,attr"`
+	Title1    string   `xml:"title1,attr"`
+	Directory []struct {
+		Text             string `xml:",chardata"`
+		AllowSync        string `xml:"allowSync,attr"`
+		Art              string `xml:"art,attr"`
+		Composite        string `xml:"composite,attr"`
+		Filters          string `xml:"filters,attr"`
+		Refreshing       string `xml:"refreshing,attr"`
+		Thumb            string `xml:"thumb,attr"`
+		Key              string `xml:"key,attr"`
+		Type             string `xml:"type,attr"`
+		Title            string `xml:"title,attr"`
+		Agent            string `xml:"agent,attr"`
+		Scanner          string `xml:"scanner,attr"`
+		Language         string `xml:"language,attr"`
+		Uuid             string `xml:"uuid,attr"`
+		UpdatedAt        string `xml:"updatedAt,attr"`
+		CreatedAt        string `xml:"createdAt,attr"`
+		ScannedAt        string `xml:"scannedAt,attr"`
+		Content          string `xml:"content,attr"`
+		Directory        string `xml:"directory,attr"`
+		ContentChangedAt string `xml:"contentChangedAt,attr"`
+		Hidden           string `xml:"hidden,attr"`
+		Location         []struct {
+			Text string `xml:",chardata"`
+			ID   string `xml:"id,attr"`
+			Path string `xml:"path,attr"`
+		} `xml:"Location"`
+	} `xml:"Directory"`
+}
+
 func GetPlexMovies(ipAddress, libraryId, resolution, plexToken string) (movieList []types.Movie) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/resolution/%s", ipAddress, libraryId, resolution)
 
@@ -130,13 +166,13 @@ func GetPlexMovies(ipAddress, libraryId, resolution, plexToken string) (movieLis
 	return movieList
 }
 
-func GetPlexLibraries(ipAddress, plexToken string) (string, error) {
+func GetPlexLibraries(ipAddress, plexToken string) (libraryList []types.PlexLibrary, err error) {
 	url := fmt.Sprintf("http://%s:32400/library/sections", ipAddress)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		fmt.Println("Error creating request:", err)
-		return "", err
+		return libraryList, err
 	}
 
 	req.Header.Set("X-Plex-Token", plexToken)
@@ -145,7 +181,7 @@ func GetPlexLibraries(ipAddress, plexToken string) (string, error) {
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("Error sending request:", err)
-		return "", err
+		return libraryList, err
 	}
 
 	defer resp.Body.Close()
@@ -153,11 +189,26 @@ func GetPlexLibraries(ipAddress, plexToken string) (string, error) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response body:", err)
-		return "", err
+		return libraryList, err
 	}
 
-	fmt.Println(string(body))
-	return string(body), nil
+	//fmt.Println(string(body))
+	libraryList, err = extractLibraries(string(body))
+	return libraryList, err
+}
+
+func extractLibraries(xmlString string) (libraryList []types.PlexLibrary, err error) {
+	var container LibraryContainer
+	err = xml.Unmarshal([]byte(xmlString), &container)
+	if err != nil {
+		fmt.Println("Error parsing XML:", err)
+		return libraryList, err
+	}
+
+	for _, directory := range container.Directory {
+		libraryList = append(libraryList, types.PlexLibrary{Title: directory.Title, Type: directory.Type, ID: directory.Key})
+	}
+	return libraryList, nil
 }
 
 func extractMovies(xmlString string) (movieList []types.Movie) {

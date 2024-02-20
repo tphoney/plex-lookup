@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"tphoney/plex-lookup/plex"
 
 	"github.com/spf13/cobra"
@@ -12,7 +13,7 @@ func init() {
 
 var plexCmd = &cobra.Command{
 	Use:   "plex-libraries",
-	Short: "list out the libraries in your plex server",
+	Short: "List out the libraries in your plex server",
 	Long:  `This command will list out the libraries in your plex server.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		getPlexLibraries()
@@ -22,6 +23,22 @@ var plexCmd = &cobra.Command{
 func getPlexLibraries() {
 	ipAddress := rootCmd.PersistentFlags().Lookup("plexIP").Value.String()
 	plexToken := rootCmd.PersistentFlags().Lookup("plexToken").Value.String()
+	// validate the input
+	if ipAddress == "" {
+		panic("plexIP Address is required")
+	}
+	if plexToken == "" {
+		panic("plexToken is required")
+	}
 
-	plex.GetPlexLibraries(ipAddress, plexToken)
+	libraries, err := plex.GetPlexLibraries(ipAddress, plexToken)
+	if err != nil {
+		panic(err)
+	}
+	for _, library := range libraries {
+		fmt.Printf("Title: %s\n", library.Title)
+		fmt.Printf("Type: %s\n", library.Type)
+		fmt.Printf("ID: %s\n", library.ID)
+		fmt.Println()
+	}
 }

@@ -22,10 +22,14 @@ func Execute() error {
 	return rootCmd.Execute()
 }
 
-func init() {
+func init() { //nolint: gochecknoinits
 	cobra.OnInitialize()
 
 	rootCmd.PersistentFlags().StringVar(&plexIP, "plexIP", "", "Plex IP Address")
 	rootCmd.PersistentFlags().StringVar(&plexLibraryID, "plexLibraryID", "", "Plex Library ID")
 	rootCmd.PersistentFlags().StringVar(&plexToken, "plexToken", "", "Plex Token")
+
+	rootCmd.AddCommand(plexCmd)
+	rootCmd.AddCommand(cinemaParadisoCmd)
+	rootCmd.AddCommand(versionCmd)
 }

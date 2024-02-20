@@ -7,15 +7,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() {
-	rootCmd.AddCommand(plexCmd)
-}
-
 var plexCmd = &cobra.Command{
 	Use:   "plex-libraries",
 	Short: "List out the libraries in your plex server",
 	Long:  `This command will list out the libraries in your plex server.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		getPlexLibraries()
 	},
 }

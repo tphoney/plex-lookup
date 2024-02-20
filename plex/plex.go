@@ -1,6 +1,7 @@
 package plex
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -29,7 +30,7 @@ type MediaContainer struct {
 		Text                  string `xml:",chardata"`
 		RatingKey             string `xml:"ratingKey,attr"`
 		Key                   string `xml:"key,attr"`
-		Guid                  string `xml:"guid,attr"`
+		GUID                  string `xml:"guid,attr"`
 		Studio                string `xml:"studio,attr"`
 		Type                  string `xml:"type,attr"`
 		Title                 string `xml:"title,attr"`
@@ -119,7 +120,7 @@ type LibraryContainer struct {
 		Agent            string `xml:"agent,attr"`
 		Scanner          string `xml:"scanner,attr"`
 		Language         string `xml:"language,attr"`
-		Uuid             string `xml:"uuid,attr"`
+		UUID             string `xml:"uuid,attr"`
 		UpdatedAt        string `xml:"updatedAt,attr"`
 		CreatedAt        string `xml:"createdAt,attr"`
 		ScannedAt        string `xml:"scannedAt,attr"`
@@ -135,10 +136,10 @@ type LibraryContainer struct {
 	} `xml:"Directory"`
 }
 
-func GetPlexMovies(ipAddress, libraryId, resolution, plexToken string) (movieList []types.Movie) {
-	url := fmt.Sprintf("http://%s:32400/library/sections/%s/resolution/%s", ipAddress, libraryId, resolution)
+func GetPlexMovies(ipAddress, libraryID, resolution, plexToken string) (movieList []types.Movie) {
+	url := fmt.Sprintf("http://%s:32400/library/sections/%s/resolution/%s", ipAddress, libraryID, resolution)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
 	if err != nil {
 		fmt.Println("Error creating request:", err)
 		return
@@ -169,7 +170,7 @@ func GetPlexMovies(ipAddress, libraryId, resolution, plexToken string) (movieLis
 func GetPlexLibraries(ipAddress, plexToken string) (libraryList []types.PlexLibrary, err error) {
 	url := fmt.Sprintf("http://%s:32400/library/sections", ipAddress)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
 	if err != nil {
 		fmt.Println("Error creating request:", err)
 		return libraryList, err
@@ -192,7 +193,6 @@ func GetPlexLibraries(ipAddress, plexToken string) (libraryList []types.PlexLibr
 		return libraryList, err
 	}
 
-	//fmt.Println(string(body))
 	libraryList, err = extractLibraries(string(body))
 	return libraryList, err
 }
@@ -205,8 +205,9 @@ func extractLibraries(xmlString string) (libraryList []types.PlexLibrary, err er
 		return libraryList, err
 	}
 
-	for _, directory := range container.Directory {
-		libraryList = append(libraryList, types.PlexLibrary{Title: directory.Title, Type: directory.Type, ID: directory.Key})
+	for i := range container.Directory {
+		libraryList = append(libraryList, types.PlexLibrary{Title: container.Directory[i].Title,
+			ID: container.Directory[i].Key, Type: container.Directory[i].Type})
 	}
 	return libraryList, nil
 }
@@ -219,8 +220,8 @@ func extractMovies(xmlString string) (movieList []types.Movie) {
 		return
 	}
 
-	for _, video := range container.Video {
-		movieList = append(movieList, types.Movie{Title: video.Title, Year: video.Year})
+	for i := range container.Video {
+		movieList = append(movieList, types.Movie{Title: container.Video[i].Title, Year: container.Video[i].Year})
 	}
 	return movieList
 }

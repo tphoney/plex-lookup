@@ -68,7 +68,7 @@ func TestYearToDate(t *testing.T) {
 		t.Errorf("Expected date %v, but got %v", expectedDate, result)
 	}
 }
-func TestMatchTitle(t *testing.T) {
+func TestMatchTitle(t *testing.T) { //nolint: gocyclo
 	results := []searchResult{
 		{title: "Cats", year: "1998", url: "https://example.com/cats", formats: []string{"DVD", "Blu-ray"}},
 		{title: "Dogs", year: "2000", url: "https://example.com/dogs", formats: []string{"DVD"}},

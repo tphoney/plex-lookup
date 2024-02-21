@@ -1,9 +1,13 @@
-name: ci
+name: docker
 
 on:
   push:
     branches:
       - 'main'
+  workflow_run:
+    workflows: ["golangci-lint"]
+    types:
+      - completed
 
 jobs:
   docker:

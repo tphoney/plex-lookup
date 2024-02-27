@@ -9,10 +9,12 @@ RUN go mod download
 
 # Copy the source from the current directory 
 COPY *.go ./
+COPY amazon/*.go amazon/
 COPY cinemaparadiso/*.go cinemaparadiso/
 COPY cmd/*.go cmd/
 COPY plex/*.go plex/
 COPY types/*.go types/
+COPY web/*.go web/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux go build -o /plex-lookup

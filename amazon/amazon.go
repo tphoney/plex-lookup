@@ -30,7 +30,8 @@ func SearchAmazon(title, year string) (hit bool, returnURL string, formats []str
 	amazonURL := fmt.Sprintf("%s%s%s", amazonURL, urlEncodedTitle, "&section=bluraymovies")
 	req, err := http.NewRequestWithContext(context.Background(), "GET", amazonURL, bytes.NewBuffer([]byte{}))
 
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+	req.Header.Set("User-Agent",
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
 	if err != nil {
 		fmt.Println("Error creating request:", err)
 		return false, "", nil
@@ -79,7 +80,7 @@ func findMoviesInResponse(response string) (results []searchResult) {
 			// Extract the movie entry
 			movieEntry := response[0:endIndex]
 
-			//fmt.Println(movieEntry)
+			// fmt.Println(movieEntry)
 			// Find the URL of the movie
 			urlStartIndex := strings.Index(movieEntry, "href=\"") + len("href=\"")
 			urlEndIndex := strings.Index(movieEntry[urlStartIndex:], "\"") + urlStartIndex

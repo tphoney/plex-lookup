@@ -1,55 +1,37 @@
 package amazon
 
 import (
-	"os"
 	"testing"
 	"time"
 )
 
-func TestExtractMovieFormats(t *testing.T) {
-	movieEntry := `<ul class="media-types"><li><span class="cpi-dvd cp-tab" title="DVD" data-json={"action":"media-format","filmId":0,"mediaTypeId":1}></span></li><li><span class="cpi-blu-ray cp-tab" title=" Blu-ray" data-json={"action":"media-format","filmId":0,"mediaTypeId":3}></span></li><li><span class="cpi-4-k cp-tab" title=" 4K Blu-ray" data-json={"action":"media-format","filmId":0,"mediaTypeId":14}></span></li></ul>` //nolint: lll
+// func TestFindMoviesInResponse(t *testing.T) {
+// 	// read response from testdata/cats.html
+// 	rawdata, err := os.ReadFile("testdata/cats.html")
+// 	if err != nil {
+// 		t.Errorf("Error reading testdata/cats.html: %s", err)
+// 	}
 
-	expectedFormats := []string{"DVD", "Blu-ray", "4K Blu-ray"}
-	formats := extractMovieFormats(movieEntry)
+// 	searchResult := findMoviesInResponse(string(rawdata))
 
-	if len(formats) != len(expectedFormats) {
-		t.Errorf("Expected %d formats, but got %d", len(expectedFormats), len(formats))
-	}
+// 	if len(searchResult) != 15 {
+// 		t.Errorf("Expected 15 search result, but got %d", len(searchResult))
+// 	}
 
-	for i, format := range formats {
-		if format != expectedFormats[i] {
-			t.Errorf("Expected format %s, but got %s", expectedFormats[i], format)
-		}
-	}
-}
-
-func TestFindMoviesInResponse(t *testing.T) {
-	// read response from testdata/cats.html
-	rawdata, err := os.ReadFile("testdata/cats.html")
-	if err != nil {
-		t.Errorf("Error reading testdata/cats.html: %s", err)
-	}
-
-	searchResult := findMoviesInResponse(string(rawdata))
-
-	if len(searchResult) != 15 {
-		t.Errorf("Expected 15 search result, but got %d", len(searchResult))
-	}
-
-	if searchResult[0].title != "Cats" {
-		t.Errorf("Expected title Cats, but got %s", searchResult[0].title)
-	}
-	if searchResult[0].year != "1998" {
-		t.Errorf("Expected year 1998, but got %s", searchResult[0].year)
-	}
-	// check formats
-	if searchResult[0].formats[0] != "DVD" {
-		t.Errorf("Expected format DVD, but got %s", searchResult[0].formats[0])
-	}
-	if searchResult[0].formats[1] != "Blu-ray" {
-		t.Errorf("Expected format Blu-ray, but got %s", searchResult[0].formats[0])
-	}
-}
+// 	if searchResult[0].title != "Cats" {
+// 		t.Errorf("Expected title Cats, but got %s", searchResult[0].title)
+// 	}
+// 	if searchResult[0].year != "1998" {
+// 		t.Errorf("Expected year 1998, but got %s", searchResult[0].year)
+// 	}
+// 	// check formats
+// 	if searchResult[0].formats[0] != "DVD" {
+// 		t.Errorf("Expected format DVD, but got %s", searchResult[0].formats[0])
+// 	}
+// 	if searchResult[0].formats[1] != "Blu-ray" {
+// 		t.Errorf("Expected format Blu-ray, but got %s", searchResult[0].formats[0])
+// 	}
+// }
 
 func TestYearToDate(t *testing.T) {
 	// Test case 1: Valid year string

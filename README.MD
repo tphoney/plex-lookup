@@ -8,8 +8,9 @@ A tool to compare your plex libraries with other physical media rental / purchas
 
 - [Docker](#Docker)
 - [Usage](#usage)
-  - [plex libraries](#plex-libraries)
+  - [amazon](#amazon) uses blu-ray.com **BETA**
   - [cinema paradiso](#cinema-paradiso)
+  - [plex libraries](#plex-libraries)
 - [Building](#building)
 
 ## Docker
@@ -22,6 +23,7 @@ You can get the docker image here [tphoney/plex-lookup](https://hub.docker.com/r
 plex-lookup [command]
 
 Available Commands:
+  amazon          Compare movies in your plex library with amazon
   cinema-paradiso Compare movies in your plex library with cinema paradiso
   completion      Generate the autocompletion script for the specified shell
   help            Help about any command
@@ -63,12 +65,24 @@ Type: artist
 ID: 1
 ```
 
+### amazon
+
+**You will need to get the library id using the library command above**
+
+```bash
+docker run --rm tphoney/plex-lookup /plex-lookup amazon --plexIP=192.168.1.3 --plexLibraryID=3 --plexToken=<secrets>
+```
+
+gives the output:
+
+
+
 ### cinema-paradiso
 
 **You will need to get the library id using the library command above**
 
 ```bash
-docker run --rm tphoney/plex-lookup /plex-lookup cinema-paradiso --plexIP=192.168.1.3 --plexLibraryID=3 --plexToken=secrets
+docker run --rm tphoney/plex-lookup /plex-lookup cinema-paradiso --plexIP=192.168.1.3 --plexLibraryID=3 --plexToken=<secrets>
 ```
 
 gives the output:

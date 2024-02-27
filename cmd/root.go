@@ -29,7 +29,8 @@ func init() { //nolint: gochecknoinits
 	rootCmd.PersistentFlags().StringVar(&plexLibraryID, "plexLibraryID", "", "Plex Library ID")
 	rootCmd.PersistentFlags().StringVar(&plexToken, "plexToken", "", "Plex Token")
 
-	rootCmd.AddCommand(plexCmd)
+	rootCmd.AddCommand(amazonCmd)
 	rootCmd.AddCommand(cinemaParadisoCmd)
+	rootCmd.AddCommand(plexCmd)
 	rootCmd.AddCommand(versionCmd)
 }

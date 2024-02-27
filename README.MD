@@ -11,11 +11,18 @@ A tool to compare your plex libraries with other physical media rental / purchas
   - [amazon](#amazon) uses blu-ray.com **BETA**
   - [cinema paradiso](#cinema-paradiso)
   - [plex libraries](#plex-libraries)
+  - [web](#web)
 - [Building](#building)
 
 ## Docker
 
 You can get the docker image here [tphoney/plex-lookup](https://hub.docker.com/r/tphoney/plex-lookup)
+
+**TLDR run the website already**
+
+```bash
+docker run --rm  -p 9090:9090 tphoney/plex-lookup
+```
 
 ## Usage
 
@@ -29,6 +36,7 @@ Available Commands:
   help            Help about any command
   plex-libraries  List out the libraries in your plex server
   version         Print the version number of plex-lookup
+  web             Starts the web server
 
 Flags:
   -h, --help                   help for plex-lookup
@@ -75,7 +83,8 @@ docker run --rm tphoney/plex-lookup /plex-lookup amazon --plexIP=192.168.1.3 --p
 
 gives the output:
 
-
+```bash
+```
 
 ### cinema-paradiso
 
@@ -95,6 +104,14 @@ There are a total of 15 movies in the library.
 Movies available:
 Anchorman: The Legend of Ron Burgundy [DVD Blu-ray]: https://www.cinemaparadiso.co.uk/rentals/anchorman-the-legend-of-ron-burgundy-10478.html
 School of Rock [DVD Blu-ray]: https://www.cinemaparadiso.co.uk/rentals/school-of-rock-2585.html
+```
+
+### web
+
+Runs the webui on port 9090 by default.
+
+```bash
+docker run --rm  -p 9090:9090 tphoney/plex-lookup
 ```
 
 ## Building

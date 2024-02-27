@@ -37,6 +37,7 @@ func init() { //nolint: gochecknoinits
 	rootCmd.AddCommand(cinemaParadisoCmd)
 	rootCmd.AddCommand(plexCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(webCmd)
 }
 
 func initializePlexMovies() []types.Movie {

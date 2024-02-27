@@ -15,6 +15,7 @@ COPY cmd/*.go cmd/
 COPY plex/*.go plex/
 COPY types/*.go types/
 COPY web/*.go web/
+COPY web/*.html web/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux go build -o /plex-lookup
@@ -25,4 +26,4 @@ COPY --from=builder /plex-lookup /plex-lookup
 # Import the root certificate for HTTPS
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-CMD ["/plex-lookup"]
+CMD ["/plex-lookup", "web"]

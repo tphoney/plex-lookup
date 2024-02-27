@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Plex lookup</title>
+    <script src="//unpkg.com/htmx.org@1.8.2"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <!-- from https://github.com/picocss/pico -->
+</head>
+
+<body>
+    <h1 class="container">Plex lookup</h1>
+    <p class="container">This is a simple tool to look up movies in a Plex library and find them on Amazon or Cinema
+        Paradiso.</p>
+    <form hx-post="/process" class="container">
+        <p class="container">Enter the Plex server IP, library ID and token to get a list of all movies in the library.
+        </p>
+        <input type="text" placeholder="Plex server IP" name="plexIP">
+        <input type="text" placeholder="Plex Library ID" name="plexLibraryID">
+        <input type="text" placeholder="Plex Token" name="plexToken">
+        <fieldset>
+            <legend><strong>Lookup</strong></legend>
+            <label for="amazon">
+                <input type="radio" id="amazon" name="lookup" value="amazon" />
+                Amazon
+            </label>
+            <label for="cinemaParadiso">
+                <input type="radio" id="cinemaParadiso" name="lookup" value="cinemaParadiso" checked />
+                Cinema Paradiso
+            </label>
+        </fieldset>
+        <button type="submit">Submit</button>
+    </form>
+    <table id="output-table" class="container"></table>
+</body>
+
+</html>

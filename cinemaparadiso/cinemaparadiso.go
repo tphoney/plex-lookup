@@ -11,35 +11,34 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/tphoney/plex-lookup/types"
 )
 
 const (
 	cinemaparadisoURL = "https://www.cinemaparadiso.co.uk/catalog-w/Search.aspx"
 )
 
-type searchResult struct {
-	title   string
-	url     string
-	formats []string
-	year    string
-}
-
-func SearchCinemaParadiso(title, year string) (hit bool, returnURL string, formats []string) {
+func SearchCinemaParadiso(title, year string) (movieSearchResult types.MovieSearchResults, err error) {
 	urlEncodedTitle := url.QueryEscape(title)
 	rawQuery := []byte(fmt.Sprintf("form-search-field=%s", urlEncodedTitle))
 	req, err := http.NewRequestWithContext(context.Background(), "POST", cinemaparadisoURL, bytes.NewBuffer(rawQuery))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded") // Assuming form data
 
+	movieSearchResult.Title = title
+	movieSearchResult.Year = year
+	movieSearchResult.SearchURL = cinemaparadisoURL + "?form-search-field=" + urlEncodedTitle
+
 	if err != nil {
 		fmt.Println("Error creating request:", err)
-		return false, "", nil
+		return movieSearchResult, err
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("Error sending request:", err)
-		return false, "", nil
+		return movieSearchResult, err
 	}
 
 	defer resp.Body.Close()
@@ -47,17 +46,17 @@ func SearchCinemaParadiso(title, year string) (hit bool, returnURL string, forma
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response body:", err)
-		return false, "", nil
+		return movieSearchResult, err
 	}
 	rawData := string(body)
 	moviesFound := findMoviesInResponse(rawData)
-	if len(moviesFound) > 0 {
-		return matchTitle(title, year, moviesFound)
-	}
-	return false, "", nil
+	movieSearchResult.SearchResults = moviesFound
+	movieSearchResult.SearchResults = markBestMatch(movieSearchResult)
+
+	return movieSearchResult, nil
 }
 
-func findMoviesInResponse(response string) (results []searchResult) {
+func findMoviesInResponse(response string) (results []types.SearchResult) {
 	// look for the movies in the response
 	// will be surrounded by <li class="clearfix"> and </li>
 	// the url will be in the href attribute of the <a> tag
@@ -97,7 +96,9 @@ func findMoviesInResponse(response string) (results []searchResult) {
 				foundTitle := match[1]
 				year := match[2]
 
-				results = append(results, searchResult{title: foundTitle, year: year, url: returnURL, formats: formats})
+				for _, format := range formats {
+					results = append(results, types.SearchResult{URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle})
+				}
 			}
 			// remove the movie entry from the response
 			response = response[endIndex:]
@@ -109,17 +110,17 @@ func findMoviesInResponse(response string) (results []searchResult) {
 	return results
 }
 
-func matchTitle(title, year string, results []searchResult) (hit bool, returnURL string, formats []string) {
-	expectedYear := yearToDate(year)
-	for _, result := range results {
+func markBestMatch(search types.MovieSearchResults) []types.SearchResult {
+	expectedYear := yearToDate(search.Movie.Year)
+	for i := range search.SearchResults {
 		// normally a match if the year is within 1 year of each other
-		resultYear := yearToDate(result.year)
-		if result.title == title && (resultYear.Year() == expectedYear.Year() ||
+		resultYear := yearToDate(search.SearchResults[i].Year)
+		if search.SearchResults[i].FoundTitle == search.Movie.Title && (resultYear.Year() == expectedYear.Year() ||
 			resultYear.Year() == expectedYear.Year()-1 || resultYear.Year() == expectedYear.Year()+1) {
-			return true, result.url, result.formats
+			search.SearchResults[i].BestMatch = true
 		}
 	}
-	return false, "", nil
+	return search.SearchResults
 }
 
 func yearToDate(yearString string) time.Time {

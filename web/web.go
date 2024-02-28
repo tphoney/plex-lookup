@@ -9,7 +9,6 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/tphoney/plex-lookup/amazon"
 	"github.com/tphoney/plex-lookup/cinemaparadiso"
 	"github.com/tphoney/plex-lookup/plex"
 	"github.com/tphoney/plex-lookup/types"
@@ -40,12 +39,13 @@ func StartServer() {
 
 		// Prepare table data
 		data := fetchPlexMovies(plexIP, plexLibraryID, plexToken)
-		var spax []pooPoo
+		var spax []types.MovieSearchResults
 
 		if lookup == "cinemaParadiso" {
 			spax = cinemaParadisoLookup(data)
 		} else {
-			spax = amazonLookup(data)
+			//spax = amazonLookup(data)
+			fmt.Println("Amazon lookup not implemented")
 		}
 
 		// Render table with HTMX
@@ -59,43 +59,45 @@ func StartServer() {
 	}
 }
 
-func renderTable(spax []pooPoo) (tableRows string) {
+func renderTable(movieCollection []types.MovieSearchResults) (tableRows string) {
 	tableRows = `<h2 class="container">Results</h2>`
-	tableRows += `<tr><th>Title</th><th>Year</th><th>Hit</th><th>Formats</th></tr>`
-	for _, movie := range spax {
-		tableRows += fmt.Sprintf(`<tr><td>%s</td><td>%v</td><td>%v</td><td><a href=%q target="_blank">%v</a></td></tr>`,
-			movie.Title, movie.Year, movie.hit, movie.url, movie.formats)
+	tableRows += `<tr><th><strong>Plex Title</strong></th><th><strong>Found</strong></th><th><strong>Format</strong></th></tr>`
+	for _, movie := range movieCollection {
+		found := false
+		for _, result := range movie.SearchResults {
+			if result.BestMatch && (result.Format == "Blu-ray" || result.Format == "4K Blu-ray") {
+				tableRows += fmt.Sprintf(`<tr><td>%s [%v]</td><td><a href=%q target="_blank">%v</a></td><td><a href=%q target="_blank">%v</a></td></tr>`,
+					movie.Title, movie.Year, movie.SearchURL, "Hit", result.URL, result.Format)
+				found = true
+			}
+		}
+		if !found {
+			tableRows += fmt.Sprintf(`<tr><td>%s [%v]</td><td><a href=%q target="_blank">.</a></td><td></td></tr>`, movie.Title, movie.Year, movie.SearchURL)
+		}
 	}
 	return tableRows // Return the generated HTML for table rows
 }
 
 func fetchPlexMovies(plexIP, plexLibraryID, plexToken string) (allMovies []types.Movie) {
-	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "sd", plexToken)...)
+	//allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "sd", plexToken)...)
 	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "480", plexToken)...)
-	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "576", plexToken)...)
-	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "720", plexToken)...)
+	// allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "576", plexToken)...)
+	// allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "720", plexToken)...)
 	return allMovies
 }
 
-type pooPoo struct {
-	types.Movie
-	hit     bool
-	url     string
-	formats []string
-}
-
-func cinemaParadisoLookup(allMovies []types.Movie) (spax []pooPoo) {
+func cinemaParadisoLookup(allMovies []types.Movie) (spax []types.MovieSearchResults) {
 	for _, movie := range allMovies {
-		hit, url, formats := cinemaparadiso.SearchCinemaParadiso(movie.Title, movie.Year)
-		spax = append(spax, pooPoo{movie, hit, url, formats})
+		newMovie, _ := cinemaparadiso.SearchCinemaParadiso(movie.Title, movie.Year)
+		spax = append(spax, newMovie)
 	}
 	return spax
 }
 
-func amazonLookup(allMovies []types.Movie) (spax []pooPoo) {
-	for _, movie := range allMovies {
-		hit, url, formats := amazon.SearchAmazon(movie.Title, movie.Year)
-		spax = append(spax, pooPoo{movie, hit, url, formats})
-	}
-	return spax
-}
+// func amazonLookup(allMovies []types.Movie) (spax []types.MovieSearchResult) {
+// 	for _, movie := range allMovies {
+// 		hit, url, formats := amazon.SearchAmazon(movie.Title, movie.Year)
+// 		spax = append(spax, types.MovieSearchResult{movie, hit, url, formats})
+// 	}
+// 	return spax
+// }

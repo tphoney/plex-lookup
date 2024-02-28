@@ -76,7 +76,7 @@ func TestMatchTitle(t *testing.T) { //nolint: gocyclo
 	}
 
 	// Test case 1: Matching title and year
-	hit, returnURL, formats := matchTitle("Cats", "1998", results)
+	hit, returnURL, formats := markBestMatch("Cats", "1998", results)
 	if !hit {
 		t.Errorf("Expected hit to be true, but got false")
 	}
@@ -94,7 +94,7 @@ func TestMatchTitle(t *testing.T) { //nolint: gocyclo
 	}
 
 	// Test case 2: Non-matching title
-	hit, returnURL, formats = matchTitle("Dogs", "1998", results)
+	hit, returnURL, formats = markBestMatch("Dogs", "1998", results)
 	if hit {
 		t.Errorf("Expected hit to be false, but got true")
 	}
@@ -106,7 +106,7 @@ func TestMatchTitle(t *testing.T) { //nolint: gocyclo
 	}
 
 	// Test case 3: Non-matching year
-	hit, returnURL, formats = matchTitle("Cats", "2000", results)
+	hit, returnURL, formats = markBestMatch("Cats", "2000", results)
 	if hit {
 		t.Errorf("Expected hit to be false, but got true")
 	}
@@ -118,7 +118,7 @@ func TestMatchTitle(t *testing.T) { //nolint: gocyclo
 	}
 
 	// Test case 4: Matching title and year within 1 year difference
-	hit, returnURL, formats = matchTitle("Cats", "1999", results)
+	hit, returnURL, formats = markBestMatch("Cats", "1999", results)
 	if !hit {
 		t.Errorf("Expected hit to be true, but got false")
 	}

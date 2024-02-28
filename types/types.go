@@ -5,6 +5,20 @@ type Movie struct {
 	Year  string
 }
 
+type MovieSearchResults struct {
+	Movie
+	SearchURL     string
+	SearchResults []SearchResult
+}
+
+type SearchResult struct {
+	FoundTitle string
+	BestMatch  bool
+	URL        string
+	Format     string
+	Year       string
+}
+
 type PlexLibrary struct {
 	Title string
 	Type  string

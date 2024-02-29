@@ -1,9 +1,10 @@
-package cmd
+package cmd //nolint: dupl
 
 import (
 	"fmt"
 
 	"github.com/tphoney/plex-lookup/cinemaparadiso"
+	"github.com/tphoney/plex-lookup/types"
 
 	"github.com/spf13/cobra"
 )
@@ -29,7 +30,7 @@ func performCinemaParadisoLookup() {
 		}
 		// if hit, and contains any format that isnt dvd, print the movie
 		for _, individualResult := range movieResult.SearchResults {
-			if individualResult.BestMatch && (individualResult.Format == "Blu-ray" || individualResult.Format == "4K Blu-ray") {
+			if individualResult.BestMatch && (individualResult.Format == types.DiskBluray || individualResult.Format == types.Disk4K) {
 				fmt.Printf("%s %v: %s\n", movieResult.Title, movieResult.Year, individualResult.URL)
 			}
 		}

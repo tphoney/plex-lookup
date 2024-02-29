@@ -1,10 +1,10 @@
-package cmd
+package cmd //nolint: dupl
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/tphoney/plex-lookup/amazon"
+	"github.com/tphoney/plex-lookup/types"
 
 	"github.com/spf13/cobra"
 )
@@ -20,15 +20,19 @@ movies that of higher quality than DVD.`,
 }
 
 func performAmazonLookup() {
-	// validate the inputs
-	allMovies := initializePlexMovies()
-
+	plexMovies := initializePlexMovies()
 	// lets search movies in amazon
-	for _, movie := range allMovies {
-		hit, url, formats := amazon.SearchAmazon(movie.Title, movie.Year)
+	for _, movie := range plexMovies {
+		movieResult, err := amazon.SearchAmazon(movie.Title, movie.Year)
+		if err != nil {
+			fmt.Printf("Error searching for movie %s: %s\n", movieResult.Title, err)
+			continue
+		}
 		// if hit, and contains any format that isnt dvd, print the movie
-		if hit && (slices.Contains(formats, "Blu-ray") || slices.Contains(formats, "4K Blu-ray")) {
-			fmt.Printf("%s %v: %s\n", movie.Title, formats, url)
+		for _, individualResult := range movieResult.SearchResults {
+			if individualResult.BestMatch && (individualResult.Format == types.DiskBluray || individualResult.Format == types.Disk4K) {
+				fmt.Printf("%s %v: %s\n", movieResult.Title, movieResult.Year, individualResult.URL)
+			}
 		}
 	}
 }

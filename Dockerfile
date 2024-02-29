@@ -14,6 +14,7 @@ COPY cinemaparadiso/*.go cinemaparadiso/
 COPY cmd/*.go cmd/
 COPY plex/*.go plex/
 COPY types/*.go types/
+COPY utils/*.go utils/
 COPY web/*.go web/
 COPY web/*.html web/
 

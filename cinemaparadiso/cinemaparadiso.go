@@ -8,11 +8,10 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/tphoney/plex-lookup/types"
+	"github.com/tphoney/plex-lookup/utils"
 )
 
 const (
@@ -51,7 +50,7 @@ func SearchCinemaParadiso(title, year string) (movieSearchResult types.MovieSear
 	rawData := string(body)
 	moviesFound := findMoviesInResponse(rawData)
 	movieSearchResult.SearchResults = moviesFound
-	movieSearchResult.SearchResults = markBestMatch(movieSearchResult)
+	movieSearchResult.SearchResults = utils.MarkBestMatch(movieSearchResult)
 
 	return movieSearchResult, nil
 }
@@ -108,27 +107,6 @@ func findMoviesInResponse(response string) (results []types.SearchResult) {
 	}
 
 	return results
-}
-
-func markBestMatch(search types.MovieSearchResults) []types.SearchResult {
-	expectedYear := yearToDate(search.Movie.Year)
-	for i := range search.SearchResults {
-		// normally a match if the year is within 1 year of each other
-		resultYear := yearToDate(search.SearchResults[i].Year)
-		if search.SearchResults[i].FoundTitle == search.Movie.Title && (resultYear.Year() == expectedYear.Year() ||
-			resultYear.Year() == expectedYear.Year()-1 || resultYear.Year() == expectedYear.Year()+1) {
-			search.SearchResults[i].BestMatch = true
-		}
-	}
-	return search.SearchResults
-}
-
-func yearToDate(yearString string) time.Time {
-	year, err := strconv.Atoi(yearString)
-	if err != nil {
-		return time.Time{}
-	}
-	return time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
 }
 
 func extractMovieFormats(movieEntry string) []string {

@@ -1,5 +1,11 @@
 package types
 
+const (
+	DiskBluray = "Blu-ray"
+	DiskDVD    = "DVD"
+	Disk4K     = "4K Blu-ray"
+)
+
 type Movie struct {
 	Title string
 	Year  string

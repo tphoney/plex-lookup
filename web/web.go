@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"net/http"
 
+	"github.com/tphoney/plex-lookup/amazon"
 	"github.com/tphoney/plex-lookup/cinemaparadiso"
 	"github.com/tphoney/plex-lookup/plex"
 	"github.com/tphoney/plex-lookup/types"
@@ -44,8 +45,7 @@ func StartServer() {
 		if lookup == "cinemaParadiso" {
 			spax = cinemaParadisoLookup(data)
 		} else {
-			//spax = amazonLookup(data)
-			fmt.Println("Amazon lookup not implemented")
+			spax = amazonLookup(data)
 		}
 
 		// Render table with HTMX
@@ -65,39 +65,41 @@ func renderTable(movieCollection []types.MovieSearchResults) (tableRows string) 
 	for _, movie := range movieCollection {
 		found := false
 		for _, result := range movie.SearchResults {
-			if result.BestMatch && (result.Format == "Blu-ray" || result.Format == "4K Blu-ray") {
-				tableRows += fmt.Sprintf(`<tr><td>%s [%v]</td><td><a href=%q target="_blank">%v</a></td><td><a href=%q target="_blank">%v</a></td></tr>`,
+			if result.BestMatch && (result.Format == types.DiskBluray || result.Format == types.Disk4K) {
+				tableRows += fmt.Sprintf(
+					`<tr><td>%s [%v]</td><td><a href=%q target="_blank">%v</a></td><td><a href=%q target="_blank">%v</a></td></tr>`,
 					movie.Title, movie.Year, movie.SearchURL, "Hit", result.URL, result.Format)
 				found = true
 			}
 		}
 		if !found {
-			tableRows += fmt.Sprintf(`<tr><td>%s [%v]</td><td><a href=%q target="_blank">.</a></td><td></td></tr>`, movie.Title, movie.Year, movie.SearchURL)
+			tableRows += fmt.Sprintf(`<tr><td>%s [%v]</td><td><a href=%q target="_blank">.</a></td><td></td></tr>`,
+				movie.Title, movie.Year, movie.SearchURL)
 		}
 	}
 	return tableRows // Return the generated HTML for table rows
 }
 
 func fetchPlexMovies(plexIP, plexLibraryID, plexToken string) (allMovies []types.Movie) {
-	//allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "sd", plexToken)...)
+	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "sd", plexToken)...)
 	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "480", plexToken)...)
-	// allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "576", plexToken)...)
-	// allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "720", plexToken)...)
+	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "576", plexToken)...)
+	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "720", plexToken)...)
 	return allMovies
 }
 
 func cinemaParadisoLookup(allMovies []types.Movie) (spax []types.MovieSearchResults) {
 	for _, movie := range allMovies {
-		newMovie, _ := cinemaparadiso.SearchCinemaParadiso(movie.Title, movie.Year)
-		spax = append(spax, newMovie)
+		movieResult, _ := cinemaparadiso.SearchCinemaParadiso(movie.Title, movie.Year)
+		spax = append(spax, movieResult)
 	}
 	return spax
 }
 
-// func amazonLookup(allMovies []types.Movie) (spax []types.MovieSearchResult) {
-// 	for _, movie := range allMovies {
-// 		hit, url, formats := amazon.SearchAmazon(movie.Title, movie.Year)
-// 		spax = append(spax, types.MovieSearchResult{movie, hit, url, formats})
-// 	}
-// 	return spax
-// }
+func amazonLookup(allMovies []types.Movie) (spax []types.MovieSearchResults) {
+	for _, movie := range allMovies {
+		movieResult, _ := amazon.SearchAmazon(movie.Title, movie.Year)
+		spax = append(spax, movieResult)
+	}
+	return spax
+}

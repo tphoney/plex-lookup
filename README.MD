@@ -4,11 +4,13 @@
 
 A tool to compare your plex libraries with other physical media rental / purchasing services.
 
+![alt text](image.png)
+
 ## Table of Contents
 
 - [Docker](#Docker)
 - [Usage](#usage)
-  - [amazon](#amazon) uses blu-ray.com **BETA**
+  - [amazon](#amazon) uses blu-ray.com
   - [cinema paradiso](#cinema-paradiso)
   - [plex libraries](#plex-libraries)
   - [web](#web)

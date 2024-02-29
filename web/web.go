@@ -90,6 +90,7 @@ func fetchPlexMovies(plexIP, plexLibraryID, plexToken string) (allMovies []types
 
 func cinemaParadisoLookup(allMovies []types.Movie) (spax []types.MovieSearchResults) {
 	for _, movie := range allMovies {
+		fmt.Print(".")
 		movieResult, _ := cinemaparadiso.SearchCinemaParadiso(movie.Title, movie.Year)
 		spax = append(spax, movieResult)
 	}
@@ -98,6 +99,7 @@ func cinemaParadisoLookup(allMovies []types.Movie) (spax []types.MovieSearchResu
 
 func amazonLookup(allMovies []types.Movie) (spax []types.MovieSearchResults) {
 	for _, movie := range allMovies {
+		fmt.Print(".")
 		movieResult, _ := amazon.SearchAmazon(movie.Title, movie.Year)
 		spax = append(spax, movieResult)
 	}

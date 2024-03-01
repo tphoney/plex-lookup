@@ -22,6 +22,10 @@ var (
 )
 
 func StartServer() {
+	numberOfMovies := 0
+	jobRunning := false
+	totalMovies := 0
+
 	http.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		tmpl := template.Must(template.New("index").Parse(indexHTML))
 		err := tmpl.Execute(w, nil)
@@ -41,15 +45,27 @@ func StartServer() {
 		// Prepare table data
 		data := fetchPlexMovies(plexIP, plexLibraryID, plexToken)
 		var spax []types.MovieSearchResults
-
-		if lookup == "cinemaParadiso" {
-			spax = cinemaParadisoLookup(data)
-		} else {
-			spax = amazonLookup(data)
+		var movieResult types.MovieSearchResults
+		jobRunning = true
+		totalMovies = len(data)
+		for i, movie := range data {
+			fmt.Print(".")
+			if lookup == "cinemaParadiso" {
+				movieResult, _ = cinemaparadiso.SearchCinemaParadiso(movie.Title, movie.Year)
+			} else {
+				movieResult, _ = amazon.SearchAmazon(movie.Title, movie.Year)
+			}
+			spax = append(spax, movieResult)
+			numberOfMovies = i
 		}
-
-		// Render table with HTMX
+		jobRunning = false
 		fmt.Fprintf(w, `<table>%s</table>`, renderTable(spax))
+	})
+
+	http.HandleFunc("/progress", func(w http.ResponseWriter, _ *http.Request) {
+		if jobRunning {
+			fmt.Fprintf(w, "Processing %d of %d", numberOfMovies, totalMovies)
+		}
 	})
 
 	err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil) //nolint: gosec
@@ -86,22 +102,4 @@ func fetchPlexMovies(plexIP, plexLibraryID, plexToken string) (allMovies []types
 	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "576", plexToken)...)
 	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "720", plexToken)...)
 	return allMovies
-}
-
-func cinemaParadisoLookup(allMovies []types.Movie) (spax []types.MovieSearchResults) {
-	for _, movie := range allMovies {
-		fmt.Print(".")
-		movieResult, _ := cinemaparadiso.SearchCinemaParadiso(movie.Title, movie.Year)
-		spax = append(spax, movieResult)
-	}
-	return spax
-}
-
-func amazonLookup(allMovies []types.Movie) (spax []types.MovieSearchResults) {
-	for _, movie := range allMovies {
-		fmt.Print(".")
-		movieResult, _ := amazon.SearchAmazon(movie.Title, movie.Year)
-		spax = append(spax, movieResult)
-	}
-	return spax
 }

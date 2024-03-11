@@ -52,7 +52,7 @@ func SearchAmazon(title, year string) (movieSearchResult types.MovieSearchResult
 	rawData := string(body)
 	moviesFound := findMoviesInResponse(rawData)
 	movieSearchResult.SearchResults = moviesFound
-	movieSearchResult.SearchResults = utils.MarkBestMatch(movieSearchResult)
+	movieSearchResult = utils.MarkBestMatch(&movieSearchResult)
 	return movieSearchResult, nil
 }
 
@@ -100,7 +100,7 @@ func findMoviesInResponse(response string) (results []types.SearchResult) {
 					format = types.DiskBluray
 				}
 
-				results = append(results, types.SearchResult{URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle})
+				results = append(results, types.SearchResult{URL: returnURL, Format: format, Year: year, FormattedTitle: foundTitle})
 			}
 			// remove the movie entry from the response
 			response = response[endIndex:]

@@ -48,9 +48,12 @@ func SearchCinemaParadiso(title, year string) (movieSearchResult types.MovieSear
 		return movieSearchResult, err
 	}
 	rawData := string(body)
+	// write the raw data to a file
+	// os.WriteFile("cinemaparadiso.html", body, 0644)
+
 	moviesFound := findMoviesInResponse(rawData)
 	movieSearchResult.SearchResults = moviesFound
-	movieSearchResult.SearchResults = utils.MarkBestMatch(movieSearchResult)
+	movieSearchResult = utils.MarkBestMatch(&movieSearchResult)
 
 	return movieSearchResult, nil
 }
@@ -96,7 +99,7 @@ func findMoviesInResponse(response string) (results []types.SearchResult) {
 				year := match[2]
 
 				for _, format := range formats {
-					results = append(results, types.SearchResult{URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle})
+					results = append(results, types.SearchResult{URL: returnURL, Format: format, Year: year, FormattedTitle: foundTitle})
 				}
 			}
 			// remove the movie entry from the response
@@ -111,7 +114,8 @@ func findMoviesInResponse(response string) (results []types.SearchResult) {
 
 func extractMovieFormats(movieEntry string) []string {
 	ulStartIndex := strings.Index(movieEntry, `<ul class="media-types">`) + len(`<ul class="media-types">`)
-	ulChunk := movieEntry[ulStartIndex:]
+	ulEndIndex := strings.Index(movieEntry[ulStartIndex:], "</ul>") + ulStartIndex
+	ulChunk := movieEntry[ulStartIndex:ulEndIndex]
 	r := regexp.MustCompile(`title="(.*?)"`)
 
 	// Find all matches

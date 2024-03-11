@@ -14,15 +14,17 @@ type Movie struct {
 type MovieSearchResults struct {
 	Movie
 	SearchURL     string
+	Matches4k     int
+	MatchesBluray int
 	SearchResults []SearchResult
 }
 
 type SearchResult struct {
-	FoundTitle string
-	BestMatch  bool
-	URL        string
-	Format     string
-	Year       string
+	FormattedTitle string
+	BestMatch      bool
+	URL            string
+	Format         string
+	Year           string
 }
 
 type PlexLibrary struct {

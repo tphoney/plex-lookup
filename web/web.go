@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"fmt"
 	"html/template"
+	"net"
 	"net/http"
 
 	"github.com/tphoney/plex-lookup/amazon"
@@ -26,6 +27,9 @@ func StartServer() {
 	jobRunning := false
 	totalMovies := 0
 
+	// find the local IP address
+	ipAddress := GetOutboundIP()
+	fmt.Printf("Starting server on http://%s:%s\n", ipAddress.String(), port)
 	http.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		tmpl := template.Must(template.New("index").Parse(indexHTML))
 		err := tmpl.Execute(w, nil)
@@ -44,7 +48,7 @@ func StartServer() {
 
 		// Prepare table data
 		data := fetchPlexMovies(plexIP, plexLibraryID, plexToken)
-		var spax []types.MovieSearchResults
+		var movieResults []types.MovieSearchResults
 		var movieResult types.MovieSearchResults
 		jobRunning = true
 		totalMovies = len(data)
@@ -55,11 +59,11 @@ func StartServer() {
 			} else {
 				movieResult, _ = amazon.SearchAmazon(movie.Title, movie.Year)
 			}
-			spax = append(spax, movieResult)
+			movieResults = append(movieResults, movieResult)
 			numberOfMovies = i
 		}
 		jobRunning = false
-		fmt.Fprintf(w, `<table>%s</table>`, renderTable(spax))
+		fmt.Fprintf(w, `<table id="movielist">%s</table>`, renderTable(movieResults))
 	})
 
 	http.HandleFunc("/progress", func(w http.ResponseWriter, _ *http.Request) {
@@ -77,21 +81,25 @@ func StartServer() {
 
 func renderTable(movieCollection []types.MovieSearchResults) (tableRows string) {
 	tableRows = `<h2 class="container">Results</h2>`
-	tableRows += `<tr><th><strong>Plex Title</strong></th><th><strong>Found</strong></th><th><strong>Format</strong></th></tr>`
+	tableRows += `<tr><th onclick="sortTable(0,false)"><strong>Plex Title</strong></th><th onclick="sortTable(1,true)"><strong>Blu-ray</strong></th><th onclick="sortTable(2,true)"><strong>4K-ray</strong></th><th><strong>Disc</strong></th></tr>` //nolint: lll
 	for _, movie := range movieCollection {
-		found := false
-		for _, result := range movie.SearchResults {
-			if result.BestMatch && (result.Format == types.DiskBluray || result.Format == types.Disk4K) {
-				tableRows += fmt.Sprintf(
-					`<tr><td>%s [%v]</td><td><a href=%q target="_blank">%v</a></td><td><a href=%q target="_blank">%v</a></td></tr>`,
-					movie.Title, movie.Year, movie.SearchURL, "Hit", result.URL, result.Format)
-				found = true
+		tableRows += fmt.Sprintf(
+			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%d</td><td>%d</td>`,
+			movie.SearchURL, movie.Title, movie.Year, movie.MatchesBluray, movie.Matches4k)
+		if movie.MatchesBluray+movie.Matches4k > 0 {
+			tableRows += "<td>"
+			for _, result := range movie.SearchResults {
+				if result.BestMatch && (result.Format == types.DiskBluray || result.Format == types.Disk4K) {
+					tableRows += fmt.Sprintf(
+						`<a href=%q target="_blank">%v</a> `,
+						result.URL, result.Format)
+				}
 			}
+			tableRows += "</td>"
+		} else {
+			tableRows += `<td>No results found</td>`
 		}
-		if !found {
-			tableRows += fmt.Sprintf(`<tr><td>%s [%v]</td><td><a href=%q target="_blank">.</a></td><td></td></tr>`,
-				movie.Title, movie.Year, movie.SearchURL)
-		}
+		tableRows += "</tr>"
 	}
 	return tableRows // Return the generated HTML for table rows
 }
@@ -102,4 +110,17 @@ func fetchPlexMovies(plexIP, plexLibraryID, plexToken string) (allMovies []types
 	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "576", plexToken)...)
 	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "720", plexToken)...)
 	return allMovies
+}
+
+func GetOutboundIP() net.IP {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		fmt.Println("Failed to get local IP address")
+		return nil
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+
+	return localAddr.IP
 }

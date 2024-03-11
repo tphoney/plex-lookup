@@ -33,25 +33,25 @@ func TestMarkBestMatch(t *testing.T) {
 		},
 		SearchResults: []types.SearchResult{
 			{
-				FoundTitle: "Movie Title",
-				Year:       "2022",
+				FormattedTitle: "Movie Title",
+				Year:           "2022",
 			},
 		},
 	}
 	expectedResults := []types.SearchResult{
 		{
-			FoundTitle: "Movie Title",
-			Year:       "2022",
-			BestMatch:  true,
+			FormattedTitle: "Movie Title",
+			Year:           "2022",
+			BestMatch:      true,
 		},
 	}
-	result := MarkBestMatch(search)
-	if len(result) != len(expectedResults) {
-		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result))
+	result := MarkBestMatch(&search)
+	if len(result.SearchResults) != len(expectedResults) {
+		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.SearchResults))
 	} else {
-		for i := range result {
-			if result[i] != expectedResults[i] {
-				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result[i])
+		for i := range result.SearchResults {
+			if result.SearchResults[i] != expectedResults[i] {
+				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result.SearchResults[i])
 			}
 		}
 	}
@@ -64,24 +64,24 @@ func TestMarkBestMatch(t *testing.T) {
 		},
 		SearchResults: []types.SearchResult{
 			{
-				FoundTitle: "Other Movie",
-				Year:       "2022",
+				FormattedTitle: "Other Movie",
+				Year:           "2022",
 			},
 		},
 	}
 	expectedResults = []types.SearchResult{
 		{
-			FoundTitle: "Other Movie",
-			Year:       "2022",
+			FormattedTitle: "Other Movie",
+			Year:           "2022",
 		},
 	}
-	result = MarkBestMatch(search)
-	if len(result) != len(expectedResults) {
-		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result))
+	result = MarkBestMatch(&search)
+	if len(result.SearchResults) != len(expectedResults) {
+		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.SearchResults))
 	} else {
-		for i := range result {
-			if result[i] != expectedResults[i] {
-				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result[i])
+		for i := range result.SearchResults {
+			if result.SearchResults[i] != expectedResults[i] {
+				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result.SearchResults[i])
 			}
 		}
 	}
@@ -94,24 +94,24 @@ func TestMarkBestMatch(t *testing.T) {
 		},
 		SearchResults: []types.SearchResult{
 			{
-				FoundTitle: "Movie Title",
-				Year:       "2024",
+				FormattedTitle: "Movie Title",
+				Year:           "2024",
 			},
 		},
 	}
 	expectedResults = []types.SearchResult{
 		{
-			FoundTitle: "Movie Title",
-			Year:       "2024",
+			FormattedTitle: "Movie Title",
+			Year:           "2024",
 		},
 	}
-	result = MarkBestMatch(search)
-	if len(result) != len(expectedResults) {
-		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result))
+	result = MarkBestMatch(&search)
+	if len(result.SearchResults) != len(expectedResults) {
+		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.SearchResults))
 	} else {
-		for i := range result {
-			if result[i] != expectedResults[i] {
-				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result[i])
+		for i := range result.SearchResults {
+			if result.SearchResults[i] != expectedResults[i] {
+				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result.SearchResults[i])
 			}
 		}
 	}

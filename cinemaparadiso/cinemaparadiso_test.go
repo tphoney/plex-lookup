@@ -37,8 +37,8 @@ func TestFindMoviesInResponse(t *testing.T) {
 		t.Errorf("Expected 21 search result, but got %d", len(searchResult))
 	}
 
-	if searchResult[0].FoundTitle != "Cats" {
-		t.Errorf("Expected title Cats, but got %s", searchResult[0].FoundTitle)
+	if searchResult[0].FormattedTitle != "Cats" {
+		t.Errorf("Expected title Cats, but got %s", searchResult[0].FormattedTitle)
 	}
 	if searchResult[0].Year != "1998" {
 		t.Errorf("Expected year 1998, but got %s", searchResult[0].Year)

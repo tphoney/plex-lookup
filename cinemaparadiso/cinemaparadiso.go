@@ -97,9 +97,8 @@ func findMoviesInResponse(response string) (results []types.SearchResult) {
 				// Extract and print title and year
 				foundTitle := match[1]
 				year := match[2]
-
 				for _, format := range formats {
-					results = append(results, types.SearchResult{URL: returnURL, Format: format, Year: year, FormattedTitle: foundTitle})
+					results = append(results, types.SearchResult{URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle, UITitle: format})
 				}
 			}
 			// remove the movie entry from the response

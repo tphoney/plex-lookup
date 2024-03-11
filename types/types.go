@@ -20,11 +20,12 @@ type MovieSearchResults struct {
 }
 
 type SearchResult struct {
-	FormattedTitle string
-	BestMatch      bool
-	URL            string
-	Format         string
-	Year           string
+	FoundTitle string
+	UITitle    string
+	BestMatch  bool
+	URL        string
+	Format     string
+	Year       string
 }
 
 type PlexLibrary struct {

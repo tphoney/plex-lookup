@@ -94,13 +94,14 @@ func findMoviesInResponse(response string) (results []types.SearchResult) {
 				// Find the formats of the movie
 				// if the title ends with 4k, then it is 4k
 				var format string
-				if strings.HasSuffix(foundTitle, "4K") {
+				if strings.HasSuffix(foundTitle, " 4K") {
 					format = types.Disk4K
+					foundTitle = strings.TrimSuffix(foundTitle, " 4K")
 				} else {
 					format = types.DiskBluray
 				}
 
-				results = append(results, types.SearchResult{URL: returnURL, Format: format, Year: year, FormattedTitle: foundTitle})
+				results = append(results, types.SearchResult{URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle, UITitle: format})
 			}
 			// remove the movie entry from the response
 			response = response[endIndex:]

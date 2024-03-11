@@ -92,7 +92,7 @@ func renderTable(movieCollection []types.MovieSearchResults) (tableRows string) 
 				if result.BestMatch && (result.Format == types.DiskBluray || result.Format == types.Disk4K) {
 					tableRows += fmt.Sprintf(
 						`<a href=%q target="_blank">%v</a> `,
-						result.URL, result.Format)
+						result.URL, result.UITitle)
 				}
 			}
 			tableRows += "</td>"

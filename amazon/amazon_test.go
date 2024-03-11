@@ -1,6 +1,7 @@
 package amazon
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -20,8 +21,8 @@ func TestFindMoviesInResponse(t *testing.T) {
 		t.Errorf("Expected 2 search result, but got %d", len(searchResult))
 	}
 
-	if searchResult[0].FormattedTitle != "Cats" {
-		t.Errorf("Expected title Cats, but got %s", searchResult[0].FormattedTitle)
+	if searchResult[0].FoundTitle != "Cats" {
+		t.Errorf("Expected title Cats, but got %s", searchResult[0].FoundTitle)
 	}
 	if searchResult[0].Year != "2019" {
 		t.Errorf("Expected year 2019, but got %s", searchResult[0].Year)
@@ -30,4 +31,12 @@ func TestFindMoviesInResponse(t *testing.T) {
 	if searchResult[0].Format != types.DiskBluray {
 		t.Errorf("Expected format Blu-ray, but got %s", searchResult[0].Format)
 	}
+}
+
+func TestSearchAmazon(t *testing.T) {
+	result, err := SearchAmazon("napoleon dynamite", "2004")
+	if err != nil {
+		t.Errorf("Error searching Amazon: %s", err)
+	}
+	fmt.Println(result)
 }

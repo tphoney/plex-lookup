@@ -12,7 +12,7 @@ func MarkBestMatch(search *types.MovieSearchResults) types.MovieSearchResults {
 	for i := range search.SearchResults {
 		// normally a match if the year is within 1 year of each other
 		resultYear := YearToDate(search.SearchResults[i].Year)
-		if search.SearchResults[i].FormattedTitle == search.Movie.Title && (resultYear.Year() == expectedYear.Year() ||
+		if search.SearchResults[i].FoundTitle == search.Movie.Title && (resultYear.Year() == expectedYear.Year() ||
 			resultYear.Year() == expectedYear.Year()-1 || resultYear.Year() == expectedYear.Year()+1) {
 			search.SearchResults[i].BestMatch = true
 			if search.SearchResults[i].Format == types.DiskBluray {

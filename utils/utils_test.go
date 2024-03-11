@@ -33,16 +33,16 @@ func TestMarkBestMatch(t *testing.T) {
 		},
 		SearchResults: []types.SearchResult{
 			{
-				FormattedTitle: "Movie Title",
-				Year:           "2022",
+				FoundTitle: "Movie Title",
+				Year:       "2022",
 			},
 		},
 	}
 	expectedResults := []types.SearchResult{
 		{
-			FormattedTitle: "Movie Title",
-			Year:           "2022",
-			BestMatch:      true,
+			FoundTitle: "Movie Title",
+			Year:       "2022",
+			BestMatch:  true,
 		},
 	}
 	result := MarkBestMatch(&search)
@@ -64,15 +64,15 @@ func TestMarkBestMatch(t *testing.T) {
 		},
 		SearchResults: []types.SearchResult{
 			{
-				FormattedTitle: "Other Movie",
-				Year:           "2022",
+				FoundTitle: "Other Movie",
+				Year:       "2022",
 			},
 		},
 	}
 	expectedResults = []types.SearchResult{
 		{
-			FormattedTitle: "Other Movie",
-			Year:           "2022",
+			FoundTitle: "Other Movie",
+			Year:       "2022",
 		},
 	}
 	result = MarkBestMatch(&search)
@@ -94,15 +94,15 @@ func TestMarkBestMatch(t *testing.T) {
 		},
 		SearchResults: []types.SearchResult{
 			{
-				FormattedTitle: "Movie Title",
-				Year:           "2024",
+				FoundTitle: "Movie Title",
+				Year:       "2024",
 			},
 		},
 	}
 	expectedResults = []types.SearchResult{
 		{
-			FormattedTitle: "Movie Title",
-			Year:           "2024",
+			FoundTitle: "Movie Title",
+			Year:       "2024",
 		},
 	}
 	result = MarkBestMatch(&search)

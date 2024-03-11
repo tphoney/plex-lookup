@@ -4,7 +4,7 @@
 
 A tool to compare your plex libraries with other physical media rental / purchasing services.
 
-![alt text](image.png)
+![demo](demo.gif)
 
 ## Table of Contents
 

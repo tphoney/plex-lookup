@@ -83,14 +83,21 @@
 
 <body>
     <h1 class="container">Plex lookup</h1>
-    <p class="container">This is a simple tool to look up movies in a Plex library and find them on Amazon or Cinema
-        Paradiso.</p>
+    <p class="container">Connect to your Plex library and scan your movies. Then search for Higher quality
+        versions of them (Blu-ray, 4k Blu-ray) on Amazon or CinemaParadiso. </p>
     <form hx-post="/process" class="container">
-        <p class="container">Enter the Plex server IP, library ID and token to get a list of all movies in the library.
+        <p class="container">Enter the <em
+                data-tooltip="Find your Plex server IP by going to your server then go to settings, then remote-access. It is the private IP address."><a
+                    href="https://plex.tv/web" target="_blank">Plex
+                    Server IP</a></em>, <em data-tooltip="Find your X-Plex-Token by following this guide.
+                "><a href="https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/"
+                    target="_blank">Plex X-Plex-Token </a></em> and <em
+                data-tooltip="Use the same approach as for the X-Plex-Token. Select a Movie, view its XML then look for `librarySectionID` it should be a number.">Plex
+                Movie Library ID</em> and to get started.
         </p>
-        <input type="text" placeholder="Plex server IP" name="plexIP">
-        <input type="text" placeholder="Plex Library ID" name="plexLibraryID">
-        <input type="text" placeholder="Plex Token" name="plexToken">
+        <input type="text" placeholder="Plex Server IP" name="plexIP">
+        <input type="text" placeholder="Plex X-Plex-Token" name="plexToken">
+        <input type="text" placeholder="Plex Library Section ID" name="plexLibraryID">
         <fieldset>
             <legend><strong>Lookup</strong></legend>
             <label for="amazon">
@@ -102,7 +109,7 @@
                 Cinema Paradiso
             </label>
         </fieldset>
-        <button type="submit">Submit</button>
+        <button type="submit" data-tooltip="Tooltip">Submit</button>
     </form>
     <div hx-get="/progress" hx-trigger="every 500ms" class="container"></div>
 </body>

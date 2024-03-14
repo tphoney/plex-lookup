@@ -81,7 +81,7 @@ func StartServer() {
 
 func renderTable(movieCollection []types.MovieSearchResults) (tableRows string) {
 	tableRows = `<h2 class="container">Results</h2>`
-	tableRows += `<tr><th onclick="sortTable(0,false)"><strong>Plex Title</strong></th><th onclick="sortTable(1,true)"><strong>Blu-ray</strong></th><th onclick="sortTable(2,true)"><strong>4K-ray</strong></th><th><strong>Disc</strong></th></tr>` //nolint: lll
+	tableRows += `<tr><th onclick="sortTable(0,false)"><strong>Plex Title ↕</strong></th><th onclick="sortTable(1,true)"><strong>Blu-ray ↕</strong></th><th onclick="sortTable(2,true)"><strong>4K-ray ↕</strong></th><th><strong>Disc</strong></th></tr>` //nolint: lll
 	for _, movie := range movieCollection {
 		tableRows += fmt.Sprintf(
 			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%d</td><td>%d</td>`,

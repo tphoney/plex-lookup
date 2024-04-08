@@ -16,12 +16,16 @@ import (
 
 const (
 	// https://www.blu-ray.com/search/?quicksearch=1&quicksearch_country=UK&quicksearch_keyword=chaos+theory&section=bluraymovies
-	amazonURL = "https://www.blu-ray.com/search/?quicksearch=1&quicksearch_country=UK&quicksearch_keyword="
+	amazonURL = "https://www.blu-ray.com/movies/search.php?keyword="
 )
 
-func SearchAmazon(title, year string) (movieSearchResult types.MovieSearchResults, err error) {
+func SearchAmazon(title, year, filter string) (movieSearchResult types.MovieSearchResults, err error) {
 	urlEncodedTitle := url.QueryEscape(title)
-	amazonURL := fmt.Sprintf("%s%s%s", amazonURL, urlEncodedTitle, "&section=bluraymovies")
+	amazonURL := amazonURL + urlEncodedTitle
+	if filter != "" {
+		amazonURL += filter
+	}
+	amazonURL += "&submit=Search&action=search"
 	req, err := http.NewRequestWithContext(context.Background(), "GET", amazonURL, bytes.NewBuffer([]byte{}))
 
 	movieSearchResult.Title = title
@@ -30,6 +34,11 @@ func SearchAmazon(title, year string) (movieSearchResult types.MovieSearchResult
 
 	req.Header.Set("User-Agent",
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+	country := "uk"
+	if strings.Contains(filter, "german") {
+		country = "de"
+	}
+	req.Header.Set("Cookie", fmt.Sprintf("country=%s;", country))
 	if err != nil {
 		fmt.Println("Error creating request:", err)
 		return movieSearchResult, err
@@ -50,6 +59,9 @@ func SearchAmazon(title, year string) (movieSearchResult types.MovieSearchResult
 		return movieSearchResult, err
 	}
 	rawData := string(body)
+
+	// os.WriteFile("result.html", body, 0644)
+
 	moviesFound := findMoviesInResponse(rawData)
 	movieSearchResult.SearchResults = moviesFound
 	movieSearchResult = utils.MarkBestMatch(&movieSearchResult)
@@ -57,10 +69,43 @@ func SearchAmazon(title, year string) (movieSearchResult types.MovieSearchResult
 }
 
 func findMoviesInResponse(response string) (results []types.SearchResult) {
-	// look for the movies in the response
-	// will be surrounded by <li class="clearfix"> and </li>
-	// the url will be in the href attribute of the <a> tag
-	// the title will be in the <a> tag
+
+	// if !strings.Contains(response, "<title>Blu-ray.com - Search </title>") {
+	// 	// we have a single result page
+	// 	r := regexp.MustCompile(`href="(.*?)"><h1>(.*?)</h1>`)
+	// 	// Find the first match
+	// 	match := r.FindStringSubmatch(response)
+	// 	var result types.SearchResult
+	// 	if match != nil {
+	// 		returnURL := match[1]
+	// 		foundTitle := match[2]
+
+	// 		var format string
+	// 		if strings.HasSuffix(foundTitle, " 4K") {
+	// 			format = types.Disk4K
+	// 			foundTitle = strings.TrimSuffix(foundTitle, " 4K")
+	// 		} else {
+	// 			foundTitle = strings.TrimSuffix(foundTitle, " Blu-ray")
+	// 			format = types.DiskBluray
+	// 		}
+
+	// 		result = types.SearchResult{URL: returnURL, Format: format, FoundTitle: foundTitle, UITitle: format}
+	// 	} else {
+	// 		// no results found
+	// 		return results
+	// 	}
+	// 	// Find the year of the movie
+	// 	r = regexp.MustCompile(`movies\.php\?year=(.*?)" rel`)
+	// 	year := "0000"
+	// 	match = r.FindStringSubmatch(response)
+	// 	if match != nil {
+	// 		year = match[1]
+	// 	}
+	// 	result.Year = year
+
+	// 	results = append(results, result)
+	// 	return results
+	// }
 
 	// Find the start and end index of the movie entry
 	for {
@@ -98,6 +143,7 @@ func findMoviesInResponse(response string) (results []types.SearchResult) {
 					format = types.Disk4K
 					foundTitle = strings.TrimSuffix(foundTitle, " 4K")
 				} else {
+					foundTitle = strings.TrimSuffix(foundTitle, " Blu-ray")
 					format = types.DiskBluray
 				}
 

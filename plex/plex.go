@@ -137,8 +137,28 @@ type LibraryContainer struct {
 	} `xml:"Directory"`
 }
 
-func GetPlexMovies(ipAddress, libraryID, resolution, plexToken string) (movieList []types.Movie) {
-	url := fmt.Sprintf("http://%s:32400/library/sections/%s/resolution/%s", ipAddress, libraryID, resolution)
+type Filter struct {
+	Name     string
+	Value    string
+	Modifier string
+}
+
+func GetPlexMovies(ipAddress, libraryID, resolution, plexToken string, filters []Filter) (movieList []types.Movie) {
+	url := fmt.Sprintf("http://%s:32400/library/sections/%s", ipAddress, libraryID)
+	if resolution == "" {
+		url += "/all"
+	} else {
+		url += fmt.Sprintf("/resolution/%s", resolution)
+	}
+
+	for i := range filters {
+		if i == 0 {
+			url += "?"
+		} else {
+			url += "&"
+		}
+		url += fmt.Sprintf("%s%s%s", filters[i].Name, filters[i].Modifier, filters[i].Value)
+	}
 
 	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
 	if err != nil {

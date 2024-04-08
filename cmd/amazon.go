@@ -23,7 +23,7 @@ func performAmazonLookup() {
 	plexMovies := initializePlexMovies()
 	// lets search movies in amazon
 	for _, movie := range plexMovies {
-		movieResult, err := amazon.SearchAmazon(movie.Title, movie.Year)
+		movieResult, err := amazon.SearchAmazon(movie.Title, movie.Year, "")
 		if err != nil {
 			fmt.Printf("Error searching for movie %s: %s\n", movieResult.Title, err)
 			continue

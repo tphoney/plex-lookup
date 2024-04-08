@@ -109,7 +109,14 @@
                 Cinema Paradiso
             </label>
         </fieldset>
-        <button type="submit" data-tooltip="Tooltip">Submit</button>
+        <fieldset>
+            <legend><strong>Filter</strong></legend>
+            <label for="german"> 
+                <input type="checkbox" id="german" name="german" value="true">
+                German audio
+            </label>
+        </fieldset>
+        <button type="submit">Submit</button>
     </form>
     <div hx-get="/progress" hx-trigger="every 500ms" class="container"></div>
 </body>

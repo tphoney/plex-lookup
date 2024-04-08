@@ -45,9 +45,10 @@ func StartServer() {
 		plexLibraryID := r.FormValue("plexLibraryID")
 		plexToken := r.FormValue("plexToken")
 		lookup := r.FormValue("lookup")
+		german := r.FormValue("german")
 
 		// Prepare table data
-		data := fetchPlexMovies(plexIP, plexLibraryID, plexToken)
+		data := fetchPlexMovies(plexIP, plexLibraryID, plexToken, german)
 		var movieResults []types.MovieSearchResults
 		var movieResult types.MovieSearchResults
 		jobRunning = true
@@ -57,7 +58,11 @@ func StartServer() {
 			if lookup == "cinemaParadiso" {
 				movieResult, _ = cinemaparadiso.SearchCinemaParadiso(movie.Title, movie.Year)
 			} else {
-				movieResult, _ = amazon.SearchAmazon(movie.Title, movie.Year)
+				if german == "true" {
+					movieResult, _ = amazon.SearchAmazon(movie.Title, movie.Year, "&audio=german")
+				} else {
+					movieResult, _ = amazon.SearchAmazon(movie.Title, movie.Year, "")
+				}
 			}
 			movieResults = append(movieResults, movieResult)
 			numberOfMovies = i
@@ -104,11 +109,28 @@ func renderTable(movieCollection []types.MovieSearchResults) (tableRows string) 
 	return tableRows // Return the generated HTML for table rows
 }
 
-func fetchPlexMovies(plexIP, plexLibraryID, plexToken string) (allMovies []types.Movie) {
-	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "sd", plexToken)...)
-	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "480", plexToken)...)
-	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "576", plexToken)...)
-	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "720", plexToken)...)
+func fetchPlexMovies(plexIP, plexLibraryID, plexToken, german string) (allMovies []types.Movie) {
+	if german == "true" {
+		filter := []plex.Filter{
+			{
+				Name:     "audioLanguage",
+				Value:    "de",
+				Modifier: "\u0021=",
+			},
+			// {
+			// 	Name:     "audioLanguage",
+			// 	Value:    "de",
+			// 	Modifier: "=",
+			// },
+		}
+		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "", plexToken, filter)...)
+	} else {
+
+		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "sd", plexToken, nil)...)
+		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "480", plexToken, nil)...)
+		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "576", plexToken, nil)...)
+		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "720", plexToken, nil)...)
+	}
 	return allMovies
 }
 

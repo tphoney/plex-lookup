@@ -163,7 +163,7 @@ func GetPlexMovies(ipAddress, libraryID, resolution, plexToken string, filters [
 	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
 	if err != nil {
 		fmt.Println("Error creating request:", err)
-		return
+		return movieList
 	}
 
 	req.Header.Set("X-Plex-Token", plexToken)
@@ -172,7 +172,7 @@ func GetPlexMovies(ipAddress, libraryID, resolution, plexToken string, filters [
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("Error sending request:", err)
-		return
+		return movieList
 	}
 
 	defer resp.Body.Close()
@@ -180,7 +180,7 @@ func GetPlexMovies(ipAddress, libraryID, resolution, plexToken string, filters [
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response body:", err)
-		return
+		return movieList
 	}
 
 	movieList = extractMovies(string(body))

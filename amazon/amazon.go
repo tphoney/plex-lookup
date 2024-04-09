@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	// https://www.blu-ray.com/search/?quicksearch=1&quicksearch_country=UK&quicksearch_keyword=chaos+theory&section=bluraymovies
 	amazonURL = "https://www.blu-ray.com/movies/search.php?keyword="
 )
 
@@ -60,8 +59,6 @@ func SearchAmazon(title, year, filter string) (movieSearchResult types.MovieSear
 	}
 	rawData := string(body)
 
-	// os.WriteFile("result.html", body, 0644)
-
 	moviesFound := findMoviesInResponse(rawData)
 	movieSearchResult.SearchResults = moviesFound
 	movieSearchResult = utils.MarkBestMatch(&movieSearchResult)
@@ -69,44 +66,6 @@ func SearchAmazon(title, year, filter string) (movieSearchResult types.MovieSear
 }
 
 func findMoviesInResponse(response string) (results []types.SearchResult) {
-
-	// if !strings.Contains(response, "<title>Blu-ray.com - Search </title>") {
-	// 	// we have a single result page
-	// 	r := regexp.MustCompile(`href="(.*?)"><h1>(.*?)</h1>`)
-	// 	// Find the first match
-	// 	match := r.FindStringSubmatch(response)
-	// 	var result types.SearchResult
-	// 	if match != nil {
-	// 		returnURL := match[1]
-	// 		foundTitle := match[2]
-
-	// 		var format string
-	// 		if strings.HasSuffix(foundTitle, " 4K") {
-	// 			format = types.Disk4K
-	// 			foundTitle = strings.TrimSuffix(foundTitle, " 4K")
-	// 		} else {
-	// 			foundTitle = strings.TrimSuffix(foundTitle, " Blu-ray")
-	// 			format = types.DiskBluray
-	// 		}
-
-	// 		result = types.SearchResult{URL: returnURL, Format: format, FoundTitle: foundTitle, UITitle: format}
-	// 	} else {
-	// 		// no results found
-	// 		return results
-	// 	}
-	// 	// Find the year of the movie
-	// 	r = regexp.MustCompile(`movies\.php\?year=(.*?)" rel`)
-	// 	year := "0000"
-	// 	match = r.FindStringSubmatch(response)
-	// 	if match != nil {
-	// 		year = match[1]
-	// 	}
-	// 	result.Year = year
-
-	// 	results = append(results, result)
-	// 	return results
-	// }
-
 	// Find the start and end index of the movie entry
 	for {
 		startIndex := strings.Index(response, `<a class="hoverlink" data-globalproductid=`)

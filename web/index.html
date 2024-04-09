@@ -3,82 +3,20 @@
 
 <head>
     <title>Plex lookup</title>
-    <script src="//unpkg.com/htmx.org@1.8.2">
-    </script>
-    <script>
-        function sortTable(n, b) {
-            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
-            table = document.getElementById("movielist");
-            switching = true;
-            // Set the sorting direction to ascending:
-            dir = "asc";
-            /* Make a loop that will continue until
-            no switching has been done: */
-            while (switching) {
-                // Start by saying: no switching is done:
-                switching = false;
-                rows = table.rows;
-                /* Loop through all table rows (except the
-                first, which contains table headers): */
-                for (i = 1; i < (rows.length - 1); i++) {
-                    // Start by saying there should be no switching:
-                    shouldSwitch = false;
-                    /* Get the two elements you want to compare,
-                    one from current row and one from the next: */
-                    x = rows[i].getElementsByTagName("TD")[n];
-                    y = rows[i + 1].getElementsByTagName("TD")[n];
-                    /* Check if the two rows should switch place,
-                    based on the direction, asc or desc: */
-                    if (b == true) {
-                        if (dir == "asc") {
-                            if (Number(x.innerHTML) > Number(y.innerHTML)) {
-                                // If so, mark as a switch and break the loop:
-                                shouldSwitch = true;
-                                break;
-                            }
-                        } else if (dir == "desc") {
-                            if (Number(x.innerHTML) < Number(y.innerHTML)) {
-                                // If so, mark as a switch and break the loop:
-                                shouldSwitch = true;
-                                break;
-                            }
-                        }
-                    } else {
-                        if (dir == "asc") {
-                            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
-                                // If so, mark as a switch and break the loop:
-                                shouldSwitch = true;
-                                break;
-                            }
-                        } else if (dir == "desc") {
-                            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
-                                // If so, mark as a switch and break the loop:
-                                shouldSwitch = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (shouldSwitch) {
-                    /* If a switch has been marked, make the switch
-                    and mark that a switch has been done: */
-                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                    switching = true;
-                    // Each time a switch is done, increase this count by 1:
-                    switchcount++;
-                } else {
-                    /* If no switching has been done AND the direction is "asc",
-                    set the direction to "desc" and run the while loop again. */
-                    if (switchcount == 0 && dir == "asc") {
-                        dir = "desc";
-                        switching = true;
-                    }
-                }
-            }
-        }
-    </script>
+    <script src="//unpkg.com/htmx.org@1.8.2"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
     <!-- from https://github.com/picocss/pico -->
+    <style>
+    [data-sort]:hover {
+        cursor: pointer;
+    }
+    [data-dir="asc"]:after {
+        content: ' ↗';
+    }
+    [data-dir="desc"]:after {
+        content: ' ↘';
+    }
+    </style>
 </head>
 
 <body>
@@ -95,9 +33,9 @@
                 data-tooltip="Use the same approach as for the X-Plex-Token. Select a Movie, view its XML then look for `librarySectionID` it should be a number.">Plex
                 Movie Library ID</em> and to get started.
         </p>
-        <input type="text" placeholder="Plex Server IP" name="plexIP">
-        <input type="text" placeholder="Plex X-Plex-Token" name="plexToken">
-        <input type="text" placeholder="Plex Library Section ID" name="plexLibraryID">
+        <input type="text" placeholder="Plex Server IP" name="plexIP" id="plexIP">
+        <input type="text" placeholder="Plex X-Plex-Token" name="plexToken" id="plexToken">
+        <input type="text" placeholder="Plex Library Section ID" name="plexLibraryID" id="plexLibraryID">
         <fieldset>
             <legend><strong>Lookup</strong></legend>
             <label for="amazon">

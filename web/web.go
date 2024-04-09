@@ -22,11 +22,11 @@ var (
 	port      string = "9090"
 )
 
+// nolint: lll, nolintlint
 func StartServer() {
-	numberOfMovies := 0
+	numberOfMoviesProcessed := 0
 	jobRunning := false
 	totalMovies := 0
-
 	// find the local IP address
 	ipAddress := GetOutboundIP()
 	fmt.Printf("Starting server on http://%s:%s\n", ipAddress.String(), port)
@@ -52,6 +52,7 @@ func StartServer() {
 		var movieResults []types.MovieSearchResults
 		var movieResult types.MovieSearchResults
 		jobRunning = true
+		numberOfMoviesProcessed = 0
 		totalMovies = len(data)
 		for i, movie := range data {
 			fmt.Print(".")
@@ -65,15 +66,20 @@ func StartServer() {
 				}
 			}
 			movieResults = append(movieResults, movieResult)
-			numberOfMovies = i
+			numberOfMoviesProcessed = i
 		}
 		jobRunning = false
-		fmt.Fprintf(w, `<table id="movielist">%s</table>`, renderTable(movieResults))
+		fmt.Fprintf(w,
+			`<h2 class="container">Results</h2><table class="table-sortable">%s</tbody></table>
+<script>function getCellIndex(t){var a=t.parentNode,r=Array.from(a.parentNode.children).indexOf(a);let s=0;for(let e=0;e<a.cells.length;e++){var l=a.cells[e].colSpan;if(s+=l,0===r){if(e===t.cellIndex)return s-1}else if(!isNaN(parseInt(t.dataset.sortCol)))return parseInt(t.dataset.sortCol)}return s-1}let is_sorting_process_on=!1,delay=100;
+function tablesort(e){if(is_sorting_process_on)return!1;is_sorting_process_on=!0;var t=e.currentTarget.closest("table"),a=getCellIndex(e.currentTarget),r=e.currentTarget.dataset.sort,s=t.querySelector("th[data-dir]"),s=(s&&s!==e.currentTarget&&delete s.dataset.dir,e.currentTarget.dataset.dir?"asc"===e.currentTarget.dataset.dir?"desc":"asc":e.currentTarget.dataset.sortDefault||"asc"),l=(e.currentTarget.dataset.dir=s,[]),o=t.querySelectorAll("tbody tr");let n,u,c,d,v;for(j=0,jj=o.length;j<jj;j++)for(n=o[j],l.push({tr:n,values:[]}),v=l[j],c=n.querySelectorAll("th, td"),i=0,ii=c.length;i<ii;i++)u=c[i],d=u.dataset.sortValue||u.innerText,"int"===r?d=parseInt(d):"float"===r?d=parseFloat(d):"date"===r&&(d=new Date(d)),v.values.push(d);l.sort("string"===r?"asc"===s?(e,t)=>(""+e.values[a]).localeCompare(t.values[a]):(e,t)=>-(""+e.values[a]).localeCompare(t.values[a]):"asc"===s?(e,t)=>isNaN(e.values[a])||isNaN(t.values[a])?isNaN(e.values[a])?isNaN(t.values[a])?0:-1:1:e.values[a]<t.values[a]?-1:e.values[a]>t.values[a]?1:0:(e,t)=>isNaN(e.values[a])||isNaN(t.values[a])?isNaN(e.values[a])?isNaN(t.values[a])?0:1:-1:e.values[a]<t.values[a]?1:e.values[a]>t.values[a]?-1:0);const N=document.createDocumentFragment();return l.forEach(e=>N.appendChild(e.tr)),t.querySelector("tbody").replaceChildren(N),setTimeout(()=>is_sorting_process_on=!1,delay),!0}Node.prototype.tsortable=function(){this.querySelectorAll("thead th[data-sort], thead td[data-sort]").forEach(e=>e.onclick=tablesort)};
+</script><script>document.querySelector('.table-sortable').tsortable()</script>`,
+			renderTable(movieResults))
 	})
 
 	http.HandleFunc("/progress", func(w http.ResponseWriter, _ *http.Request) {
 		if jobRunning {
-			fmt.Fprintf(w, "Processing %d of %d", numberOfMovies, totalMovies)
+			fmt.Fprintf(w, "Processing %d of %d", numberOfMoviesProcessed, totalMovies)
 		}
 	})
 
@@ -85,8 +91,7 @@ func StartServer() {
 }
 
 func renderTable(movieCollection []types.MovieSearchResults) (tableRows string) {
-	tableRows = `<h2 class="container">Results</h2>`
-	tableRows += `<tr><th onclick="sortTable(0,false)"><strong>Plex Title ↕</strong></th><th onclick="sortTable(1,true)"><strong>Blu-ray ↕</strong></th><th onclick="sortTable(2,true)"><strong>4K-ray ↕</strong></th><th><strong>Disc</strong></th></tr>` //nolint: lll
+	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
 	for _, movie := range movieCollection {
 		tableRows += fmt.Sprintf(
 			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%d</td><td>%d</td>`,
@@ -125,7 +130,6 @@ func fetchPlexMovies(plexIP, plexLibraryID, plexToken, german string) (allMovies
 		}
 		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "", plexToken, filter)...)
 	} else {
-
 		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "sd", plexToken, nil)...)
 		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "480", plexToken, nil)...)
 		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "576", plexToken, nil)...)

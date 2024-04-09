@@ -17,15 +17,15 @@ func TestFindMoviesInResponse(t *testing.T) {
 
 	searchResult := findMoviesInResponse(string(rawdata))
 
-	if len(searchResult) != 2 {
+	if len(searchResult) != 19 {
 		t.Errorf("Expected 2 search result, but got %d", len(searchResult))
 	}
 
 	if searchResult[0].FoundTitle != "Cats" {
 		t.Errorf("Expected title Cats, but got %s", searchResult[0].FoundTitle)
 	}
-	if searchResult[0].Year != "2019" {
-		t.Errorf("Expected year 2019, but got %s", searchResult[0].Year)
+	if searchResult[0].Year != "1998" {
+		t.Errorf("Expected year 1998, but got %s", searchResult[0].Year)
 	}
 	// check formats
 	if searchResult[0].Format != types.DiskBluray {
@@ -34,7 +34,7 @@ func TestFindMoviesInResponse(t *testing.T) {
 }
 
 func TestSearchAmazon(t *testing.T) {
-	result, err := SearchAmazon("napoleon dynamite", "2004")
+	result, err := SearchAmazon("napoleon dynamite", "2004", "")
 	if err != nil {
 		t.Errorf("Error searching Amazon: %s", err)
 	}

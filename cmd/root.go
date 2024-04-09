@@ -56,10 +56,10 @@ func initializePlexMovies() []types.Movie {
 	}
 
 	var allMovies []types.Movie
-	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryID, "sd", plexToken)...)
-	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryID, "480", plexToken)...)
-	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryID, "576", plexToken)...)
-	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryID, "720", plexToken)...)
+	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryID, "sd", plexToken, nil)...)
+	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryID, "480", plexToken, nil)...)
+	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryID, "576", plexToken, nil)...)
+	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryID, "720", plexToken, nil)...)
 
 	fmt.Printf("\nThere are a total of %d movies in the library.\n\nMovies available:\n", len(allMovies))
 	return allMovies

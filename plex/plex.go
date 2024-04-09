@@ -137,13 +137,33 @@ type LibraryContainer struct {
 	} `xml:"Directory"`
 }
 
-func GetPlexMovies(ipAddress, libraryID, resolution, plexToken string) (movieList []types.Movie) {
-	url := fmt.Sprintf("http://%s:32400/library/sections/%s/resolution/%s", ipAddress, libraryID, resolution)
+type Filter struct {
+	Name     string
+	Value    string
+	Modifier string
+}
+
+func GetPlexMovies(ipAddress, libraryID, resolution, plexToken string, filters []Filter) (movieList []types.Movie) {
+	url := fmt.Sprintf("http://%s:32400/library/sections/%s", ipAddress, libraryID)
+	if resolution == "" {
+		url += "/all"
+	} else {
+		url += fmt.Sprintf("/resolution/%s", resolution)
+	}
+
+	for i := range filters {
+		if i == 0 {
+			url += "?"
+		} else {
+			url += "&"
+		}
+		url += fmt.Sprintf("%s%s%s", filters[i].Name, filters[i].Modifier, filters[i].Value)
+	}
 
 	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
 	if err != nil {
 		fmt.Println("Error creating request:", err)
-		return
+		return movieList
 	}
 
 	req.Header.Set("X-Plex-Token", plexToken)
@@ -152,7 +172,7 @@ func GetPlexMovies(ipAddress, libraryID, resolution, plexToken string) (movieLis
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("Error sending request:", err)
-		return
+		return movieList
 	}
 
 	defer resp.Body.Close()
@@ -160,7 +180,7 @@ func GetPlexMovies(ipAddress, libraryID, resolution, plexToken string) (movieLis
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response body:", err)
-		return
+		return movieList
 	}
 
 	movieList = extractMovies(string(body))

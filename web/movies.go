@@ -1,13 +1,9 @@
-//go:generate templ generate
-//go:generate tailwindcss -i assets/input.css -o assets/dist.css --minify
-
 package web
 
 import (
 	_ "embed"
 	"fmt"
 	"html/template"
-	"net"
 	"net/http"
 
 	"github.com/tphoney/plex-lookup/amazon"
@@ -17,51 +13,45 @@ import (
 )
 
 var (
-	//go:embed index.html
-	indexHTML               string
-	port                    string = "9090"
-	numberOfMoviesProcessed int    = 0
-	jobRunning              bool   = false
-	totalMovies             int    = 0
+	//go:embed movies.html
+	moviesPage string
+
+	numberOfMoviesProcessed int  = 0
+	jobRunning              bool = false
+	totalMovies             int  = 0
 )
 
-func StartServer() {
-	// find the local IP address
-	ipAddress := GetOutboundIP()
-	fmt.Printf("Starting server on http://%s:%s\n", ipAddress.String(), port)
-	http.HandleFunc("/", index)
-
-	http.HandleFunc("/process", processMoviesHTML)
-
-	http.HandleFunc("/progress", progressBarHTML)
-
-	err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil) //nolint: gosec
-	if err != nil {
-		fmt.Printf("Failed to start server on port %s: %s\n", port, err)
-		panic(err)
-	}
-}
-
-func index(w http.ResponseWriter, _ *http.Request) {
-	tmpl := template.Must(template.New("index").Parse(indexHTML))
+func moviesHandler(w http.ResponseWriter, _ *http.Request) {
+	tmpl := template.Must(template.New("movies").Parse(moviesPage))
 	err := tmpl.Execute(w, nil)
 	if err != nil {
-		http.Error(w, "Failed to render index", http.StatusInternalServerError)
+		http.Error(w, "Failed to render plex page", http.StatusInternalServerError)
 		return
 	}
 }
 
 // nolint: lll, nolintlint
 func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
-	// Retrieve form fields (replace with proper values)
-	plexIP := r.FormValue("plexIP")
-	plexLibraryID := r.FormValue("plexLibraryID")
-	plexToken := r.FormValue("plexToken")
 	lookup := r.FormValue("lookup")
 	german := r.FormValue("german")
-
+	// plex resolutions
+	sd := r.FormValue("sd")
+	r240 := r.FormValue("240p")
+	r480 := r.FormValue("480p")
+	r576 := r.FormValue("576p")
+	r720 := r.FormValue("720p")
+	r1080 := r.FormValue("1080p")
+	r4k := r.FormValue("4k")
+	plexResolutions := []string{sd, r240, r480, r576, r720, r1080, r4k}
+	// remove empty resolutions
+	var filteredResolutions []string
+	for _, resolution := range plexResolutions {
+		if resolution != "" {
+			filteredResolutions = append(filteredResolutions, resolution)
+		}
+	}
 	// Prepare table data
-	data := fetchPlexMovies(plexIP, plexLibraryID, plexToken, german)
+	data := fetchPlexMovies(PlexInformation.IP, PlexInformation.MovieLibraryID, PlexInformation.Token, filteredResolutions, german)
 	var movieResults []types.MovieSearchResults
 	var movieResult types.MovieSearchResults
 	jobRunning = true
@@ -120,9 +110,10 @@ func renderTable(movieCollection []types.MovieSearchResults) (tableRows string) 
 	return tableRows // Return the generated HTML for table rows
 }
 
-func fetchPlexMovies(plexIP, plexLibraryID, plexToken, german string) (allMovies []types.Movie) {
+func fetchPlexMovies(plexIP, plexLibraryID, plexToken string, plexResolutions []string, german string) (allMovies []types.Movie) {
+	filter := []plex.Filter{}
 	if german == "true" {
-		filter := []plex.Filter{
+		filter = []plex.Filter{
 			{
 				Name:     "audioLanguage",
 				Value:    "de",
@@ -134,25 +125,13 @@ func fetchPlexMovies(plexIP, plexLibraryID, plexToken, german string) (allMovies
 			// 	Modifier: "=",
 			// },
 		}
-		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "", plexToken, filter)...)
+	}
+	if len(plexResolutions) == 0 {
+		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, plexToken, "", filter)...)
 	} else {
-		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "sd", plexToken, nil)...)
-		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "480", plexToken, nil)...)
-		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "576", plexToken, nil)...)
-		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "720", plexToken, nil)...)
+		for _, resolution := range plexResolutions {
+			allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, plexToken, resolution, filter)...)
+		}
 	}
 	return allMovies
-}
-
-func GetOutboundIP() net.IP {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		fmt.Println("Failed to get local IP address")
-		return nil
-	}
-	defer conn.Close()
-
-	localAddr := conn.LocalAddr().(*net.UDPAddr)
-
-	return localAddr.IP
 }

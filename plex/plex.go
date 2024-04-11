@@ -143,7 +143,7 @@ type Filter struct {
 	Modifier string
 }
 
-func GetPlexMovies(ipAddress, libraryID, resolution, plexToken string, filters []Filter) (movieList []types.Movie) {
+func GetPlexMovies(ipAddress, libraryID, plexToken, resolution string, filters []Filter) (movieList []types.Movie) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s", ipAddress, libraryID)
 	if resolution == "" {
 		url += "/all"
@@ -242,7 +242,8 @@ func extractMovies(xmlString string) (movieList []types.Movie) {
 	}
 
 	for i := range container.Video {
-		movieList = append(movieList, types.Movie{Title: container.Video[i].Title, Year: container.Video[i].Year})
+		movieList = append(movieList, types.Movie{
+			Title: container.Video[i].Title, Year: container.Video[i].Year, DateAdded: container.Video[i].AddedAt})
 	}
 	return movieList
 }

@@ -7,8 +7,9 @@ const (
 )
 
 type Movie struct {
-	Title string
-	Year  string
+	Title     string
+	Year      string
+	DateAdded string
 }
 
 type MovieSearchResults struct {
@@ -32,4 +33,10 @@ type PlexLibrary struct {
 	Title string
 	Type  string
 	ID    string
+}
+
+type PlexInformation struct {
+	IP             string
+	Token          string
+	MovieLibraryID string
 }

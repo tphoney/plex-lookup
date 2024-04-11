@@ -1,12 +1,18 @@
 package web
 
 import (
+	_ "embed"
 	"fmt"
 	"html/template"
 	"net/http"
 
 	"github.com/tphoney/plex-lookup/plex"
 	"github.com/tphoney/plex-lookup/types"
+)
+
+var (
+	//go:embed plex.html
+	plexPage string
 )
 
 func plexHandler(w http.ResponseWriter, _ *http.Request) {

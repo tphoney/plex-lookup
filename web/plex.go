@@ -38,6 +38,15 @@ func processPlexLibrariesHTML(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, renderLibraries(libraries))
 }
 
+func plexInformationOKHTML(w http.ResponseWriter, _ *http.Request) {
+	// remove the warning in the html if the plex information is set
+	if PlexInformation.IP == "" || PlexInformation.Token == "" || PlexInformation.MovieLibraryID == "" {
+		fmt.Fprint(w, `<h1><a href="/plex"> Enter your plex information here</a></h1>`)
+	} else {
+		fmt.Fprint(w, ``)
+	}
+}
+
 func plexSaveHandler(w http.ResponseWriter, r *http.Request) {
 	// Retrieve form fields (replace with proper values)
 	plexIP := r.FormValue("plexIP")
@@ -61,6 +70,6 @@ func renderLibraries(libraries []types.PlexLibrary) string {
 	html += `</tbody></table>
 	<input type="text" placeholder="Plex Movie Library Section ID" name="plexMovieLibraryID"
             id="plexMovieLibraryID">
-			<button hx-post="/saveplex" hx-include="#plexMovieLibraryID,#plexIP,#plexToken" hx-swap="outerHTML">Save</button>`
+			<button hx-post="/plexsave" hx-include="#plexMovieLibraryID,#plexIP,#plexToken" hx-swap="outerHTML">Save</button>`
 	return html
 }

@@ -24,7 +24,8 @@ func StartServer() {
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/plex", plexHandler)
 	http.HandleFunc("/plexlibraries", processPlexLibrariesHTML)
-	http.HandleFunc("/saveplex", plexSaveHandler)
+	http.HandleFunc("/plexinfook", plexInformationOKHTML)
+	http.HandleFunc("/plexsave", plexSaveHandler)
 
 	http.HandleFunc("/movies", moviesHandler)
 	http.HandleFunc("/processmovies", processMoviesHTML)

@@ -23,6 +23,7 @@
 
 <body>
     <h1 class="container">Movies</h1>
+    <div hx-get="/plexinfook" class="container" hx-trigger="load"></div>
     <form hx-post="/processmovies" class="container">
         <fieldset>
             <legend><strong>Lookup</strong></legend>

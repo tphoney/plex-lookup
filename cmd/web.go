@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
+	"github.com/tphoney/plex-lookup/types"
 	"github.com/tphoney/plex-lookup/web"
 )
 
@@ -15,5 +18,11 @@ var webCmd = &cobra.Command{
 }
 
 func startServer() {
-	web.StartServer()
+	plexInformation := types.PlexInformation{}
+	// read environment variables
+	plexInformation.IP = os.Getenv("PLEX_IP")
+	plexInformation.MovieLibraryID = os.Getenv("PLEX_LIBRARY_ID")
+	plexInformation.Token = os.Getenv("PLEX_TOKEN")
+
+	web.StartServer(plexInformation)
 }

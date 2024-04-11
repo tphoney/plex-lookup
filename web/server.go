@@ -17,7 +17,8 @@ var (
 	PlexInformation types.PlexInformation
 )
 
-func StartServer() {
+func StartServer(info types.PlexInformation) {
+	PlexInformation = info
 	// find the local IP address
 	ipAddress := GetOutboundIP()
 	fmt.Printf("Starting server on http://%s:%s\n", ipAddress.String(), port)

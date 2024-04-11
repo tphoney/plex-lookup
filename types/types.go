@@ -7,8 +7,9 @@ const (
 )
 
 type Movie struct {
-	Title string
-	Year  string
+	Title     string
+	Year      string
+	DateAdded string
 }
 
 type MovieSearchResults struct {

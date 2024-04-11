@@ -37,11 +37,42 @@
             </label>
         </fieldset>
         <fieldset>
-            <legend><strong>Filter</strong></legend>
+            <legend><strong>Filter Plex:</strong> only return movies that match the following criteria</legend>
+            <label for="title" data-sort="title">
+                <input type="checkbox" id="sd" name="sd" value="sd">
+                SD
+            </label>
+            <label for="title" data-sort="title">
+                <input type="checkbox" id="480p" name="480p" value="480">
+                480p
+            </label>
+            <label for="title" data-sort="title">
+                <input type="checkbox" id="576p" name="576p" value="576">
+                576p
+            </label>
+            <label for="title" data-sort="title">
+                <input type="checkbox" id="720p" name="720p" value="720">
+                720p
+            </label>
+            <label for="title" data-sort="title">
+                <input type="checkbox" id="1080p" name="1080p" value="1080">
+                1080p
+            </label>
+            <label for="title" data-sort="title">
+                <input type="checkbox" id="4k" name="4k" value="4k">
+                4k
+            </label>
+        </fieldset>
+        <fieldset>
+            <legend><strong>Filter Lookup:</strong></legend>
             <label for="german">
                 <input type="checkbox" id="german" name="german" value="true">
                 German audio
             </label>
+            <!-- <label for="newerVersion">
+                <input type="checkbox" id="newerVersion" name="newerVersion" value="true">
+                Newer Version, release date is after when the movie was added to Plex.
+            </label> -->
         </fieldset>
         <button type="submit">Submit</button>
     </form>

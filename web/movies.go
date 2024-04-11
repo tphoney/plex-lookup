@@ -32,12 +32,26 @@ func moviesHandler(w http.ResponseWriter, _ *http.Request) {
 
 // nolint: lll, nolintlint
 func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
-	// Retrieve form fields (replace with proper values)
 	lookup := r.FormValue("lookup")
 	german := r.FormValue("german")
-
+	// plex resolutions
+	sd := r.FormValue("sd")
+	r240 := r.FormValue("240p")
+	r480 := r.FormValue("480p")
+	r576 := r.FormValue("576p")
+	r720 := r.FormValue("720p")
+	r1080 := r.FormValue("1080p")
+	r4k := r.FormValue("4k")
+	plexResolutions := []string{sd, r240, r480, r576, r720, r1080, r4k}
+	// remove empty resolutions
+	var filteredResolutions []string
+	for _, resolution := range plexResolutions {
+		if resolution != "" {
+			filteredResolutions = append(filteredResolutions, resolution)
+		}
+	}
 	// Prepare table data
-	data := fetchPlexMovies(PlexInformation.IP, PlexInformation.MovieLibraryID, PlexInformation.Token, german)
+	data := fetchPlexMovies(PlexInformation.IP, PlexInformation.MovieLibraryID, PlexInformation.Token, filteredResolutions, german)
 	var movieResults []types.MovieSearchResults
 	var movieResult types.MovieSearchResults
 	jobRunning = true
@@ -96,9 +110,10 @@ func renderTable(movieCollection []types.MovieSearchResults) (tableRows string) 
 	return tableRows // Return the generated HTML for table rows
 }
 
-func fetchPlexMovies(plexIP, plexLibraryID, plexToken, german string) (allMovies []types.Movie) {
+func fetchPlexMovies(plexIP, plexLibraryID, plexToken string, plexResolutions []string, german string) (allMovies []types.Movie) {
+	filter := []plex.Filter{}
 	if german == "true" {
-		filter := []plex.Filter{
+		filter = []plex.Filter{
 			{
 				Name:     "audioLanguage",
 				Value:    "de",
@@ -110,12 +125,13 @@ func fetchPlexMovies(plexIP, plexLibraryID, plexToken, german string) (allMovies
 			// 	Modifier: "=",
 			// },
 		}
-		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "", plexToken, filter)...)
+	}
+	if len(plexResolutions) == 0 {
+		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, plexToken, "", filter)...)
 	} else {
-		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "sd", plexToken, nil)...)
-		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "480", plexToken, nil)...)
-		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "576", plexToken, nil)...)
-		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, "720", plexToken, nil)...)
+		for _, resolution := range plexResolutions {
+			allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, plexToken, resolution, filter)...)
+		}
 	}
 	return allMovies
 }

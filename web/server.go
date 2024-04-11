@@ -18,21 +18,26 @@ import (
 
 var (
 	//go:embed index.html
-	indexHTML               string
+	indexPage string
+	//go:embed plex.html
+	plexPage                string
 	port                    string = "9090"
 	numberOfMoviesProcessed int    = 0
 	jobRunning              bool   = false
 	totalMovies             int    = 0
+	PlexInformation         types.PlexInformation
 )
 
 func StartServer() {
 	// find the local IP address
 	ipAddress := GetOutboundIP()
 	fmt.Printf("Starting server on http://%s:%s\n", ipAddress.String(), port)
-	http.HandleFunc("/", index)
+	http.HandleFunc("/", indexHandler)
+	http.HandleFunc("/plex", plexHandler)
+	http.HandleFunc("/plexlibraries", processPlexLibrariesHTML)
+	http.HandleFunc("/saveplex", plexSaveHandler)
 
 	http.HandleFunc("/process", processMoviesHTML)
-
 	http.HandleFunc("/progress", progressBarHTML)
 
 	err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil) //nolint: gosec
@@ -42,8 +47,8 @@ func StartServer() {
 	}
 }
 
-func index(w http.ResponseWriter, _ *http.Request) {
-	tmpl := template.Must(template.New("index").Parse(indexHTML))
+func indexHandler(w http.ResponseWriter, _ *http.Request) {
+	tmpl := template.Must(template.New("index").Parse(indexPage))
 	err := tmpl.Execute(w, nil)
 	if err != nil {
 		http.Error(w, "Failed to render index", http.StatusInternalServerError)

@@ -33,3 +33,9 @@ type PlexLibrary struct {
 	Type  string
 	ID    string
 }
+
+type PlexInformation struct {
+	IP             string
+	Token          string
+	MovieLibraryID string
+}

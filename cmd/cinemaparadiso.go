@@ -23,7 +23,7 @@ func performCinemaParadisoLookup() {
 	plexMovies := initializePlexMovies()
 	// lets search movies in cinemaparadiso
 	for _, movie := range plexMovies {
-		movieResult, err := cinemaparadiso.SearchCinemaParadiso(movie.Title, movie.Year)
+		movieResult, err := cinemaparadiso.SearchCinemaParadiso(movie)
 		if err != nil {
 			fmt.Printf("Error searching for movie %s: %s\n", movieResult.Title, err)
 			continue

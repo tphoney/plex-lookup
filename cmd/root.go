@@ -40,7 +40,7 @@ func init() { //nolint: gochecknoinits
 	rootCmd.AddCommand(webCmd)
 }
 
-func initializePlexMovies() []types.Movie {
+func initializePlexMovies() []types.PlexMovie {
 	ipAddress := rootCmd.PersistentFlags().Lookup("plexIP").Value.String()
 	libraryID := rootCmd.PersistentFlags().Lookup("plexLibraryID").Value.String()
 	plexToken := rootCmd.PersistentFlags().Lookup("plexToken").Value.String()
@@ -55,7 +55,7 @@ func initializePlexMovies() []types.Movie {
 		panic("plexToken is required")
 	}
 
-	var allMovies []types.Movie
+	var allMovies []types.PlexMovie
 	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryID, plexToken, "sd", nil)...)
 	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryID, plexToken, "480", nil)...)
 	allMovies = append(allMovies, plex.GetPlexMovies(ipAddress, libraryID, plexToken, "576", nil)...)

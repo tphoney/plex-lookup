@@ -143,7 +143,7 @@ type Filter struct {
 	Modifier string
 }
 
-func GetPlexMovies(ipAddress, libraryID, plexToken, resolution string, filters []Filter) (movieList []types.Movie) {
+func GetPlexMovies(ipAddress, libraryID, plexToken, resolution string, filters []Filter) (movieList []types.PlexMovie) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s", ipAddress, libraryID)
 	if resolution == "" {
 		url += "/all"
@@ -233,7 +233,7 @@ func extractLibraries(xmlString string) (libraryList []types.PlexLibrary, err er
 	return libraryList, nil
 }
 
-func extractMovies(xmlString string) (movieList []types.Movie) {
+func extractMovies(xmlString string) (movieList []types.PlexMovie) {
 	var container MediaContainer
 	err := xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
@@ -242,7 +242,7 @@ func extractMovies(xmlString string) (movieList []types.Movie) {
 	}
 
 	for i := range container.Video {
-		movieList = append(movieList, types.Movie{
+		movieList = append(movieList, types.PlexMovie{
 			Title: container.Video[i].Title, Year: container.Video[i].Year, DateAdded: container.Video[i].AddedAt})
 	}
 	return movieList

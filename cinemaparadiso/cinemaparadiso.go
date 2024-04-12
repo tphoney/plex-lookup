@@ -18,14 +18,13 @@ const (
 	cinemaparadisoURL = "https://www.cinemaparadiso.co.uk/catalog-w/Search.aspx"
 )
 
-func SearchCinemaParadiso(title, year string) (movieSearchResult types.MovieSearchResults, err error) {
-	urlEncodedTitle := url.QueryEscape(title)
+func SearchCinemaParadiso(plexMovie types.PlexMovie) (movieSearchResult types.MovieSearchResults, err error) {
+	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
 	rawQuery := []byte(fmt.Sprintf("form-search-field=%s", urlEncodedTitle))
 	req, err := http.NewRequestWithContext(context.Background(), "POST", cinemaparadisoURL, bytes.NewBuffer(rawQuery))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded") // Assuming form data
 
-	movieSearchResult.Title = title
-	movieSearchResult.Year = year
+	movieSearchResult.PlexMovie = plexMovie
 	movieSearchResult.SearchURL = cinemaparadisoURL + "?form-search-field=" + urlEncodedTitle
 
 	if err != nil {

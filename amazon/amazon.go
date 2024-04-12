@@ -18,8 +18,60 @@ const (
 	amazonURL = "https://www.blu-ray.com/movies/search.php?keyword="
 )
 
-func SearchAmazon(title, year, filter string) (movieSearchResult types.MovieSearchResults, err error) {
-	urlEncodedTitle := url.QueryEscape(title)
+func ScrapeMovies(movieSearchResult *types.MovieSearchResults) (string, error) {
+	for _, searchResult := range movieSearchResult.SearchResults {
+		date, err := scrapeMovie(searchResult.URL)
+		if err != nil {
+			fmt.Println("Error scraping movie:", err)
+		}
+		// compare dates
+		fmt.Printf("%s- Plex: %s, Amazon: %s\n", movieSearchResult.Title, movieSearchResult.PlexMovie.DateAdded, date)
+	}
+	return "", nil
+}
+
+func scrapeMovie(movieURL string) (date string, err error) {
+	req, err := http.NewRequestWithContext(context.Background(), "GET", movieURL, bytes.NewBuffer([]byte{}))
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return "", err
+	}
+
+	req.Header.Set("User-Agent",
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return "", err
+	}
+	rawData := string(body)
+
+	date = findMovieDetails(rawData)
+	return date, nil
+}
+
+func findMovieDetails(response string) (releaseDate string) {
+	r := regexp.MustCompile(`<a class="grey noline" alt=".*">(.*?)</a></span>`)
+
+	match := r.FindStringSubmatch(response)
+	if match != nil {
+		releaseDate = match[1]
+	}
+	return releaseDate
+}
+
+func SearchAmazon(plexMovie types.PlexMovie, filter string) (movieSearchResult types.MovieSearchResults, err error) {
+	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
 	amazonURL := amazonURL + urlEncodedTitle
 	if filter != "" {
 		amazonURL += filter
@@ -27,8 +79,7 @@ func SearchAmazon(title, year, filter string) (movieSearchResult types.MovieSear
 	amazonURL += "&submit=Search&action=search"
 	req, err := http.NewRequestWithContext(context.Background(), "GET", amazonURL, bytes.NewBuffer([]byte{}))
 
-	movieSearchResult.Title = title
-	movieSearchResult.Year = year
+	movieSearchResult.PlexMovie = plexMovie
 	movieSearchResult.SearchURL = amazonURL
 
 	req.Header.Set("User-Agent",

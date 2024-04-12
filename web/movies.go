@@ -12,6 +12,10 @@ import (
 	"github.com/tphoney/plex-lookup/types"
 )
 
+const (
+	stringTrue = "true"
+)
+
 var (
 	//go:embed movies.html
 	moviesPage string
@@ -33,7 +37,6 @@ func moviesHandler(w http.ResponseWriter, _ *http.Request) {
 // nolint: lll, nolintlint
 func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 	lookup := r.FormValue("lookup")
-	german := r.FormValue("german")
 	// plex resolutions
 	sd := r.FormValue("sd")
 	r240 := r.FormValue("240p")
@@ -50,25 +53,32 @@ func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 			filteredResolutions = append(filteredResolutions, resolution)
 		}
 	}
-	// Prepare table data
-	data := fetchPlexMovies(PlexInformation.IP, PlexInformation.MovieLibraryID, PlexInformation.Token, filteredResolutions, german)
-	var movieResults []types.MovieSearchResults
-	var movieResult types.MovieSearchResults
+	// lookup filters
+	german := r.FormValue("german")
+	newerVersion := r.FormValue("newerVersion")
+	// Prepare table plexMovies
+	plexMovies := fetchPlexMovies(PlexInformation.IP, PlexInformation.MovieLibraryID, PlexInformation.Token, filteredResolutions, german)
+	var searchResults []types.MovieSearchResults
+	var searchResult types.MovieSearchResults
 	jobRunning = true
 	numberOfMoviesProcessed = 0
-	totalMovies = len(data)
-	for i, movie := range data {
+	totalMovies = len(plexMovies)
+	for i, movie := range plexMovies {
 		fmt.Print(".")
 		if lookup == "cinemaParadiso" {
-			movieResult, _ = cinemaparadiso.SearchCinemaParadiso(movie.Title, movie.Year)
+			searchResult, _ = cinemaparadiso.SearchCinemaParadiso(movie)
 		} else {
-			if german == "true" {
-				movieResult, _ = amazon.SearchAmazon(movie.Title, movie.Year, "&audio=german")
+			if german == stringTrue {
+				searchResult, _ = amazon.SearchAmazon(movie, "&audio=german")
 			} else {
-				movieResult, _ = amazon.SearchAmazon(movie.Title, movie.Year, "")
+				searchResult, _ = amazon.SearchAmazon(movie, "")
+			}
+			// if we are filtering by newer version, we need to search again
+			if newerVersion == stringTrue {
+				_, _ = amazon.ScrapeMovies(&searchResult)
 			}
 		}
-		movieResults = append(movieResults, movieResult)
+		searchResults = append(searchResults, searchResult)
 		numberOfMoviesProcessed = i
 	}
 	jobRunning = false
@@ -77,7 +87,7 @@ func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 <script>function getCellIndex(t){var a=t.parentNode,r=Array.from(a.parentNode.children).indexOf(a);let s=0;for(let e=0;e<a.cells.length;e++){var l=a.cells[e].colSpan;if(s+=l,0===r){if(e===t.cellIndex)return s-1}else if(!isNaN(parseInt(t.dataset.sortCol)))return parseInt(t.dataset.sortCol)}return s-1}let is_sorting_process_on=!1,delay=100;
 function tablesort(e){if(is_sorting_process_on)return!1;is_sorting_process_on=!0;var t=e.currentTarget.closest("table"),a=getCellIndex(e.currentTarget),r=e.currentTarget.dataset.sort,s=t.querySelector("th[data-dir]"),s=(s&&s!==e.currentTarget&&delete s.dataset.dir,e.currentTarget.dataset.dir?"asc"===e.currentTarget.dataset.dir?"desc":"asc":e.currentTarget.dataset.sortDefault||"asc"),l=(e.currentTarget.dataset.dir=s,[]),o=t.querySelectorAll("tbody tr");let n,u,c,d,v;for(j=0,jj=o.length;j<jj;j++)for(n=o[j],l.push({tr:n,values:[]}),v=l[j],c=n.querySelectorAll("th, td"),i=0,ii=c.length;i<ii;i++)u=c[i],d=u.dataset.sortValue||u.innerText,"int"===r?d=parseInt(d):"float"===r?d=parseFloat(d):"date"===r&&(d=new Date(d)),v.values.push(d);l.sort("string"===r?"asc"===s?(e,t)=>(""+e.values[a]).localeCompare(t.values[a]):(e,t)=>-(""+e.values[a]).localeCompare(t.values[a]):"asc"===s?(e,t)=>isNaN(e.values[a])||isNaN(t.values[a])?isNaN(e.values[a])?isNaN(t.values[a])?0:-1:1:e.values[a]<t.values[a]?-1:e.values[a]>t.values[a]?1:0:(e,t)=>isNaN(e.values[a])||isNaN(t.values[a])?isNaN(e.values[a])?isNaN(t.values[a])?0:1:-1:e.values[a]<t.values[a]?1:e.values[a]>t.values[a]?-1:0);const N=document.createDocumentFragment();return l.forEach(e=>N.appendChild(e.tr)),t.querySelector("tbody").replaceChildren(N),setTimeout(()=>is_sorting_process_on=!1,delay),!0}Node.prototype.tsortable=function(){this.querySelectorAll("thead th[data-sort], thead td[data-sort]").forEach(e=>e.onclick=tablesort)};
 </script><script>document.querySelector('.table-sortable').tsortable()</script>`,
-		renderTable(movieResults))
+		renderTable(searchResults))
 }
 
 func progressBarHTML(w http.ResponseWriter, _ *http.Request) {
@@ -110,9 +120,9 @@ func renderTable(movieCollection []types.MovieSearchResults) (tableRows string) 
 	return tableRows // Return the generated HTML for table rows
 }
 
-func fetchPlexMovies(plexIP, plexLibraryID, plexToken string, plexResolutions []string, german string) (allMovies []types.Movie) {
+func fetchPlexMovies(plexIP, plexLibraryID, plexToken string, plexResolutions []string, german string) (allMovies []types.PlexMovie) {
 	filter := []plex.Filter{}
-	if german == "true" {
+	if german == stringTrue {
 		filter = []plex.Filter{
 			{
 				Name:     "audioLanguage",

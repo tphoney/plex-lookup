@@ -6,14 +6,8 @@ const (
 	Disk4K     = "4K Blu-ray"
 )
 
-type Movie struct {
-	Title     string
-	Year      string
-	DateAdded string
-}
-
 type MovieSearchResults struct {
-	Movie
+	PlexMovie
 	SearchURL     string
 	Matches4k     int
 	MatchesBluray int
@@ -27,6 +21,12 @@ type SearchResult struct {
 	URL        string
 	Format     string
 	Year       string
+}
+
+type PlexMovie struct {
+	Title     string
+	Year      string
+	DateAdded string
 }
 
 type PlexLibrary struct {

@@ -27,7 +27,7 @@ func TestYearToDate(t *testing.T) {
 func TestMarkBestMatch(t *testing.T) {
 	// Test case 1: Matching title and year within 1 year
 	search := types.MovieSearchResults{
-		Movie: types.Movie{
+		PlexMovie: types.PlexMovie{
 			Title: "Movie Title",
 			Year:  "2022",
 		},
@@ -58,7 +58,7 @@ func TestMarkBestMatch(t *testing.T) {
 
 	// Test case 2: Non-matching title
 	search = types.MovieSearchResults{
-		Movie: types.Movie{
+		PlexMovie: types.PlexMovie{
 			Title: "Movie Title",
 			Year:  "2022",
 		},
@@ -88,7 +88,7 @@ func TestMarkBestMatch(t *testing.T) {
 
 	// Test case 3: Non-matching year
 	search = types.MovieSearchResults{
-		Movie: types.Movie{
+		PlexMovie: types.PlexMovie{
 			Title: "Movie Title",
 			Year:  "2022",
 		},

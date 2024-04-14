@@ -27,11 +27,11 @@ jobs:
         id: gen_tags
         run: |
           if [[ $GITHUB_REF == 'refs/tags/'* ]]; then
-            TAGS='["tphoney/plex-lookup:latest","tphoney/plex-lookup:'${GITHUB_REF/refs\/tags\//}'"]'
+            TAGS="tphoney/plex-lookup:latest,tphoney/plex-lookup:'${GITHUB_REF/refs\/tags\//}'"
           else
-            TAGS='["tphoney/plex-lookup:latest"]'
+            TAGS="tphoney/plex-lookup:latest"
           fi
-          echo "using: $TAGS"
+          echo "$GITHUB_REF using: $TAGS"
           echo "TAGS=$TAGS" >> "$GITHUB_ENV"
       -
         name: Build and push

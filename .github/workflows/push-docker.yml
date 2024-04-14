@@ -38,4 +38,4 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: printf '%s\n' "$TAGS"
+          tags: ${{ TAGS }} 

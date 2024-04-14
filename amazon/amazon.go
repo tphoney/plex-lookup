@@ -20,31 +20,42 @@ const (
 )
 
 func ScrapeMovies(movieSearchResult *types.MovieSearchResults) (scrapedResults []types.SearchResult) {
-	var results []types.SearchResult
+	var results, lookups []types.SearchResult
 	for _, searchResult := range movieSearchResult.SearchResults {
 		if !searchResult.BestMatch {
 			results = append(results, searchResult)
-			continue
+		} else {
+			lookups = append(lookups, searchResult)
 		}
-		scrapedDate, err := scrapeMovie(searchResult.URL)
-		if err != nil {
-			fmt.Println("Error scraping movie:", err)
+	}
+
+	if len(lookups) > 0 {
+		ch := make(chan *types.SearchResult, len(lookups))
+		// Limit number of concurrent requests
+		semaphore := make(chan struct{}, types.ConcurrencyLimit)
+		for i := range lookups {
+			go func() {
+				semaphore <- struct{}{}
+				defer func() { <-semaphore }()
+				scrapeMovie(&lookups[i], movieSearchResult.DateAdded, ch)
+			}()
 		}
-		// compare dates
-		searchResult.ReleaseDate = scrapedDate
-		if scrapedDate.After(movieSearchResult.DateAdded) {
-			searchResult.NewRelease = true
+
+		for i := 0; i < len(lookups); i++ {
+			lookup := <-ch
+			results = append(results, *lookup)
 		}
-		results = append(results, searchResult)
 	}
 	return results
 }
 
-func scrapeMovie(movieURL string) (date time.Time, err error) {
-	req, err := http.NewRequestWithContext(context.Background(), "GET", movieURL, bytes.NewBuffer([]byte{}))
+func scrapeMovie(movie *types.SearchResult, dateAdded time.Time, ch chan<- *types.SearchResult) {
+	req, err := http.NewRequestWithContext(context.Background(), "GET", movie.URL, bytes.NewBuffer([]byte{}))
+	movie.ReleaseDate = time.Time{}
 	if err != nil {
 		fmt.Println("Error creating request:", err)
-		return time.Time{}, err
+		ch <- movie
+		return
 	}
 
 	req.Header.Set("User-Agent",
@@ -54,7 +65,8 @@ func scrapeMovie(movieURL string) (date time.Time, err error) {
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("Error sending request:", err)
-		return time.Time{}, err
+		ch <- movie
+		return
 	}
 
 	defer resp.Body.Close()
@@ -62,12 +74,15 @@ func scrapeMovie(movieURL string) (date time.Time, err error) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response body:", err)
-		return time.Time{}, err
+		ch <- movie
+		return
 	}
 	rawData := string(body)
-
-	date = findMovieDetails(rawData)
-	return date, nil
+	movie.ReleaseDate = findMovieDetails(rawData)
+	if movie.ReleaseDate.After(dateAdded) {
+		movie.NewRelease = true
+	}
+	ch <- movie
 }
 
 func findMovieDetails(response string) (releaseDate time.Time) {

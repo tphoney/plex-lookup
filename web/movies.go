@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"time"
 
 	"github.com/tphoney/plex-lookup/amazon"
 	"github.com/tphoney/plex-lookup/cinemaparadiso"
@@ -63,6 +64,7 @@ func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 	jobRunning = true
 	numberOfMoviesProcessed = 0
 	totalMovies = len(plexMovies)
+	startTime := time.Now()
 	for i, movie := range plexMovies {
 		fmt.Print(".")
 		if lookup == "cinemaParadiso" {
@@ -83,6 +85,7 @@ func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 		numberOfMoviesProcessed = i
 	}
 	jobRunning = false
+	fmt.Printf("\nProcessed %d movies in %v\n", totalMovies, time.Since(startTime))
 	fmt.Fprintf(w,
 		`<table class="table-sortable">%s</tbody></table>
 <script>function getCellIndex(t){var a=t.parentNode,r=Array.from(a.parentNode.children).indexOf(a);let s=0;for(let e=0;e<a.cells.length;e++){var l=a.cells[e].colSpan;if(s+=l,0===r){if(e===t.cellIndex)return s-1}else if(!isNaN(parseInt(t.dataset.sortCol)))return parseInt(t.dataset.sortCol)}return s-1}let is_sorting_process_on=!1,delay=100;

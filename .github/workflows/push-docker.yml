@@ -28,7 +28,7 @@ jobs:
         id: gen_tags
         run: |
           if [[ $GITHUB_REF == 'refs/tags/'* ]]; then
-            TAGS="tphoney/plex-lookup:latest,tphoney/plex-lookup:'${GITHUB_REF/refs\/tags\//}'"
+            TAGS="tphoney/plex-lookup:latest, tphoney/plex-lookup:${GITHUB_REF/refs\/tags\//}"
           else
             TAGS="tphoney/plex-lookup:latest"
           fi

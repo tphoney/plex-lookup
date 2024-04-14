@@ -31,10 +31,11 @@ jobs:
           else
             TAGS='["tphoney/plex-lookup:latest"]'
           fi
-          echo '::set-output name=tags::'$TAGS
+          echo "using: $TAGS"
+          echo $TAGS >> "$GITHUB_ENV"
       -
         name: Build and push
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: ${{ fromJson(steps.gen_tags.outputs.tags) }}
+          tags: $TAGS

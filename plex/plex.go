@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"time"
 
 	types "github.com/tphoney/plex-lookup/types"
 )
@@ -242,8 +244,16 @@ func extractMovies(xmlString string) (movieList []types.PlexMovie) {
 	}
 
 	for i := range container.Video {
+		intTime, err := strconv.ParseInt(container.Video[i].AddedAt, 10, 64)
+		var parsedDate time.Time
+		if err != nil {
+			parsedDate = time.Time{}
+		} else {
+			parsedDate = time.Unix(intTime, 0)
+		}
+
 		movieList = append(movieList, types.PlexMovie{
-			Title: container.Video[i].Title, Year: container.Video[i].Year, DateAdded: container.Video[i].AddedAt})
+			Title: container.Video[i].Title, Year: container.Video[i].Year, DateAdded: parsedDate})
 	}
 	return movieList
 }

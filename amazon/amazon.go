@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/tphoney/plex-lookup/types"
 	"github.com/tphoney/plex-lookup/utils"
@@ -18,23 +19,32 @@ const (
 	amazonURL = "https://www.blu-ray.com/movies/search.php?keyword="
 )
 
-func ScrapeMovies(movieSearchResult *types.MovieSearchResults) (string, error) {
+func ScrapeMovies(movieSearchResult *types.MovieSearchResults) (scrapedResults []types.SearchResult) {
+	var results []types.SearchResult
 	for _, searchResult := range movieSearchResult.SearchResults {
-		date, err := scrapeMovie(searchResult.URL)
+		if !searchResult.BestMatch {
+			results = append(results, searchResult)
+			continue
+		}
+		scrapedDate, err := scrapeMovie(searchResult.URL)
 		if err != nil {
 			fmt.Println("Error scraping movie:", err)
 		}
 		// compare dates
-		fmt.Printf("%s- Plex: %s, Amazon: %s\n", movieSearchResult.Title, movieSearchResult.PlexMovie.DateAdded, date)
+		searchResult.ReleaseDate = scrapedDate
+		if scrapedDate.After(movieSearchResult.DateAdded) {
+			searchResult.NewRelease = true
+		}
+		results = append(results, searchResult)
 	}
-	return "", nil
+	return results
 }
 
-func scrapeMovie(movieURL string) (date string, err error) {
+func scrapeMovie(movieURL string) (date time.Time, err error) {
 	req, err := http.NewRequestWithContext(context.Background(), "GET", movieURL, bytes.NewBuffer([]byte{}))
 	if err != nil {
 		fmt.Println("Error creating request:", err)
-		return "", err
+		return time.Time{}, err
 	}
 
 	req.Header.Set("User-Agent",
@@ -44,7 +54,7 @@ func scrapeMovie(movieURL string) (date string, err error) {
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("Error sending request:", err)
-		return "", err
+		return time.Time{}, err
 	}
 
 	defer resp.Body.Close()
@@ -52,7 +62,7 @@ func scrapeMovie(movieURL string) (date string, err error) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response body:", err)
-		return "", err
+		return time.Time{}, err
 	}
 	rawData := string(body)
 
@@ -60,13 +70,21 @@ func scrapeMovie(movieURL string) (date string, err error) {
 	return date, nil
 }
 
-func findMovieDetails(response string) (releaseDate string) {
+func findMovieDetails(response string) (releaseDate time.Time) {
 	r := regexp.MustCompile(`<a class="grey noline" alt=".*">(.*?)</a></span>`)
 
 	match := r.FindStringSubmatch(response)
 	if match != nil {
-		releaseDate = match[1]
+		stringDate := match[1]
+		var err error
+		releaseDate, err = time.Parse("Jan 02, 2006", stringDate)
+		if err != nil {
+			releaseDate = time.Time{}
+		}
+	} else {
+		releaseDate = time.Time{}
 	}
+
 	return releaseDate
 }
 

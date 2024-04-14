@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer size="3" allowSync="1" art="/:/resources/movie-fanart.jpg" content="secondary" identifier="com.plexapp.plugins.library" librarySectionID="3" librarySectionTitle="Films" librarySectionUUID="16803efc-ef61-4648-bf6e-2909c09ebf5b" mediaTagPrefix="/system/bundle/media/flags/" mediaTagVersion="1711645865" thumb="/:/resources/movie.png" title1="Films" title2="sd" viewGroup="movie">
+<Video ratingKey="60830" key="/library/metadata/60830" guid="plex://movie/5d776cfc51dd69001fe3f2e3" studio="W.I.P." type="movie" title="Chaos Theory" contentRating="PG-13" summary="Frank Allen, a professional speaker who lectures on time management has a perfectly ordered and scheduled life, down to the minute. When his wife sets his clock forward 10 minutes as a joke, his day is thrown off. Deciding that his strictly ordered life has done him little good, he begins to make multiple choice index cards, choosing one at random and doing what is written on the card." rating="3.0" audienceRating="5.8" viewCount="1" lastViewedAt="1628768050" year="2007" tagline="This man will bring order to the universe...or not." thumb="/library/metadata/60830/thumb/1696026335" art="/library/metadata/60830/art/1696026335" duration="5244480" originallyAvailableAt="2007-10-26" addedAt="1674313390" updatedAt="1696026335" audienceRatingImage="rottentomatoes://image.rating.spilled" primaryExtraKey="/library/metadata/60838" ratingImage="rottentomatoes://image.rating.rotten">
+<Media id="68612" duration="5244480" bitrate="1110" width="704" height="288" aspectRatio="2.35" audioChannels="2" audioCodec="ac3" videoCodec="mpeg4" videoResolution="sd" container="avi" videoFrameRate="24p" videoProfile="advanced simple">
+<Part id="131819" key="/library/parts/131819/1296320862/file.avi" duration="5244480" file="/fourteena/Chaos Theory (2008)/Chaos Theory (2008).avi" size="733784064" container="avi" videoProfile="advanced simple" />
+</Media>
+<Genre tag="Comedy" />
+<Genre tag="Drama" />
+<Country tag="United States of America" />
+<Director tag="Marcos Siega" />
+<Writer tag="Daniel Taplitz" />
+<Role tag="Ryan Reynolds" />
+<Role tag="Emily Mortimer" />
+<Role tag="Stuart Townsend" />
+</Video>
+<Video ratingKey="62982" key="/library/metadata/62982" guid="plex://movie/5d9f352ad74e670020021175" studio="Independent Pictures (II)" type="movie" title="Gummo" contentRating="gb/18" summary="Lonely residents of a tornado-stricken Ohio town wander the deserted landscape trying to fulfill their boring, nihilistic lives." rating="3.8" audienceRating="7.3" viewCount="1" lastViewedAt="1628768116" year="1997" tagline="Prepare to visit a town you&#39;d never want to call home." thumb="/library/metadata/62982/thumb/1696026480" art="/library/metadata/62982/art/1696026480" duration="5178595" originallyAvailableAt="1997-11-24" addedAt="1674313570" updatedAt="1696026480" audienceRatingImage="rottentomatoes://image.rating.upright" ratingImage="rottentomatoes://image.rating.rotten">
+<Media id="73317" duration="5178595" bitrate="1119" width="640" height="352" aspectRatio="1.85" audioChannels="2" audioCodec="mp3" videoCodec="msmpeg4v3" videoResolution="sd" container="avi" videoFrameRate="24p">
+<Part id="132094" key="/library/parts/132094/1296323449/file.avi" duration="5178595" file="/fourteena/Gummo (1997)/Gummo (1997).avi" size="732266496" container="avi" />
+</Media>
+<Genre tag="Drama" />
+<Genre tag="Comedy" />
+<Country tag="United States of America" />
+<Director tag="Harmony Korine" />
+<Writer tag="Harmony Korine" />
+<Role tag="Jacob Reynolds" />
+<Role tag="Nick Sutton" />
+<Role tag="Linda Manz" />
+</Video>
+<Video ratingKey="63904" key="/library/metadata/63904" guid="plex://movie/5d776bf723d5a3001f515f5f" studio="GSP Studios" type="movie" title="Mad to Be Normal" contentRating="gb/15" summary="During the 1960s, a renegade Scottish psychiatrist courts controversy within his profession for his approach to the field, and for the unique community he creates for his patients to inhabit." rating="6.1" audienceRating="6.3" viewCount="1" lastViewedAt="1710441486" year="2017" thumb="/library/metadata/63904/thumb/1696026573" art="/library/metadata/63904/art/1696026573" duration="6329526" originallyAvailableAt="2017-04-06" addedAt="1676229015" updatedAt="1696026573" audienceRatingImage="rottentomatoes://image.rating.upright" primaryExtraKey="/library/metadata/63905" ratingImage="rottentomatoes://image.rating.ripe">
+<Media id="78173" duration="6329526" bitrate="1888" width="720" height="304" aspectRatio="2.35" audioChannels="2" audioCodec="ac3" videoCodec="mpeg4" videoResolution="sd" container="avi" videoFrameRate="24p" videoProfile="advanced simple">
+<Part id="132241" key="/library/parts/132241/1676227500/file.avi" duration="6329526" file="/toshix/Mad to Be Normal (2017)/Mad to Be Normal (2017).avi" size="1498359130" container="avi" videoProfile="advanced simple" />
+</Media>
+<Genre tag="Biography" />
+<Genre tag="Drama" />
+<Country tag="United Kingdom" />
+<Director tag="Robert Mullan" />
+<Writer tag="Robert Mullan" />
+<Writer tag="Tracy Moreton" />
+<Role tag="David Tennant" />
+<Role tag="Elisabeth Moss" />
+<Role tag="Michael Gambon" />
+</Video>
+</MediaContainer>

@@ -5,6 +5,7 @@ on:
     workflows: ["golangci-lint"]
     types:
       - completed
+  release:
 
 jobs:
   docker:

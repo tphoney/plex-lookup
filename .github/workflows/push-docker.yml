@@ -22,9 +22,19 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - 
+        name: generate tags
+        id: gen_tags
+        run: |
+          if [[ $GITHUB_REF == 'refs/tags/'* ]]; then
+            TAGS='["tphoney/plex-lookup:latest","tphoney/plex-lookup:'${GITHUB_REF/refs\/tags\//}'"]'
+          else
+            TAGS='["tphoney/plex-lookup:latest"]'
+          fi
+          echo '::set-output name=tags::'$TAGS
       -
         name: Build and push
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: tphoney/plex-lookup:latest
+          tags: ${{ fromJson(steps.gen_tags.outputs.tags) }}

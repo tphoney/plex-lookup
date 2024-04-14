@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/tphoney/plex-lookup/types"
 )
@@ -48,8 +49,8 @@ func TestFindMovieDetails(t *testing.T) {
 	}
 
 	processed := findMovieDetails(string(rawdata))
-
-	if processed != "Oct 04, 2010" {
-		t.Errorf("Expected Oct 04, 2010, but got %s", processed)
+	expected := time.Date(2010, time.October, 4, 0, 0, 0, 0, time.UTC)
+	if processed.Compare(expected) != 0 {
+		t.Errorf("Expected %s, but got %s", expected, processed)
 	}
 }

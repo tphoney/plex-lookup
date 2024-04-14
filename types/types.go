@@ -1,5 +1,7 @@
 package types
 
+import "time"
+
 const (
 	DiskBluray = "Blu-ray"
 	DiskDVD    = "DVD"
@@ -15,18 +17,20 @@ type MovieSearchResults struct {
 }
 
 type SearchResult struct {
-	FoundTitle string
-	UITitle    string
-	BestMatch  bool
-	URL        string
-	Format     string
-	Year       string
+	FoundTitle  string
+	UITitle     string
+	BestMatch   bool
+	URL         string
+	Format      string
+	Year        string
+	ReleaseDate time.Time
+	NewRelease  bool
 }
 
 type PlexMovie struct {
 	Title     string
 	Year      string
-	DateAdded string
+	DateAdded time.Time
 }
 
 type PlexLibrary struct {

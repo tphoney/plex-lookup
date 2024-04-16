@@ -8,6 +8,13 @@ import (
 	types "github.com/tphoney/plex-lookup/types"
 )
 
+var (
+	plexIP             = os.Getenv("PLEX_IP")
+	plexToken          = os.Getenv("PLEX_TOKEN")
+	plexMovieLibraryID = os.Getenv("PLEX_MOVIE_LIBRARY_ID")
+	plexTVLibraryID    = os.Getenv("PLEX_TV_LIBRARY_ID")
+)
+
 func TestFindMovieDetails(t *testing.T) {
 	rawdata, err := os.ReadFile("testdata/movies.xml")
 	if err != nil {
@@ -37,5 +44,35 @@ func TestFindMovieDetails(t *testing.T) {
 
 	if processed[0].DateAdded.Compare(expected[0].DateAdded) != 0 {
 		t.Errorf("Expected date %s, but got %s", expected[0].DateAdded, processed[0].DateAdded)
+	}
+}
+
+func TestGetPlexMovies(t *testing.T) {
+	if plexIP == "" || plexTVLibraryID == "" || plexToken == "" {
+		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
+	}
+	result := GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, "", nil)
+
+	if len(result) == 0 {
+		t.Errorf("Expected at least one TV show, but got %d", len(result))
+	}
+}
+
+func TestGetPlexTV(t *testing.T) {
+	if plexIP == "" || plexTVLibraryID == "" || plexToken == "" {
+		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
+	}
+	result := GetPlexTV(plexIP, plexTVLibraryID, plexToken, "")
+
+	if len(result) == 0 {
+		t.Errorf("Expected at least one TV show, but got %d", len(result))
+	}
+
+	if len(result[0].Seasons) == 0 {
+		t.Errorf("Expected at least one season, but got %d", len(result[0].Seasons))
+	}
+
+	if len(result[0].Seasons[0].Episodes) == 0 {
+		t.Errorf("Expected at least one episode, but got %d", len(result[0].Seasons[0].Episodes))
 	}
 }

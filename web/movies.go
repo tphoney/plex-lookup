@@ -128,7 +128,7 @@ func renderTable(movieCollection []types.MovieSearchResults) (tableRows string) 
 	return tableRows // Return the generated HTML for table rows
 }
 
-func fetchPlexMovies(plexIP, plexLibraryID, plexToken string, plexResolutions []string, german string) (allMovies []types.PlexMovie) {
+func fetchPlexMovies(plexIP, plexMovieLibraryID, plexToken string, plexResolutions []string, german string) (allMovies []types.PlexMovie) {
 	filter := []plex.Filter{}
 	if german == stringTrue {
 		filter = []plex.Filter{
@@ -145,10 +145,10 @@ func fetchPlexMovies(plexIP, plexLibraryID, plexToken string, plexResolutions []
 		}
 	}
 	if len(plexResolutions) == 0 {
-		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, plexToken, "", filter)...)
+		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, "", filter)...)
 	} else {
 		for _, resolution := range plexResolutions {
-			allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexLibraryID, plexToken, resolution, filter)...)
+			allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, resolution, filter)...)
 		}
 	}
 	return allMovies

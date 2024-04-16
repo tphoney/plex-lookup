@@ -3,9 +3,10 @@ package types
 import "time"
 
 const (
-	DiskBluray = "Blu-ray"
-	DiskDVD    = "DVD"
-	Disk4K     = "4K Blu-ray"
+	DiskBluray       = "Blu-ray"
+	DiskDVD          = "DVD"
+	Disk4K           = "4K Blu-ray"
+	ConcurrencyLimit = 10
 )
 
 type MovieSearchResults struct {

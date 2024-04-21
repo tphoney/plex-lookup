@@ -41,10 +41,11 @@ Available Commands:
   web             Starts the web server
 
 Flags:
-  -h, --help                   help for plex-lookup
-      --plexIP string          Plex IP Address
-      --plexLibraryID string   Plex Library ID
-      --plexToken string       Plex Token
+  -h, --help                        help for plex-lookup
+      --plexIP string               Plex IP Address
+      --plexMovieLibraryID string   Plex Library ID
+      --plexToken string            Plex Token
+      --type string                 Library Type (Movie, TV) (default "Movie")s
 
 Use "plex-lookup [command] --help" for more information about a command.
 ```
@@ -80,7 +81,7 @@ ID: 1
 **You will need to get the library id using the library command above**
 
 ```bash
-docker run --rm tphoney/plex-lookup /plex-lookup amazon --plexIP=192.168.1.3 --plexLibraryID=3 --plexToken=<secrets>
+docker run --rm tphoney/plex-lookup /plex-lookup amazon --plexIP=192.168.1.3 --plexMovieLibraryID=3 --plexToken=<secrets>
 ```
 
 gives the output:
@@ -93,7 +94,7 @@ gives the output:
 **You will need to get the library id using the library command above**
 
 ```bash
-docker run --rm tphoney/plex-lookup /plex-lookup cinema-paradiso --plexIP=192.168.1.3 --plexLibraryID=3 --plexToken=<secrets>
+docker run --rm tphoney/plex-lookup /plex-lookup cinema-paradiso --plexIP=192.168.1.3 --plexMovieLibraryID=3 --plexToken=<secrets>
 ```
 
 gives the output:

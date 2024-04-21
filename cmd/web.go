@@ -21,7 +21,7 @@ func startServer() {
 	plexInformation := types.PlexInformation{}
 	// read environment variables
 	plexInformation.IP = os.Getenv("PLEX_IP")
-	plexInformation.MovieLibraryID = os.Getenv("PLEX_LIBRARY_ID")
+	plexInformation.MovieLibraryID = os.Getenv("PLEX_MOVIE_LIBRARY_ID")
 	plexInformation.Token = os.Getenv("PLEX_TOKEN")
 
 	web.StartServer(plexInformation)

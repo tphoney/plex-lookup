@@ -10,15 +10,17 @@ const (
 	ConcurrencyLimit = 10
 )
 
-type MovieSearchResults struct {
+type SearchResults struct {
 	PlexMovie
-	SearchURL     string
-	Matches4k     int
-	MatchesBluray int
-	SearchResults []SearchResult
+	PlexTVShow
+	SearchURL          string
+	Matches4k          int
+	MatchesBluray      int
+	MovieSearchResults []MovieSearchResult
+	TVSearchResults    []TVSearchResult
 }
 
-type SearchResult struct {
+type MovieSearchResult struct {
 	FoundTitle  string
 	UITitle     string
 	BestMatch   bool
@@ -27,6 +29,25 @@ type SearchResult struct {
 	Year        string
 	ReleaseDate time.Time
 	NewRelease  bool
+}
+
+type TVSearchResult struct {
+	FoundTitle  string
+	UITitle     string
+	BestMatch   bool
+	URL         string
+	Format      string
+	Year        string
+	ReleaseDate time.Time
+	NewRelease  bool
+	Series      []TVSeries
+}
+
+type TVSeries struct {
+	Number      int
+	URL         string
+	Format      []string
+	ReleaseDate time.Time
 }
 
 type PlexMovie struct {

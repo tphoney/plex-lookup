@@ -7,18 +7,32 @@ import (
 	"github.com/tphoney/plex-lookup/types"
 )
 
-func MarkBestMatch(search *types.MovieSearchResults) types.MovieSearchResults {
+// nolint: dupl, nolintlint
+func MarkBestMatch(search *types.SearchResults) types.SearchResults {
 	expectedYear := YearToDate(search.PlexMovie.Year)
-	for i := range search.SearchResults {
+	for i := range search.MovieSearchResults {
 		// normally a match if the year is within 1 year of each other
-		resultYear := YearToDate(search.SearchResults[i].Year)
-		if search.SearchResults[i].FoundTitle == search.PlexMovie.Title && (resultYear.Year() == expectedYear.Year() ||
+		resultYear := YearToDate(search.MovieSearchResults[i].Year)
+		if search.MovieSearchResults[i].FoundTitle == search.PlexMovie.Title && (resultYear.Year() == expectedYear.Year() ||
 			resultYear.Year() == expectedYear.Year()-1 || resultYear.Year() == expectedYear.Year()+1) {
-			search.SearchResults[i].BestMatch = true
-			if search.SearchResults[i].Format == types.DiskBluray {
+			search.MovieSearchResults[i].BestMatch = true
+			if search.MovieSearchResults[i].Format == types.DiskBluray {
 				search.MatchesBluray++
 			}
-			if search.SearchResults[i].Format == types.Disk4K {
+			if search.MovieSearchResults[i].Format == types.Disk4K {
+				search.Matches4k++
+			}
+		}
+	}
+	for i := range search.TVSearchResults {
+		resultYear := YearToDate(search.TVSearchResults[i].Year)
+		if search.TVSearchResults[i].FoundTitle == search.PlexTVShow.Title && (resultYear.Year() == expectedYear.Year() ||
+			resultYear.Year() == expectedYear.Year()-1 || resultYear.Year() == expectedYear.Year()+1) {
+			search.TVSearchResults[i].BestMatch = true
+			if search.TVSearchResults[i].Format == types.DiskBluray {
+				search.MatchesBluray++
+			}
+			if search.TVSearchResults[i].Format == types.Disk4K {
 				search.Matches4k++
 			}
 		}

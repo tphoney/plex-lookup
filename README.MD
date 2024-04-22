@@ -8,10 +8,10 @@ A tool to compare your plex libraries with other physical media rental / purchas
 
 ## Table of Contents
 
-- [Docker](#Docker)
+- [Docker](#docker)
 - [Usage](#usage)
-  - [amazon](#amazon) uses blu-ray.com
-  - [cinema paradiso](#cinema-paradiso)
+  - [Amazon](#amazon) uses blu-ray.com
+  - [Cinema Paradiso](#cinema-paradiso)
   - [plex libraries](#plex-libraries)
   - [web](#web)
 - [Building](#building)
@@ -20,7 +20,7 @@ A tool to compare your plex libraries with other physical media rental / purchas
 
 You can get the docker image here [tphoney/plex-lookup](https://hub.docker.com/r/tphoney/plex-lookup)
 
-**TLDR run the website already**
+## **TLDR run the website already**
 
 ```bash
 docker run --rm  -p 9090:9090 tphoney/plex-lookup
@@ -45,7 +45,7 @@ Flags:
       --plexIP string               Plex IP Address
       --plexMovieLibraryID string   Plex Library ID
       --plexToken string            Plex Token
-      --type string                 Library Type (Movie, TV) (default "Movie")s
+      --type string                 Library Type (Movie, TV) (default "Movie")
 
 Use "plex-lookup [command] --help" for more information about a command.
 ```
@@ -76,9 +76,9 @@ Type: artist
 ID: 1
 ```
 
-### amazon
+### Amazon
 
-**You will need to get the library id using the library command above**
+**NB** You will need to get the library id using the library command above.
 
 ```bash
 docker run --rm tphoney/plex-lookup /plex-lookup amazon --plexIP=192.168.1.3 --plexMovieLibraryID=3 --plexToken=<secrets>
@@ -89,9 +89,9 @@ gives the output:
 ```bash
 ```
 
-### cinema-paradiso
+### Cinema Paradiso
 
-**You will need to get the library id using the library command above**
+**NB** You will need to get the library id using the library command above.
 
 ```bash
 docker run --rm tphoney/plex-lookup /plex-lookup cinema-paradiso --plexIP=192.168.1.3 --plexMovieLibraryID=3 --plexToken=<secrets>

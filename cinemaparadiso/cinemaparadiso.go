@@ -8,35 +8,71 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/tphoney/plex-lookup/types"
 	"github.com/tphoney/plex-lookup/utils"
 )
 
 const (
-	cinemaparadisoURL = "https://www.cinemaparadiso.co.uk/catalog-w/Search.aspx"
+	cinemaparadisoSearchURL = "https://www.cinemaparadiso.co.uk/catalog-w/Search.aspx"
+	cinemaparadisoSeriesURL = "https://www.cinemaparadiso.co.uk/ajax/CPMain.wsFilmDescription,CPMain.ashx?_method=ShowSeries&_session=r"
 )
 
-func SearchCinemaParadiso(plexMovie types.PlexMovie) (movieSearchResult types.MovieSearchResults, err error) {
+func SearchCinemaParadisoMovie(plexMovie types.PlexMovie) (movieSearchResult types.SearchResults, err error) {
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
-	rawQuery := []byte(fmt.Sprintf("form-search-field=%s", urlEncodedTitle))
-	req, err := http.NewRequestWithContext(context.Background(), "POST", cinemaparadisoURL, bytes.NewBuffer(rawQuery))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded") // Assuming form data
-
 	movieSearchResult.PlexMovie = plexMovie
-	movieSearchResult.SearchURL = cinemaparadisoURL + "?form-search-field=" + urlEncodedTitle
+	movieSearchResult.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
+	rawData, err := makeSearchRequest(urlEncodedTitle)
+	if err != nil {
+		fmt.Println("Error making web request:", err)
+		return movieSearchResult, err
+	}
 
+	moviesFound, _ := findTitlesInResponse(rawData, true)
+	movieSearchResult.MovieSearchResults = moviesFound
+	movieSearchResult = utils.MarkBestMatch(&movieSearchResult)
+
+	return movieSearchResult, nil
+}
+
+func SearchCinemaParadisoTV(plexTVShow *types.PlexTVShow) (tvSearchResult types.SearchResults, err error) {
+	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)
+	tvSearchResult.PlexTVShow = *plexTVShow
+	tvSearchResult.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
+	rawData, err := makeSearchRequest(urlEncodedTitle)
+	if err != nil {
+		fmt.Println("Error making web request:", err)
+		return tvSearchResult, err
+	}
+
+	_, tvFound := findTitlesInResponse(rawData, false)
+	tvSearchResult.TVSearchResults = tvFound
+	tvSearchResult = utils.MarkBestMatch(&tvSearchResult)
+	// now we can get the series information for each best match
+	for i := range tvSearchResult.TVSearchResults {
+		if tvSearchResult.TVSearchResults[i].BestMatch {
+			_, _ = findTVSeriesInfo(tvSearchResult.TVSearchResults[i].URL)
+		}
+	}
+	return tvSearchResult, nil
+}
+
+func findTVSeriesInfo(seriesURL string) (tvSeries []types.TVSeries, err error) {
+	// make a request to the url
+	req, err := http.NewRequestWithContext(context.Background(), "GET", seriesURL, bytes.NewBuffer([]byte{}))
 	if err != nil {
 		fmt.Println("Error creating request:", err)
-		return movieSearchResult, err
+		return tvSeries, err
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("Error sending request:", err)
-		return movieSearchResult, err
+		return tvSeries, err
 	}
 
 	defer resp.Body.Close()
@@ -44,25 +80,126 @@ func SearchCinemaParadiso(plexMovie types.PlexMovie) (movieSearchResult types.Mo
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response body:", err)
-		return movieSearchResult, err
+		return tvSeries, err
 	}
 	rawData := string(body)
 	// write the raw data to a file
-	// os.WriteFile("cinemaparadiso.html", body, 0644)
-
-	moviesFound := findMoviesInResponse(rawData)
-	movieSearchResult.SearchResults = moviesFound
-	movieSearchResult = utils.MarkBestMatch(&movieSearchResult)
-
-	return movieSearchResult, nil
+	// os.WriteFile("series.html", body, 0644)
+	tvSeries = findTVSeriesInResponse(rawData)
+	return tvSeries, nil
 }
 
-func findMoviesInResponse(response string) (results []types.SearchResult) {
+func makeSearchRequest(urlEncodedTitle string) (rawResponse string, err error) {
+	rawQuery := []byte(fmt.Sprintf("form-search-field=%s", urlEncodedTitle))
+	req, err := http.NewRequestWithContext(context.Background(), "POST", cinemaparadisoSearchURL, bytes.NewBuffer(rawQuery))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded") // Assuming form data
+
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return rawResponse, err
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return rawResponse, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return rawResponse, err
+	}
+	rawData := string(body)
+	// write the raw data to a file
+	// os.WriteFile("search.html", body, 0644)
+	return rawData, nil
+}
+
+func findTVSeriesInResponse(response string) (tvSeries []types.TVSeries) {
+	// look for the series in the response
+	r := regexp.MustCompile(`<li data-filmId="(\d*)">`)
+	match := r.FindAllStringSubmatch(response, -1)
+	for i, m := range match {
+		tvSeries = append(tvSeries, types.TVSeries{Number: i, URL: m[1]})
+	}
+	// remove the first entry as it is general information
+	results := make([]types.TVSeries, 0, len(tvSeries))
+	if len(tvSeries) > 0 {
+		tvSeries = tvSeries[1:]
+		ch := make(chan *types.TVSeries, len(tvSeries))
+
+		semaphore := make(chan struct{}, types.ConcurrencyLimit)
+		for i := range tvSeries {
+			go func() {
+				semaphore <- struct{}{}
+				defer func() { <-semaphore }()
+				makeSeriesRequest(tvSeries[i], ch)
+			}()
+		}
+
+		for i := 0; i < len(tvSeries); i++ {
+			result := <-ch
+			results = append(results, *result)
+		}
+	}
+	// sort the results by number
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Number < results[j].Number
+	})
+	return results
+}
+
+func makeSeriesRequest(tv types.TVSeries, ch chan<- *types.TVSeries) {
+	content := []byte(fmt.Sprintf("FilmID=%s", tv.URL))
+	req, err := http.NewRequestWithContext(context.Background(), "POST", cinemaparadisoSeriesURL, bytes.NewBuffer(content))
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		ch <- &tv
+		return
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		ch <- &tv
+		return
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		ch <- &tv
+		return
+	}
+	rawData := string(body)
+	// write the raw data to a file
+	r := regexp.MustCompile(`{.."Media..":.."(.*?)",.."ReleaseDate..":.."(.*?)"}`)
+
+	// Find all matches
+	matches := r.FindAllStringSubmatch(rawData, -1)
+	for _, match := range matches {
+		tv.Format = append(tv.Format, strings.ReplaceAll(match[1], "\\", ""))
+		// strip slashes from the date
+		date := strings.ReplaceAll(match[2], "\\", "")
+		var releaseDate time.Time
+		releaseDate, err = time.Parse("02/01/2006", date)
+		if err != nil {
+			releaseDate = time.Time{}
+		}
+		tv.ReleaseDate = releaseDate
+	}
+	ch <- &tv
+}
+
+func findTitlesInResponse(response string, movie bool) (movieResults []types.MovieSearchResult, tvResults []types.TVSearchResult) {
 	// look for the movies in the response
 	// will be surrounded by <li class="clearfix"> and </li>
-	// the url will be in the href attribute of the <a> tag
-	// the title will be in the <a> tag
-
 	// Find the start and end index of the movie entry
 	for {
 		startIndex := strings.Index(response, "<li class=\"clearfix\">")
@@ -84,7 +221,7 @@ func findMoviesInResponse(response string) (results []types.SearchResult) {
 			returnURL := movieEntry[urlStartIndex:urlEndIndex]
 
 			// Find the formats of the movies
-			formats := extractMovieFormats(movieEntry)
+			formats := extractDiscFormats(movieEntry)
 
 			// Find the title of the movie
 			r := regexp.MustCompile(`<a.*?>(.*?)\s*\((.*?)\)</a>`)
@@ -97,7 +234,13 @@ func findMoviesInResponse(response string) (results []types.SearchResult) {
 				foundTitle := match[1]
 				year := match[2]
 				for _, format := range formats {
-					results = append(results, types.SearchResult{URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle, UITitle: format})
+					if movie {
+						movieResults = append(movieResults, types.MovieSearchResult{
+							URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle, UITitle: format})
+					} else {
+						tvResults = append(tvResults, types.TVSearchResult{
+							URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle, UITitle: format})
+					}
 				}
 			}
 			// remove the movie entry from the response
@@ -107,10 +250,10 @@ func findMoviesInResponse(response string) (results []types.SearchResult) {
 		}
 	}
 
-	return results
+	return movieResults, tvResults
 }
 
-func extractMovieFormats(movieEntry string) []string {
+func extractDiscFormats(movieEntry string) []string {
 	ulStartIndex := strings.Index(movieEntry, `<ul class="media-types">`) + len(`<ul class="media-types">`)
 	ulEndIndex := strings.Index(movieEntry[ulStartIndex:], "</ul>") + ulStartIndex
 	ulChunk := movieEntry[ulStartIndex:ulEndIndex]

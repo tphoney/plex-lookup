@@ -19,9 +19,9 @@ const (
 	amazonURL = "https://www.blu-ray.com/movies/search.php?keyword="
 )
 
-func ScrapeMovies(movieSearchResult *types.MovieSearchResults) (scrapedResults []types.SearchResult) {
-	var results, lookups []types.SearchResult
-	for _, searchResult := range movieSearchResult.SearchResults {
+func ScrapeMovies(movieSearchResult *types.SearchResults) (scrapedResults []types.MovieSearchResult) {
+	var results, lookups []types.MovieSearchResult
+	for _, searchResult := range movieSearchResult.MovieSearchResults {
 		if !searchResult.BestMatch {
 			results = append(results, searchResult)
 		} else {
@@ -30,14 +30,14 @@ func ScrapeMovies(movieSearchResult *types.MovieSearchResults) (scrapedResults [
 	}
 
 	if len(lookups) > 0 {
-		ch := make(chan *types.SearchResult, len(lookups))
+		ch := make(chan *types.MovieSearchResult, len(lookups))
 		// Limit number of concurrent requests
 		semaphore := make(chan struct{}, types.ConcurrencyLimit)
 		for i := range lookups {
 			go func() {
 				semaphore <- struct{}{}
 				defer func() { <-semaphore }()
-				scrapeMovie(&lookups[i], movieSearchResult.DateAdded, ch)
+				scrapeMovie(&lookups[i], movieSearchResult.PlexMovie.DateAdded, ch)
 			}()
 		}
 
@@ -49,7 +49,7 @@ func ScrapeMovies(movieSearchResult *types.MovieSearchResults) (scrapedResults [
 	return results
 }
 
-func scrapeMovie(movie *types.SearchResult, dateAdded time.Time, ch chan<- *types.SearchResult) {
+func scrapeMovie(movie *types.MovieSearchResult, dateAdded time.Time, ch chan<- *types.MovieSearchResult) {
 	req, err := http.NewRequestWithContext(context.Background(), "GET", movie.URL, bytes.NewBuffer([]byte{}))
 	movie.ReleaseDate = time.Time{}
 	if err != nil {
@@ -103,7 +103,7 @@ func findMovieDetails(response string) (releaseDate time.Time) {
 	return releaseDate
 }
 
-func SearchAmazon(plexMovie types.PlexMovie, filter string) (movieSearchResult types.MovieSearchResults, err error) {
+func SearchAmazon(plexMovie types.PlexMovie, filter string) (movieSearchResult types.SearchResults, err error) {
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
 	amazonURL := amazonURL + urlEncodedTitle
 	if filter != "" {
@@ -144,12 +144,12 @@ func SearchAmazon(plexMovie types.PlexMovie, filter string) (movieSearchResult t
 	rawData := string(body)
 
 	moviesFound := findMoviesInResponse(rawData)
-	movieSearchResult.SearchResults = moviesFound
+	movieSearchResult.MovieSearchResults = moviesFound
 	movieSearchResult = utils.MarkBestMatch(&movieSearchResult)
 	return movieSearchResult, nil
 }
 
-func findMoviesInResponse(response string) (results []types.SearchResult) {
+func findMoviesInResponse(response string) (results []types.MovieSearchResult) {
 	// Find the start and end index of the movie entry
 	for {
 		startIndex := strings.Index(response, `<a class="hoverlink" data-globalproductid=`)
@@ -190,7 +190,7 @@ func findMoviesInResponse(response string) (results []types.SearchResult) {
 					format = types.DiskBluray
 				}
 
-				results = append(results, types.SearchResult{URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle, UITitle: format})
+				results = append(results, types.MovieSearchResult{URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle, UITitle: format})
 			}
 			// remove the movie entry from the response
 			response = response[endIndex:]

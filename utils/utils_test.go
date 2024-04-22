@@ -26,19 +26,19 @@ func TestYearToDate(t *testing.T) {
 }
 func TestMarkBestMatch(t *testing.T) {
 	// Test case 1: Matching title and year within 1 year
-	search := types.MovieSearchResults{
+	search := types.SearchResults{
 		PlexMovie: types.PlexMovie{
 			Title: "Movie Title",
 			Year:  "2022",
 		},
-		SearchResults: []types.SearchResult{
+		MovieSearchResults: []types.MovieSearchResult{
 			{
 				FoundTitle: "Movie Title",
 				Year:       "2022",
 			},
 		},
 	}
-	expectedResults := []types.SearchResult{
+	expectedResults := []types.MovieSearchResult{
 		{
 			FoundTitle: "Movie Title",
 			Year:       "2022",
@@ -46,72 +46,72 @@ func TestMarkBestMatch(t *testing.T) {
 		},
 	}
 	result := MarkBestMatch(&search)
-	if len(result.SearchResults) != len(expectedResults) {
-		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.SearchResults))
+	if len(result.MovieSearchResults) != len(expectedResults) {
+		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.MovieSearchResults))
 	} else {
-		for i := range result.SearchResults {
-			if result.SearchResults[i] != expectedResults[i] {
-				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result.SearchResults[i])
+		for i := range result.MovieSearchResults {
+			if result.MovieSearchResults[i] != expectedResults[i] {
+				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result.MovieSearchResults[i])
 			}
 		}
 	}
 
 	// Test case 2: Non-matching title
-	search = types.MovieSearchResults{
+	search = types.SearchResults{
 		PlexMovie: types.PlexMovie{
 			Title: "Movie Title",
 			Year:  "2022",
 		},
-		SearchResults: []types.SearchResult{
+		MovieSearchResults: []types.MovieSearchResult{
 			{
 				FoundTitle: "Other Movie",
 				Year:       "2022",
 			},
 		},
 	}
-	expectedResults = []types.SearchResult{
+	expectedResults = []types.MovieSearchResult{
 		{
 			FoundTitle: "Other Movie",
 			Year:       "2022",
 		},
 	}
 	result = MarkBestMatch(&search)
-	if len(result.SearchResults) != len(expectedResults) {
-		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.SearchResults))
+	if len(result.MovieSearchResults) != len(expectedResults) {
+		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.MovieSearchResults))
 	} else {
-		for i := range result.SearchResults {
-			if result.SearchResults[i] != expectedResults[i] {
-				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result.SearchResults[i])
+		for i := range result.MovieSearchResults {
+			if result.MovieSearchResults[i] != expectedResults[i] {
+				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result.MovieSearchResults[i])
 			}
 		}
 	}
 
 	// Test case 3: Non-matching year
-	search = types.MovieSearchResults{
+	search = types.SearchResults{
 		PlexMovie: types.PlexMovie{
 			Title: "Movie Title",
 			Year:  "2022",
 		},
-		SearchResults: []types.SearchResult{
+		MovieSearchResults: []types.MovieSearchResult{
 			{
 				FoundTitle: "Movie Title",
 				Year:       "2024",
 			},
 		},
 	}
-	expectedResults = []types.SearchResult{
+	expectedResults = []types.MovieSearchResult{
 		{
 			FoundTitle: "Movie Title",
 			Year:       "2024",
 		},
 	}
 	result = MarkBestMatch(&search)
-	if len(result.SearchResults) != len(expectedResults) {
-		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.SearchResults))
+	if len(result.MovieSearchResults) != len(expectedResults) {
+		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.MovieSearchResults))
 	} else {
-		for i := range result.SearchResults {
-			if result.SearchResults[i] != expectedResults[i] {
-				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result.SearchResults[i])
+		for i := range result.MovieSearchResults {
+			if result.MovieSearchResults[i] != expectedResults[i] {
+				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result.MovieSearchResults[i])
 			}
 		}
 	}

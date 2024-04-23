@@ -7,36 +7,31 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/tphoney/plex-lookup/amazon"
 	"github.com/tphoney/plex-lookup/cinemaparadiso"
 	"github.com/tphoney/plex-lookup/plex"
 	"github.com/tphoney/plex-lookup/types"
 )
 
-const (
-	stringTrue = "true"
-)
-
 var (
-	//go:embed movies.html
-	moviesPage string
+	//go:embed tv.html
+	tvPage string
 
-	numberOfMoviesProcessed int  = 0
-	jobRunning              bool = false
-	totalMovies             int  = 0
+	numberOfTVProcessed int  = 0
+	tvJobRunning        bool = false
+	totalTV             int  = 0
 )
 
-func moviesHandler(w http.ResponseWriter, _ *http.Request) {
-	tmpl := template.Must(template.New("movies").Parse(moviesPage))
+func tvHandler(w http.ResponseWriter, _ *http.Request) {
+	tmpl := template.Must(template.New("tv").Parse(tvPage))
 	err := tmpl.Execute(w, nil)
 	if err != nil {
-		http.Error(w, "Failed to render movies page", http.StatusInternalServerError)
+		http.Error(w, "Failed to render tv page", http.StatusInternalServerError)
 		return
 	}
 }
 
 // nolint: lll, nolintlint
-func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
+func processTVHTML(w http.ResponseWriter, r *http.Request) {
 	lookup := r.FormValue("lookup")
 	// plex resolutions
 	sd := r.FormValue("sd")
@@ -55,61 +50,56 @@ func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// lookup filters
-	german := r.FormValue("german")
-	newerVersion := r.FormValue("newerVersion")
-	// Prepare table plexMovies
-	plexMovies := fetchPlexMovies(PlexInformation.IP, PlexInformation.MovieLibraryID, PlexInformation.Token, filteredResolutions, german)
+	// german := r.FormValue("german")
+	// newerVersion := r.FormValue("newerVersion")
+	// Prepare table plexTV
+	plexTV := plex.GetPlexTV(PlexInformation.IP, PlexInformation.TVLibraryID, PlexInformation.Token, filteredResolutions)
 	var searchResults []types.SearchResults
 	var searchResult types.SearchResults
-	jobRunning = true
-	numberOfMoviesProcessed = 0
-	totalMovies = len(plexMovies)
+	tvJobRunning = true
+
+	numberOfTVProcessed = 0
+	totalTV = len(plexTV)
 	startTime := time.Now()
-	for i, movie := range plexMovies {
+	for i := range plexTV {
 		fmt.Print(".")
 		if lookup == "cinemaParadiso" {
-			searchResult, _ = cinemaparadiso.SearchCinemaParadisoMovie(movie)
-		} else {
-			if german == stringTrue {
-				searchResult, _ = amazon.SearchAmazon(movie, "&audio=german")
-			} else {
-				searchResult, _ = amazon.SearchAmazon(movie, "")
-			}
-			// if we are filtering by newer version, we need to search again
-			if newerVersion == stringTrue {
-				scrapedResults := amazon.ScrapeMovies(&searchResult)
-				searchResult.MovieSearchResults = scrapedResults
-			}
+			searchResult, _ = cinemaparadiso.SearchCinemaParadisoTV(&plexTV[i])
+			// } else {
+			// 	if german == stringTrue {
+			// 		searchResult, _ = amazon.SearchAmazon(plexTV[i], "&audio=german")
+			// 	} else {
+			// 		searchResult, _ = amazon.SearchAmazon(plexTV[i], "")
+			// 	}
+			// 	// if we are filtering by newer version, we need to search again
+			// 	if newerVersion == stringTrue {
+			// 		scrapedResults := amazon.ScrapeMovies(&searchResult)
+			// 		searchResult.MovieSearchResults = scrapedResults
+			// 	}
 		}
 		searchResults = append(searchResults, searchResult)
-		numberOfMoviesProcessed = i
+		numberOfTVProcessed = i
 	}
-	jobRunning = false
-	fmt.Printf("\nProcessed %d movies in %v\n", totalMovies, time.Since(startTime))
+	tvJobRunning = false
+	fmt.Printf("\nProcessed %d TV Shows in %v\n", totalTV, time.Since(startTime))
 	fmt.Fprintf(w,
 		`<table class="table-sortable">%s</tbody></table>
 <script>function getCellIndex(t){var a=t.parentNode,r=Array.from(a.parentNode.children).indexOf(a);let s=0;for(let e=0;e<a.cells.length;e++){var l=a.cells[e].colSpan;if(s+=l,0===r){if(e===t.cellIndex)return s-1}else if(!isNaN(parseInt(t.dataset.sortCol)))return parseInt(t.dataset.sortCol)}return s-1}let is_sorting_process_on=!1,delay=100;
 function tablesort(e){if(is_sorting_process_on)return!1;is_sorting_process_on=!0;var t=e.currentTarget.closest("table"),a=getCellIndex(e.currentTarget),r=e.currentTarget.dataset.sort,s=t.querySelector("th[data-dir]"),s=(s&&s!==e.currentTarget&&delete s.dataset.dir,e.currentTarget.dataset.dir?"asc"===e.currentTarget.dataset.dir?"desc":"asc":e.currentTarget.dataset.sortDefault||"asc"),l=(e.currentTarget.dataset.dir=s,[]),o=t.querySelectorAll("tbody tr");let n,u,c,d,v;for(j=0,jj=o.length;j<jj;j++)for(n=o[j],l.push({tr:n,values:[]}),v=l[j],c=n.querySelectorAll("th, td"),i=0,ii=c.length;i<ii;i++)u=c[i],d=u.dataset.sortValue||u.innerText,"int"===r?d=parseInt(d):"float"===r?d=parseFloat(d):"date"===r&&(d=new Date(d)),v.values.push(d);l.sort("string"===r?"asc"===s?(e,t)=>(""+e.values[a]).localeCompare(t.values[a]):(e,t)=>-(""+e.values[a]).localeCompare(t.values[a]):"asc"===s?(e,t)=>isNaN(e.values[a])||isNaN(t.values[a])?isNaN(e.values[a])?isNaN(t.values[a])?0:-1:1:e.values[a]<t.values[a]?-1:e.values[a]>t.values[a]?1:0:(e,t)=>isNaN(e.values[a])||isNaN(t.values[a])?isNaN(e.values[a])?isNaN(t.values[a])?0:1:-1:e.values[a]<t.values[a]?1:e.values[a]>t.values[a]?-1:0);const N=document.createDocumentFragment();return l.forEach(e=>N.appendChild(e.tr)),t.querySelector("tbody").replaceChildren(N),setTimeout(()=>is_sorting_process_on=!1,delay),!0}Node.prototype.tsortable=function(){this.querySelectorAll("thead th[data-sort], thead td[data-sort]").forEach(e=>e.onclick=tablesort)};
 </script><script>document.querySelector('.table-sortable').tsortable()</script>`,
-		renderTable(searchResults))
+		renderTVTable(searchResults))
 }
 
-func progressBarHTML(w http.ResponseWriter, _ *http.Request) {
-	if jobRunning {
-		fmt.Fprintf(w, `<progress value="%d" max= "%d"/>`, numberOfMoviesProcessed, totalMovies)
-	}
-}
-
-func renderTable(movieCollection []types.SearchResults) (tableRows string) {
-	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
-	for i := range movieCollection {
+func renderTVTable(collection []types.SearchResults) (tableRows string) {
+	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="int"><strong>Blu-ray Seasons</strong></th><th data-sort="int"><strong>4K-ray Seasons</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
+	for i := range collection {
 		tableRows += fmt.Sprintf(
 			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%d</td><td>%d</td>`,
-			movieCollection[i].SearchURL, movieCollection[i].PlexMovie.Title, movieCollection[i].PlexMovie.Year,
-			movieCollection[i].MatchesBluray, movieCollection[i].Matches4k)
-		if movieCollection[i].MatchesBluray+movieCollection[i].Matches4k > 0 {
+			collection[i].SearchURL, collection[i].PlexTVShow.Title, collection[i].PlexTVShow.Year,
+			collection[i].MatchesBluray, collection[i].Matches4k)
+		if collection[i].MatchesBluray+collection[i].Matches4k > 0 {
 			tableRows += "<td>"
-			for _, result := range movieCollection[i].MovieSearchResults {
+			for _, result := range collection[i].TVSearchResults {
 				if result.BestMatch && (result.Format == types.DiskBluray || result.Format == types.Disk4K) {
 					tableRows += fmt.Sprintf(
 						`<a href=%q target="_blank">%v`,
@@ -127,30 +117,4 @@ func renderTable(movieCollection []types.SearchResults) (tableRows string) {
 		tableRows += "</tr>"
 	}
 	return tableRows // Return the generated HTML for table rows
-}
-
-func fetchPlexMovies(plexIP, plexMovieLibraryID, plexToken string, plexResolutions []string, german string) (allMovies []types.PlexMovie) {
-	filter := []plex.Filter{}
-	if german == stringTrue {
-		filter = []plex.Filter{
-			{
-				Name:     "audioLanguage",
-				Value:    "de",
-				Modifier: "\u0021=",
-			},
-			// {
-			// 	Name:     "audioLanguage",
-			// 	Value:    "de",
-			// 	Modifier: "=",
-			// },
-		}
-	}
-	if len(plexResolutions) == 0 {
-		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, "", filter)...)
-	} else {
-		for _, resolution := range plexResolutions {
-			allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, resolution, filter)...)
-		}
-	}
-	return allMovies
 }

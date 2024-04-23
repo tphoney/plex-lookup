@@ -32,6 +32,9 @@ func StartServer(info types.PlexInformation) {
 	http.HandleFunc("/processmovies", processMoviesHTML)
 	http.HandleFunc("/progress", progressBarHTML)
 
+	http.HandleFunc("/tv", tvHandler)
+	http.HandleFunc("/processtv", processTVHTML)
+
 	err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil) //nolint: gosec
 	if err != nil {
 		fmt.Printf("Failed to start server on port %s: %s\n", port, err)

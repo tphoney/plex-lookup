@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"slices"
 	"strconv"
 	"time"
 
@@ -29,10 +30,10 @@ func MarkBestMatch(search *types.SearchResults) types.SearchResults {
 		if search.TVSearchResults[i].FoundTitle == search.PlexTVShow.Title && (resultYear.Year() == expectedYear.Year() ||
 			resultYear.Year() == expectedYear.Year()-1 || resultYear.Year() == expectedYear.Year()+1) {
 			search.TVSearchResults[i].BestMatch = true
-			if search.TVSearchResults[i].Format == types.DiskBluray {
+			if slices.Contains(search.TVSearchResults[i].Format, types.DiskBluray) {
 				search.MatchesBluray++
 			}
-			if search.TVSearchResults[i].Format == types.Disk4K {
+			if slices.Contains(search.TVSearchResults[i].Format, types.Disk4K) {
 				search.Matches4k++
 			}
 		}

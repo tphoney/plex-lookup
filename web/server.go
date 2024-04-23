@@ -34,6 +34,7 @@ func StartServer(info types.PlexInformation) {
 
 	http.HandleFunc("/tv", tvHandler)
 	http.HandleFunc("/processtv", processTVHTML)
+	http.HandleFunc("/progresstv", tvProgressBarHTML)
 
 	err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil) //nolint: gosec
 	if err != nil {

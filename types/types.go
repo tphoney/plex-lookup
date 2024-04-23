@@ -36,7 +36,7 @@ type TVSearchResult struct {
 	UITitle     string
 	BestMatch   bool
 	URL         string
-	Format      string
+	Format      []string
 	Year        string
 	ReleaseDate time.Time
 	NewRelease  bool

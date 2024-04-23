@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/tphoney/plex-lookup/cinemaparadiso"
@@ -90,6 +91,12 @@ function tablesort(e){if(is_sorting_process_on)return!1;is_sorting_process_on=!0
 		renderTVTable(searchResults))
 }
 
+func tvProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
+	if tvJobRunning {
+		fmt.Fprintf(w, `<progress value="%d" max= "%d"/>`, numberOfTVProcessed, totalTV)
+	}
+}
+
 func renderTVTable(collection []types.SearchResults) (tableRows string) {
 	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="int"><strong>Blu-ray Seasons</strong></th><th data-sort="int"><strong>4K-ray Seasons</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
 	for i := range collection {
@@ -99,15 +106,14 @@ func renderTVTable(collection []types.SearchResults) (tableRows string) {
 			collection[i].MatchesBluray, collection[i].Matches4k)
 		if collection[i].MatchesBluray+collection[i].Matches4k > 0 {
 			tableRows += "<td>"
-			for _, result := range collection[i].TVSearchResults {
-				if result.BestMatch && (result.Format == types.DiskBluray || result.Format == types.Disk4K) {
-					tableRows += fmt.Sprintf(
-						`<a href=%q target="_blank">%v`,
-						result.URL, result.UITitle)
-					if result.NewRelease {
-						tableRows += "(new)"
+			for j := range collection[i].TVSearchResults {
+				for _, series := range collection[i].TVSearchResults[j].Series {
+					if slices.Contains(series.Format, types.DiskBluray) || slices.Contains(series.Format, types.Disk4K) {
+						tableRows += fmt.Sprintf(
+							`<a href=%q target="_blank">Season %d:%v`,
+							series.URL, series.Number, series.Format)
+						tableRows += "</a><br>"
 					}
-					tableRows += " </a>"
 				}
 			}
 			tableRows += "</td>"

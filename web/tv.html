@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Movies</title>
+    <script src="//unpkg.com/htmx.org@1.8.2"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <!-- from https://github.com/picocss/pico -->
+    <style>
+        [data-sort]:hover {
+            cursor: pointer;
+        }
+
+        [data-dir="asc"]:after {
+            content: ' ↗';
+        }
+
+        [data-dir="desc"]:after {
+            content: ' ↘';
+        }
+    </style>
+</head>
+
+<body>
+    <h1 class="container">TV</h1>
+    <div hx-get="/plexinfook" class="container" hx-trigger="load"></div>
+    <form hx-post="/processtv" class="container">
+        <fieldset>
+            <legend><strong>Lookup</strong></legend>
+            <label for="amazon">
+                <input type="radio" id="amazon" name="lookup" value="amazon" />
+                Amazon
+            </label>
+            <label for="cinemaParadiso">
+                <input type="radio" id="cinemaParadiso" name="lookup" value="cinemaParadiso" checked />
+                Cinema Paradiso
+            </label>
+        </fieldset>
+        <fieldset>
+            <legend><strong>Filter Plex:</strong> only return TV that match the following criteria</legend>
+            <label for="title" data-sort="title">
+                <input type="checkbox" id="sd" name="sd" value="sd">
+                SD
+            </label>
+            <label for="title" data-sort="title">
+                <input type="checkbox" id="480p" name="480p" value="480">
+                480p
+            </label>
+            <label for="title" data-sort="title">
+                <input type="checkbox" id="576p" name="576p" value="576">
+                576p
+            </label>
+            <label for="title" data-sort="title">
+                <input type="checkbox" id="720p" name="720p" value="720">
+                720p
+            </label>
+            <label for="title" data-sort="title">
+                <input type="checkbox" id="1080p" name="1080p" value="1080">
+                1080p
+            </label>
+            <label for="title" data-sort="title">
+                <input type="checkbox" id="4k" name="4k" value="4k">
+                4k
+            </label>
+        </fieldset>
+        <fieldset>
+            <legend><strong>Filter Lookup:</strong></legend>
+            <label for="german">
+                <input type="checkbox" id="german" name="german" value="true">
+                German audio
+            </label>
+            <label for="newerVersion">
+                <input type="checkbox" id="newerVersion" name="newerVersion" value="true">
+                 Newer Version. Disc release date > Plex added date. (slower search)
+            </label>
+        </fieldset>
+        <button type="submit">Submit</button>
+    </form>
+    <div hx-get="/progresstv" hx-trigger="every 500ms" class="container"></div>
+</body>
+
+</html>

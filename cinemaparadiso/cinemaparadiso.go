@@ -54,7 +54,7 @@ func SearchCinemaParadisoTV(plexTVShow *types.PlexTVShow) (tvSearchResult types.
 	// now we can get the series information for each best match
 	for i := range tvSearchResult.TVSearchResults {
 		if tvSearchResult.TVSearchResults[i].BestMatch {
-			_, _ = findTVSeriesInfo(tvSearchResult.TVSearchResults[i].URL)
+			tvSearchResult.TVSearchResults[i].Series, _ = findTVSeriesInfo(tvSearchResult.TVSearchResults[i].URL)
 		}
 	}
 	return tvSearchResult, nil
@@ -233,14 +233,14 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 				// Extract and print title and year
 				foundTitle := match[1]
 				year := match[2]
-				for _, format := range formats {
-					if movie {
+				if movie {
+					for _, format := range formats {
 						movieResults = append(movieResults, types.MovieSearchResult{
 							URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle, UITitle: format})
-					} else {
-						tvResults = append(tvResults, types.TVSearchResult{
-							URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle, UITitle: format})
 					}
+				} else {
+					tvResults = append(tvResults, types.TVSearchResult{
+						URL: returnURL, Format: formats, Year: year, FoundTitle: foundTitle, UITitle: foundTitle})
 				}
 			}
 			// remove the movie entry from the response

@@ -52,11 +52,13 @@ func plexSaveHandler(w http.ResponseWriter, r *http.Request) {
 	plexIP := r.FormValue("plexIP")
 	plexToken := r.FormValue("plexToken")
 	plexMovieLibraryID := r.FormValue("plexMovieLibraryID")
+	plexTVLibraryID := r.FormValue("plexTVLibraryID")
 	// validate form fields
 	PlexInformation = types.PlexInformation{
 		IP:             plexIP,
 		Token:          plexToken,
 		MovieLibraryID: plexMovieLibraryID,
+		TVLibraryID:    plexTVLibraryID,
 	}
 	fmt.Fprint(w, `<h2>Saved!</h2><a href="/">Back</a>`)
 	fmt.Printf("Saved plex information: %+v\n", PlexInformation)
@@ -68,8 +70,8 @@ func renderLibraries(libraries []types.PlexLibrary) string {
 		html += fmt.Sprintf(`<tr><td>%s</td><td>%s</td><td>%s</td></tr>`, library.Title, library.Type, library.ID)
 	}
 	html += `</tbody></table>
-	<input type="text" placeholder="Plex Movie Library Section ID" name="plexMovieLibraryID"
-            id="plexMovieLibraryID">
-			<button hx-post="/plexsave" hx-include="#plexMovieLibraryID,#plexIP,#plexToken" hx-swap="outerHTML">Save</button>`
+	<input type="text" placeholder="Plex Movie Library Section ID" name="plexMovieLibraryID"id="plexMovieLibraryID">
+	<input type="text" placeholder="Plex TV Series Library Section ID" name="plexTVLibraryID"id="plexTVLibraryID">
+	<button hx-post="/plexsave" hx-include="#plexMovieLibraryID,#plexIP,#plexToken" hx-swap="outerHTML">Save</button>`
 	return html
 }

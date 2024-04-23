@@ -80,6 +80,15 @@ func TestFindTVSeriesInResponse(t *testing.T) {
 	if tvSeries[0].ReleaseDate.Compare(expected) != 0 {
 		t.Errorf("Expected date %s, but got %s", expected, tvSeries[0].ReleaseDate)
 	}
+	if tvSeries[0].Number != 1 {
+		t.Errorf("Expected number 1, but got %d", tvSeries[0].Number)
+	}
+	if tvSeries[0].Format[0] != types.DiskDVD {
+		t.Errorf("Expected format %s, but got %s", types.DiskDVD, tvSeries[0].Format[0])
+	}
+	if tvSeries[0].Format[1] != types.DiskBluray {
+		t.Errorf("Expected format %s, but got %s", types.DiskBluray, tvSeries[0].Format[1])
+	}
 }
 
 func TestSearchCinemaParadisoTV(t *testing.T) {
@@ -87,8 +96,10 @@ func TestSearchCinemaParadisoTV(t *testing.T) {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
 	show := types.PlexTVShow{
-		Title: "Friends",
-		Year:  "1994",
+		// Title: "Friends",
+		// Year:  "1994",
+		Title: "Charmed",
+		Year:  "1998",
 	}
 	result, err := SearchCinemaParadisoTV(&show)
 	if err != nil {

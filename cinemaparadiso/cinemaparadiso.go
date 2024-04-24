@@ -243,7 +243,7 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 						URL: returnURL, Format: formats, Year: year, FoundTitle: foundTitle, UITitle: foundTitle})
 				}
 			}
-			// remove the movie entry from the response
+			// remove the entry from the response
 			response = response[endIndex:]
 		} else {
 			break

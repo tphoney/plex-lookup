@@ -66,6 +66,7 @@ type PlexTVShow struct {
 
 type PlexTVSeason struct {
 	Title     string
+	Number    int
 	RatingKey string
 	Episodes  []PlexTVEpisode
 }

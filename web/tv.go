@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/tphoney/plex-lookup/cinemaparadiso"
@@ -97,21 +98,24 @@ func tvProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func renderTVTable(collection []types.SearchResults) (tableRows string) {
+func renderTVTable(searchResults []types.SearchResults) (tableRows string) {
 	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="int"><strong>Blu-ray Seasons</strong></th><th data-sort="int"><strong>4K-ray Seasons</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
-	for i := range collection {
+	for i := range searchResults {
 		tableRows += fmt.Sprintf(
 			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%d</td><td>%d</td>`,
-			collection[i].SearchURL, collection[i].PlexTVShow.Title, collection[i].PlexTVShow.Year,
-			collection[i].MatchesBluray, collection[i].Matches4k)
-		if collection[i].MatchesBluray+collection[i].Matches4k > 0 {
+			searchResults[i].SearchURL, searchResults[i].PlexTVShow.Title, searchResults[i].PlexTVShow.Year,
+			searchResults[i].MatchesBluray, searchResults[i].Matches4k)
+		if searchResults[i].MatchesBluray+searchResults[i].Matches4k > 0 {
 			tableRows += "<td>"
-			for j := range collection[i].TVSearchResults {
-				for _, series := range collection[i].TVSearchResults[j].Series {
+			for j := range searchResults[i].TVSearchResults {
+				for _, series := range searchResults[i].TVSearchResults[j].Series {
 					if slices.Contains(series.Format, types.DiskBluray) || slices.Contains(series.Format, types.Disk4K) {
+						// remove the dvd format
+						disks := fmt.Sprintf("%v", series.Format)
+						disks = strings.ReplaceAll(disks, "DVD ", "")
 						tableRows += fmt.Sprintf(
-							`<a href=%q target="_blank">Season %d:%v`,
-							series.URL, series.Number, series.Format)
+							`<a href=%q target="_blank">Season %d: %v`,
+							searchResults[i].TVSearchResults[j].URL, series.Number, disks)
 						tableRows += "</a><br>"
 					}
 				}

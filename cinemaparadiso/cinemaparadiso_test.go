@@ -98,8 +98,10 @@ func TestSearchCinemaParadisoTV(t *testing.T) {
 	show := types.PlexTVShow{
 		// Title: "Friends",
 		// Year:  "1994",
-		Title: "Charmed",
-		Year:  "1998",
+		// Title: "Charmed",
+		// Year:  "1998",
+		Title: "Adventure Time",
+		Year:  "2010",
 	}
 	result, err := SearchCinemaParadisoTV(&show)
 	if err != nil {

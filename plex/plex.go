@@ -650,8 +650,9 @@ func extractTVSeasons(xmlString string) (seasonList []types.PlexTVSeason) {
 
 	for i := range container.Directory {
 		if strings.HasPrefix(container.Directory[i].Title, "Season") {
+			seasonNumber, _ := strconv.Atoi(container.Directory[i].Index)
 			seasonList = append(seasonList, types.PlexTVSeason{
-				Title: container.Directory[i].Title, RatingKey: container.Directory[i].RatingKey})
+				Title: container.Directory[i].Title, RatingKey: container.Directory[i].RatingKey, Number: seasonNumber})
 		}
 	}
 	return seasonList

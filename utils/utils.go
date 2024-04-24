@@ -8,7 +8,6 @@ import (
 	"github.com/tphoney/plex-lookup/types"
 )
 
-// nolint: dupl, nolintlint
 func MarkBestMatch(search *types.SearchResults) types.SearchResults {
 	expectedYear := YearToDate(search.PlexMovie.Year)
 	for i := range search.MovieSearchResults {

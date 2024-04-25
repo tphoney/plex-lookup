@@ -72,6 +72,6 @@ func renderLibraries(libraries []types.PlexLibrary) string {
 	html += `</tbody></table>
 	<input type="text" placeholder="Plex Movie Library Section ID" name="plexMovieLibraryID"id="plexMovieLibraryID">
 	<input type="text" placeholder="Plex TV Series Library Section ID" name="plexTVLibraryID"id="plexTVLibraryID">
-	<button hx-post="/plexsave" hx-include="#plexMovieLibraryID,#plexIP,#plexToken" hx-swap="outerHTML">Save</button>`
+	<button hx-post="/plexsave" hx-include="#plexMovieLibraryID,#plexTVLibraryID,#plexIP,#plexToken" hx-swap="outerHTML">Save</button>`
 	return html
 }

@@ -17,6 +17,7 @@ COPY types/*.go types/
 COPY utils/*.go utils/
 COPY web/*.go web/
 COPY web/*.html web/
+COPY web/static/* web/static/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux go build -o /plex-lookup

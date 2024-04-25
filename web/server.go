@@ -1,7 +1,8 @@
 package web
 
 import (
-	_ "embed"
+	"embed"
+
 	"fmt"
 	"html/template"
 	"net"
@@ -12,7 +13,11 @@ import (
 
 var (
 	//go:embed index.html
-	indexPage       string
+	indexPage string
+
+	//go:embed static/*
+	staticFS embed.FS
+
 	port            string = "9090"
 	PlexInformation types.PlexInformation
 )
@@ -22,21 +27,26 @@ func StartServer(info types.PlexInformation) {
 	// find the local IP address
 	ipAddress := GetOutboundIP()
 	fmt.Printf("Starting server on http://%s:%s\n", ipAddress.String(), port)
-	http.HandleFunc("/", indexHandler)
+	mux := http.NewServeMux()
+
+	// serve static files
+	mux.Handle("/static/", http.FileServer(http.FS(staticFS)))
+
 	http.HandleFunc("/plex", plexHandler)
-	http.HandleFunc("/plexlibraries", processPlexLibrariesHTML)
-	http.HandleFunc("/plexinfook", plexInformationOKHTML)
-	http.HandleFunc("/plexsave", plexSaveHandler)
+	mux.HandleFunc("/plexlibraries", processPlexLibrariesHTML)
+	mux.HandleFunc("/plexinfook", plexInformationOKHTML)
+	mux.HandleFunc("/plexsave", plexSaveHandler)
 
-	http.HandleFunc("/movies", moviesHandler)
-	http.HandleFunc("/processmovies", processMoviesHTML)
-	http.HandleFunc("/progress", progressBarHTML)
+	mux.HandleFunc("/movies", moviesHandler)
+	mux.HandleFunc("/processmovies", processMoviesHTML)
+	mux.HandleFunc("/progress", progressBarHTML)
 
-	http.HandleFunc("/tv", tvHandler)
-	http.HandleFunc("/processtv", processTVHTML)
-	http.HandleFunc("/progresstv", tvProgressBarHTML)
+	mux.HandleFunc("/tv", tvHandler)
+	mux.HandleFunc("/processtv", processTVHTML)
+	mux.HandleFunc("/progresstv", tvProgressBarHTML)
 
-	err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil) //nolint: gosec
+	mux.HandleFunc("/", indexHandler)
+	err := http.ListenAndServe(fmt.Sprintf(":%s", port), mux) //nolint: gosec
 	if err != nil {
 		fmt.Printf("Failed to start server on port %s: %s\n", port, err)
 		panic(err)

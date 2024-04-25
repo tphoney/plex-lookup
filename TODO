@@ -7,9 +7,14 @@
 
 ## bugs
 
-<!-- - fix links on the tv page to a tv series to cinema paradiso. use a hx-post -->
 - remove links to tv series we already have in plex. eg dont show adventure time series 1 and 2 ?
-<!-- - remove the dvds from the tv page -->
 - fix the progress bar on the tv page
-- add a link back to the index page on the tv page/ movie page
 - remove dead fields from the tv data types
+
+## done
+
+- fix links on the tv page to a tv series to cinema paradiso. use a hx-post
+- remove the dvds from the tv page
+- add a link back to the index page on the tv page/ movie page
+- embed the tablesorter as a static file
+- use a proper mux for the server

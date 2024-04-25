@@ -3,12 +3,10 @@
 ## features
 
 - add amazon search for tv series
-- use hx-boost
 
 ## bugs
 
 - remove links to tv series we already have in plex. eg dont show adventure time series 1 and 2 ?
-- fix the progress bar on the tv page
 - remove dead fields from the tv data types
 
 ## done
@@ -18,3 +16,5 @@
 - add a link back to the index page on the tv page/ movie page
 - embed the tablesorter as a static file
 - use a proper mux for the server
+- use hx-boost
+- fix the progress bar on the tv page

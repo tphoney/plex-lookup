@@ -5,6 +5,7 @@
     <title>Plex lookup - Movies</title>
     <script src="//unpkg.com/htmx.org@1.8.2"></script>
     <script src="static/tablesort.min.js"></script>
+    <!-- from https://github.com/oleksavyshnivsky/tablesort  -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
     <!-- from https://github.com/picocss/pico -->
     <style>
@@ -25,7 +26,7 @@
 <body>
     <h1 class="container">Movies</h1>
     <div hx-get="/plexinfook" class="container" hx-trigger="load"></div>
-    <form hx-post="/processmovies" class="container" hx-target="#progress">
+    <form hx-post="/processmovies" class="container" hx-target="#progress" hx-boost="true">
         <fieldset>
             <legend><strong>Plex Filter:</strong> only compare movies that match the following criteria.</legend>
             <label for="title" data-sort="title">

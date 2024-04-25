@@ -21,6 +21,7 @@ var (
 	numberOfTVProcessed int  = 0
 	tvJobRunning        bool = false
 	totalTV             int  = 0
+	tvSearchResults     []types.SearchResults
 )
 
 func tvHandler(w http.ResponseWriter, _ *http.Request) {
@@ -56,43 +57,54 @@ func processTVHTML(w http.ResponseWriter, r *http.Request) {
 	// newerVersion := r.FormValue("newerVersion")
 	// Prepare table plexTV
 	plexTV := plex.GetPlexTV(PlexInformation.IP, PlexInformation.TVLibraryID, PlexInformation.Token, filteredResolutions)
-	var searchResults []types.SearchResults
 	var searchResult types.SearchResults
 	tvJobRunning = true
-
 	numberOfTVProcessed = 0
-	totalTV = len(plexTV)
-	startTime := time.Now()
-	for i := range plexTV {
-		fmt.Print(".")
-		if lookup == "cinemaParadiso" {
-			searchResult, _ = cinemaparadiso.SearchCinemaParadisoTV(&plexTV[i])
-			// } else {
-			// 	if german == stringTrue {
-			// 		searchResult, _ = amazon.SearchAmazon(plexTV[i], "&audio=german")
-			// 	} else {
-			// 		searchResult, _ = amazon.SearchAmazon(plexTV[i], "")
-			// 	}
-			// 	// if we are filtering by newer version, we need to search again
-			// 	if newerVersion == stringTrue {
-			// 		scrapedResults := amazon.ScrapeMovies(&searchResult)
-			// 		searchResult.MovieSearchResults = scrapedResults
-			// 	}
+	totalTV = len(plexTV) - 1
+
+	fmt.Fprintf(w, `<div hx-get="/progresstv" hx-trigger="every 100ms" class="container" id="progress">
+		<progress value="%d" max= "%d"/></div>`, numberOfTVProcessed, totalTV)
+
+	go func() {
+		startTime := time.Now()
+		for i := range plexTV {
+			fmt.Print(".")
+			if lookup == "cinemaParadiso" {
+				searchResult, _ = cinemaparadiso.SearchCinemaParadisoTV(&plexTV[i])
+				// } else {
+				// 	if german == stringTrue {
+				// 		searchResult, _ = amazon.SearchAmazon(plexTV[i], "&audio=german")
+				// 	} else {
+				// 		searchResult, _ = amazon.SearchAmazon(plexTV[i], "")
+				// 	}
+				// 	// if we are filtering by newer version, we need to search again
+				// 	if newerVersion == stringTrue {
+				// 		scrapedResults := amazon.ScrapeMovies(&searchResult)
+				// 		searchResult.MovieSearchResults = scrapedResults
+				// 	}
+			}
+			tvSearchResults = append(tvSearchResults, searchResult)
+			numberOfTVProcessed = i
 		}
-		searchResults = append(searchResults, searchResult)
-		numberOfTVProcessed = i
-	}
-	tvJobRunning = false
-	fmt.Printf("\nProcessed %d TV Shows in %v\n", totalTV, time.Since(startTime))
-	fmt.Fprintf(w,
-		`<table class="table-sortable">%s</tbody></table>
-		</script><script>document.querySelector('.table-sortable').tsortable()</script>`,
-		renderTVTable(searchResults))
+		tvJobRunning = false
+		fmt.Printf("\nProcessed %d TV Shows in %v\n", totalTV, time.Since(startTime))
+	}()
 }
 
 func tvProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 	if tvJobRunning {
-		fmt.Fprintf(w, `<progress value="%d" max= "%d"/>`, numberOfTVProcessed, totalTV)
+		fmt.Fprintf(w, `<div hx-get="/progresstv" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
+		<progress value="%d" max= "%d"/></div>`, numberOfTVProcessed, totalTV)
+	}
+	if totalTV == numberOfTVProcessed && totalTV != 0 {
+		fmt.Fprintf(w,
+			`<table class="table-sortable">%s</tbody></table>
+		</script><script>document.querySelector('.table-sortable').tsortable()</script>`,
+			renderTVTable(tvSearchResults))
+		//reset variables
+		numberOfTVProcessed = 0
+		totalTV = 0
+		tvSearchResults = []types.SearchResults{}
 	}
 }
 

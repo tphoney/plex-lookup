@@ -4,8 +4,6 @@
 
 - add amazon search for tv series
 - use hx-boost
-- use a proper mux for the server
-- embed the tablesorter as a static file
 
 ## bugs
 
@@ -18,3 +16,5 @@
 - fix links on the tv page to a tv series to cinema paradiso. use a hx-post
 - remove the dvds from the tv page
 - add a link back to the index page on the tv page/ movie page
+- embed the tablesorter as a static file
+- use a proper mux for the server

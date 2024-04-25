@@ -36,7 +36,6 @@ func moviesHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// nolint: lll, nolintlint
 func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 	lookup := r.FormValue("lookup")
 	// plex resolutions
@@ -92,7 +91,6 @@ func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 		}
 		jobRunning = false
 		fmt.Printf("\nProcessed %d movies in %v\n", totalMovies, time.Since(startTime))
-
 	}()
 }
 

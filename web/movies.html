@@ -23,21 +23,10 @@
 
 <body>
     <h1 class="container">Movies</h1>
-    <div hx-get="/plexinfook" class="container" hx-trigger="load" ></div>
+    <div hx-get="/plexinfook" class="container" hx-trigger="load"></div>
     <form hx-post="/processmovies" class="container" hx-target="#progress">
         <fieldset>
-            <legend><strong>Lookup</strong></legend>
-            <label for="amazon">
-                <input type="radio" id="amazon" name="lookup" value="amazon" />
-                Amazon
-            </label>
-            <label for="cinemaParadiso">
-                <input type="radio" id="cinemaParadiso" name="lookup" value="cinemaParadiso" checked />
-                Cinema Paradiso
-            </label>
-        </fieldset>
-        <fieldset>
-            <legend><strong>Filter Plex:</strong> only return movies that match the following criteria</legend>
+            <legend><strong>Plex Filter:</strong> only compare movies that match the following criteria.</legend>
             <label for="title" data-sort="title">
                 <input type="checkbox" id="sd" name="sd" value="sd">
                 SD
@@ -64,19 +53,32 @@
             </label>
         </fieldset>
         <fieldset>
-            <legend><strong>Filter Lookup:</strong></legend>
+            <legend><strong>Lookup:</strong></legend>
+            <label for="amazon">
+                <input type="radio" id="amazon" name="lookup" value="amazon" />
+                Amazon
+            </label>
+            <label for="cinemaParadiso">
+                <input type="radio" id="cinemaParadiso" name="lookup" value="cinemaParadiso" checked />
+                Cinema Paradiso
+            </label>
+        </fieldset>
+        <fieldset>
+            <legend><strong>Lookup Filters:</strong></legend>
             <label for="german">
                 <input type="checkbox" id="german" name="german" value="true">
                 German audio
             </label>
             <label for="newerVersion">
                 <input type="checkbox" id="newerVersion" name="newerVersion" value="true">
-                 Newer Version. Disc release date > Plex added date. (slower search)
+                Newer Version. Disc release date > Plex added date. (slower search)
             </label>
         </fieldset>
         <button type="submit">Submit</button>
     </form>
     <div id="progress" hx-swap="outerHTML"></div>
+    <br>
+    <div class="container"><a href="/">Back</a></div>
 </body>
 
 </html>

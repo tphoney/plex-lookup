@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Movies</title>
+    <title>Plex lookup - Movies</title>
     <script src="//unpkg.com/htmx.org@1.8.2"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
     <!-- from https://github.com/picocss/pico -->
@@ -23,8 +23,8 @@
 
 <body>
     <h1 class="container">Movies</h1>
-    <div hx-get="/plexinfook" class="container" hx-trigger="load"></div>
-    <form hx-post="/processmovies" class="container">
+    <div hx-get="/plexinfook" class="container" hx-trigger="load" ></div>
+    <form hx-post="/processmovies" class="container" hx-target="#progress">
         <fieldset>
             <legend><strong>Lookup</strong></legend>
             <label for="amazon">
@@ -76,7 +76,7 @@
         </fieldset>
         <button type="submit">Submit</button>
     </form>
-    <div hx-get="/progress" hx-trigger="every 500ms" class="container"></div>
+    <div id="progress" hx-swap="outerHTML"></div>
 </body>
 
 </html>

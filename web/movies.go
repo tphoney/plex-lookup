@@ -24,6 +24,7 @@ var (
 	numberOfMoviesProcessed int  = 0
 	jobRunning              bool = false
 	totalMovies             int  = 0
+	searchResults           []types.SearchResults
 )
 
 func moviesHandler(w http.ResponseWriter, _ *http.Request) {
@@ -59,44 +60,59 @@ func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 	newerVersion := r.FormValue("newerVersion")
 	// Prepare table plexMovies
 	plexMovies := fetchPlexMovies(PlexInformation.IP, PlexInformation.MovieLibraryID, PlexInformation.Token, filteredResolutions, german)
-	var searchResults []types.SearchResults
 	var searchResult types.SearchResults
 	jobRunning = true
 	numberOfMoviesProcessed = 0
-	totalMovies = len(plexMovies)
-	startTime := time.Now()
-	for i, movie := range plexMovies {
-		fmt.Print(".")
-		if lookup == "cinemaParadiso" {
-			searchResult, _ = cinemaparadiso.SearchCinemaParadisoMovie(movie)
-		} else {
-			if german == stringTrue {
-				searchResult, _ = amazon.SearchAmazon(movie, "&audio=german")
+	totalMovies = len(plexMovies) - 1
+
+	// write progress bar
+	fmt.Fprintf(w, `<div hx-get="/progress" hx-trigger="every 100ms" class="container" id="progress">
+	<progress value="%d" max= "%d"/></div>`, numberOfMoviesProcessed, totalMovies)
+
+	go func() {
+		startTime := time.Now()
+		for i, movie := range plexMovies {
+			fmt.Print(".")
+			if lookup == "cinemaParadiso" {
+				searchResult, _ = cinemaparadiso.SearchCinemaParadisoMovie(movie)
 			} else {
-				searchResult, _ = amazon.SearchAmazon(movie, "")
+				if german == stringTrue {
+					searchResult, _ = amazon.SearchAmazon(movie, "&audio=german")
+				} else {
+					searchResult, _ = amazon.SearchAmazon(movie, "")
+				}
+				// if we are filtering by newer version, we need to search again
+				if newerVersion == stringTrue {
+					scrapedResults := amazon.ScrapeMovies(&searchResult)
+					searchResult.MovieSearchResults = scrapedResults
+				}
 			}
-			// if we are filtering by newer version, we need to search again
-			if newerVersion == stringTrue {
-				scrapedResults := amazon.ScrapeMovies(&searchResult)
-				searchResult.MovieSearchResults = scrapedResults
-			}
+			searchResults = append(searchResults, searchResult)
+			numberOfMoviesProcessed = i
 		}
-		searchResults = append(searchResults, searchResult)
-		numberOfMoviesProcessed = i
-	}
-	jobRunning = false
-	fmt.Printf("\nProcessed %d movies in %v\n", totalMovies, time.Since(startTime))
-	fmt.Fprintf(w,
-		`<table class="table-sortable">%s</tbody></table>
-<script>function getCellIndex(t){var a=t.parentNode,r=Array.from(a.parentNode.children).indexOf(a);let s=0;for(let e=0;e<a.cells.length;e++){var l=a.cells[e].colSpan;if(s+=l,0===r){if(e===t.cellIndex)return s-1}else if(!isNaN(parseInt(t.dataset.sortCol)))return parseInt(t.dataset.sortCol)}return s-1}let is_sorting_process_on=!1,delay=100;
-function tablesort(e){if(is_sorting_process_on)return!1;is_sorting_process_on=!0;var t=e.currentTarget.closest("table"),a=getCellIndex(e.currentTarget),r=e.currentTarget.dataset.sort,s=t.querySelector("th[data-dir]"),s=(s&&s!==e.currentTarget&&delete s.dataset.dir,e.currentTarget.dataset.dir?"asc"===e.currentTarget.dataset.dir?"desc":"asc":e.currentTarget.dataset.sortDefault||"asc"),l=(e.currentTarget.dataset.dir=s,[]),o=t.querySelectorAll("tbody tr");let n,u,c,d,v;for(j=0,jj=o.length;j<jj;j++)for(n=o[j],l.push({tr:n,values:[]}),v=l[j],c=n.querySelectorAll("th, td"),i=0,ii=c.length;i<ii;i++)u=c[i],d=u.dataset.sortValue||u.innerText,"int"===r?d=parseInt(d):"float"===r?d=parseFloat(d):"date"===r&&(d=new Date(d)),v.values.push(d);l.sort("string"===r?"asc"===s?(e,t)=>(""+e.values[a]).localeCompare(t.values[a]):(e,t)=>-(""+e.values[a]).localeCompare(t.values[a]):"asc"===s?(e,t)=>isNaN(e.values[a])||isNaN(t.values[a])?isNaN(e.values[a])?isNaN(t.values[a])?0:-1:1:e.values[a]<t.values[a]?-1:e.values[a]>t.values[a]?1:0:(e,t)=>isNaN(e.values[a])||isNaN(t.values[a])?isNaN(e.values[a])?isNaN(t.values[a])?0:1:-1:e.values[a]<t.values[a]?1:e.values[a]>t.values[a]?-1:0);const N=document.createDocumentFragment();return l.forEach(e=>N.appendChild(e.tr)),t.querySelector("tbody").replaceChildren(N),setTimeout(()=>is_sorting_process_on=!1,delay),!0}Node.prototype.tsortable=function(){this.querySelectorAll("thead th[data-sort], thead td[data-sort]").forEach(e=>e.onclick=tablesort)};
-</script><script>document.querySelector('.table-sortable').tsortable()</script>`,
-		renderTable(searchResults))
+		jobRunning = false
+		fmt.Printf("\nProcessed %d movies in %v\n", totalMovies, time.Since(startTime))
+
+	}()
 }
 
 func progressBarHTML(w http.ResponseWriter, _ *http.Request) {
 	if jobRunning {
-		fmt.Fprintf(w, `<progress value="%d" max= "%d"/>`, numberOfMoviesProcessed, totalMovies)
+		fmt.Fprintf(w, `<div hx-get="/progress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
+		<progress value="%d" max= "%d"/></div>`, numberOfMoviesProcessed, totalMovies)
+	}
+	if totalMovies == numberOfMoviesProcessed && totalMovies != 0 {
+		// display a table
+		fmt.Fprintf(w,
+			`<table class="table-sortable">%s</tbody></table>
+	<script>function getCellIndex(t){var a=t.parentNode,r=Array.from(a.parentNode.children).indexOf(a);let s=0;for(let e=0;e<a.cells.length;e++){var l=a.cells[e].colSpan;if(s+=l,0===r){if(e===t.cellIndex)return s-1}else if(!isNaN(parseInt(t.dataset.sortCol)))return parseInt(t.dataset.sortCol)}return s-1}let is_sorting_process_on=!1,delay=100;
+	function tablesort(e){if(is_sorting_process_on)return!1;is_sorting_process_on=!0;var t=e.currentTarget.closest("table"),a=getCellIndex(e.currentTarget),r=e.currentTarget.dataset.sort,s=t.querySelector("th[data-dir]"),s=(s&&s!==e.currentTarget&&delete s.dataset.dir,e.currentTarget.dataset.dir?"asc"===e.currentTarget.dataset.dir?"desc":"asc":e.currentTarget.dataset.sortDefault||"asc"),l=(e.currentTarget.dataset.dir=s,[]),o=t.querySelectorAll("tbody tr");let n,u,c,d,v;for(j=0,jj=o.length;j<jj;j++)for(n=o[j],l.push({tr:n,values:[]}),v=l[j],c=n.querySelectorAll("th, td"),i=0,ii=c.length;i<ii;i++)u=c[i],d=u.dataset.sortValue||u.innerText,"int"===r?d=parseInt(d):"float"===r?d=parseFloat(d):"date"===r&&(d=new Date(d)),v.values.push(d);l.sort("string"===r?"asc"===s?(e,t)=>(""+e.values[a]).localeCompare(t.values[a]):(e,t)=>-(""+e.values[a]).localeCompare(t.values[a]):"asc"===s?(e,t)=>isNaN(e.values[a])||isNaN(t.values[a])?isNaN(e.values[a])?isNaN(t.values[a])?0:-1:1:e.values[a]<t.values[a]?-1:e.values[a]>t.values[a]?1:0:(e,t)=>isNaN(e.values[a])||isNaN(t.values[a])?isNaN(e.values[a])?isNaN(t.values[a])?0:1:-1:e.values[a]<t.values[a]?1:e.values[a]>t.values[a]?-1:0);const N=document.createDocumentFragment();return l.forEach(e=>N.appendChild(e.tr)),t.querySelector("tbody").replaceChildren(N),setTimeout(()=>is_sorting_process_on=!1,delay),!0}Node.prototype.tsortable=function(){this.querySelectorAll("thead th[data-sort], thead td[data-sort]").forEach(e=>e.onclick=tablesort)};
+	</script><script>document.querySelector('.table-sortable').tsortable()</script>`,
+			renderTable(searchResults))
+		// reset variables
+		numberOfMoviesProcessed = 0
+		totalMovies = 0
+		searchResults = []types.SearchResults{}
 	}
 }
 

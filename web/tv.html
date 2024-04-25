@@ -26,7 +26,7 @@
 <body>
     <h1 class="container">TV</h1>
     <div hx-get="/plexinfook" class="container" hx-trigger="load"></div>
-    <form hx-post="/processtv" class="container" hx-target="#progress">
+    <form hx-post="/processtv" class="container" hx-target="#progress" hx-boost="true">
         <fieldset>
             <legend><strong>Plex Filter:</strong> only compare TV series that match the following criteria.</legend>
             <label for="title" data-sort="title">

@@ -101,7 +101,7 @@ func tvProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 			`<table class="table-sortable">%s</tbody></table>
 		</script><script>document.querySelector('.table-sortable').tsortable()</script>`,
 			renderTVTable(tvSearchResults))
-		//reset variables
+		// reset variables
 		numberOfTVProcessed = 0
 		totalTV = 0
 		tvSearchResults = []types.SearchResults{}

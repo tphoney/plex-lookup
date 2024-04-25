@@ -32,7 +32,7 @@ func StartServer(info types.PlexInformation) {
 	// serve static files
 	mux.Handle("/static/", http.FileServer(http.FS(staticFS)))
 
-	http.HandleFunc("/plex", plexHandler)
+	mux.HandleFunc("/plex", plexHandler)
 	mux.HandleFunc("/plexlibraries", processPlexLibrariesHTML)
 	mux.HandleFunc("/plexinfook", plexInformationOKHTML)
 	mux.HandleFunc("/plexsave", plexSaveHandler)

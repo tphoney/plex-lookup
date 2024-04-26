@@ -76,9 +76,9 @@ func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 				searchResult, _ = cinemaparadiso.SearchCinemaParadisoMovie(movie)
 			} else {
 				if german == stringTrue {
-					searchResult, _ = amazon.SearchAmazon(movie, "&audio=german")
+					searchResult, _ = amazon.SearchAmazonMovie(movie, "&audio=german")
 				} else {
-					searchResult, _ = amazon.SearchAmazon(movie, "")
+					searchResult, _ = amazon.SearchAmazonMovie(movie, "")
 				}
 				// if we are filtering by newer version, we need to search again
 				if newerVersion == stringTrue {

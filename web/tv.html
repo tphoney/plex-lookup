@@ -26,7 +26,7 @@
 <body>
     <h1 class="container">TV</h1>
     <div hx-get="/plexinfook" class="container" hx-trigger="load"></div>
-    <form hx-post="/processtv" class="container" hx-target="#progress" hx-boost="true">
+    <form hx-post="/processtv" class="container" hx-target="#progress" hx-boost="true" hx-indicator="#indicator">
         <fieldset>
             <legend><strong>Plex Filter:</strong> only compare TV series that match the following criteria.</legend>
             <label for="title" data-sort="title">
@@ -72,12 +72,13 @@
                 German audio
             </label>
             <label for="newerVersion">
-                <input type="checkbox" id="newerVersion" name="newerVersion" value="true">
+                <input type="checkbox" id="newerVersion" name="newerVersion" value="true" disabled="true">
                 Newer Version. Disc release date > Plex added date. (slower search)
             </label>
         </fieldset>
         <button type="submit">Submit</button>
     </form>
+    <div class="container"><strong id="indicator" class="htmx-indicator">Searching Plex ....</strong></div>
     <div id="progress" hx-swap="outerHTML"></div>
     <br>
     <div class="container"><a href="/">Back</a></div>

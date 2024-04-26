@@ -26,8 +26,9 @@ func MarkBestMatch(search *types.SearchResults) types.SearchResults {
 	}
 	for i := range search.TVSearchResults {
 		resultYear := YearToDate(search.TVSearchResults[i].Year)
-		if search.TVSearchResults[i].FoundTitle == search.PlexTVShow.Title && (resultYear.Year() == expectedYear.Year() ||
-			resultYear.Year() == expectedYear.Year()-1 || resultYear.Year() == expectedYear.Year()+1) {
+		if search.TVSearchResults[i].FoundTitle == search.PlexTVShow.Title &&
+			// normally a match if the year is within 1 year of each other
+			(resultYear.Year() == expectedYear.Year() || resultYear.Year() == expectedYear.Year()-1 || resultYear.Year() == expectedYear.Year()+1) {
 			search.TVSearchResults[i].BestMatch = true
 			if slices.Contains(search.TVSearchResults[i].Format, types.DiskBluray) {
 				search.MatchesBluray++

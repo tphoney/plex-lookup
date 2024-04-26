@@ -9,6 +9,11 @@ import (
 	"github.com/tphoney/plex-lookup/types"
 )
 
+var (
+	plexIP    = os.Getenv("PLEX_IP")
+	plexToken = os.Getenv("PLEX_TOKEN")
+)
+
 func TestFindMoviesInResponse(t *testing.T) {
 	// read response from testdata/cats.html
 	rawdata, err := os.ReadFile("testdata/cats_search.html")
@@ -16,7 +21,7 @@ func TestFindMoviesInResponse(t *testing.T) {
 		t.Errorf("Error reading testdata/cats_search.html: %s", err)
 	}
 
-	searchResult := findMoviesInResponse(string(rawdata))
+	searchResult, _ := findTitlesInResponse(string(rawdata), true)
 
 	if len(searchResult) != 19 {
 		t.Errorf("Expected 2 search result, but got %d", len(searchResult))
@@ -35,7 +40,7 @@ func TestFindMoviesInResponse(t *testing.T) {
 }
 
 func TestSearchAmazon(t *testing.T) {
-	result, err := SearchAmazon(types.PlexMovie{Title: "napoleon dynamite", Year: "2004"}, "")
+	result, err := SearchAmazonMovie(types.PlexMovie{Title: "napoleon dynamite", Year: "2004"}, "")
 	if err != nil {
 		t.Errorf("Error searching Amazon: %s", err)
 	}
@@ -52,5 +57,26 @@ func TestFindMovieDetails(t *testing.T) {
 	expected := time.Date(2010, time.October, 4, 0, 0, 0, 0, time.UTC)
 	if processed.Compare(expected) != 0 {
 		t.Errorf("Expected %s, but got %s", expected, processed)
+	}
+}
+
+func TestSearchAmazonTV(t *testing.T) {
+	if plexIP == "" || plexToken == "" {
+		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
+	}
+	show := types.PlexTVShow{
+		Title: "Friends",
+		Year:  "1994",
+		// Title: "Charmed",
+		// Year:  "1998",
+		// Title: "Adventure Time",
+		// Year:  "2010",
+	}
+	result, err := SearchAmazonTV(&show, "")
+	if err != nil {
+		t.Errorf("Error searching for TV show: %s", err)
+	}
+	if result.SearchURL == "" {
+		t.Errorf("Expected searchurl, but got none")
 	}
 }

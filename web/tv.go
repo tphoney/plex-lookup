@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tphoney/plex-lookup/amazon"
 	"github.com/tphoney/plex-lookup/cinemaparadiso"
 	"github.com/tphoney/plex-lookup/plex"
 	"github.com/tphoney/plex-lookup/types"
@@ -53,7 +54,7 @@ func processTVHTML(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// lookup filters
-	// german := r.FormValue("german")
+	german := r.FormValue("german")
 	// newerVersion := r.FormValue("newerVersion")
 	// Prepare table plexTV
 	plexTV := plex.GetPlexTV(PlexInformation.IP, PlexInformation.TVLibraryID, PlexInformation.Token, filteredResolutions)
@@ -71,17 +72,17 @@ func processTVHTML(w http.ResponseWriter, r *http.Request) {
 			fmt.Print(".")
 			if lookup == "cinemaParadiso" {
 				searchResult, _ = cinemaparadiso.SearchCinemaParadisoTV(&plexTV[i])
-				// } else {
-				// 	if german == stringTrue {
-				// 		searchResult, _ = amazon.SearchAmazon(plexTV[i], "&audio=german")
-				// 	} else {
-				// 		searchResult, _ = amazon.SearchAmazon(plexTV[i], "")
-				// 	}
-				// 	// if we are filtering by newer version, we need to search again
-				// 	if newerVersion == stringTrue {
-				// 		scrapedResults := amazon.ScrapeMovies(&searchResult)
-				// 		searchResult.MovieSearchResults = scrapedResults
-				// 	}
+			} else {
+				if german == stringTrue {
+					searchResult, _ = amazon.SearchAmazonTV(&plexTV[i], "&audio=german")
+				} else {
+					searchResult, _ = amazon.SearchAmazonTV(&plexTV[i], "")
+				}
+				// if we are filtering by newer version, we need to search again
+				// if newerVersion == stringTrue {
+				// 	scrapedResults := amazon.ScrapeMovies(&searchResult)
+				// 	searchResult.MovieSearchResults = scrapedResults
+				// }
 			}
 			tvSearchResults = append(tvSearchResults, searchResult)
 			numberOfTVProcessed = i
@@ -115,18 +116,25 @@ func renderTVTable(searchResults []types.SearchResults) (tableRows string) {
 			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%d</td><td>%d</td>`,
 			searchResults[i].SearchURL, searchResults[i].PlexTVShow.Title, searchResults[i].PlexTVShow.Year,
 			searchResults[i].MatchesBluray, searchResults[i].Matches4k)
-		if searchResults[i].MatchesBluray+searchResults[i].Matches4k > 0 {
+		if (searchResults[i].MatchesBluray + searchResults[i].Matches4k) > 0 {
 			tableRows += "<td>"
 			for j := range searchResults[i].TVSearchResults {
-				for _, series := range searchResults[i].TVSearchResults[j].Series {
-					if slices.Contains(series.Format, types.DiskBluray) || slices.Contains(series.Format, types.Disk4K) {
-						// remove the dvd format
-						disks := fmt.Sprintf("%v", series.Format)
-						disks = strings.ReplaceAll(disks, "DVD ", "")
-						tableRows += fmt.Sprintf(
-							`<a href=%q target="_blank">Season %d: %v`,
-							searchResults[i].TVSearchResults[j].URL, series.Number, disks)
-						tableRows += "</a><br>"
+				if searchResults[i].TVSearchResults[j].BestMatch {
+					if searchResults[i].TVSearchResults[j].BoxSet {
+						tableRows += fmt.Sprintf(`<a href=%q target="_blank">%s Box Set</a></br>`,
+							searchResults[i].TVSearchResults[j].URL, searchResults[i].TVSearchResults[j].Format[0])
+					} else {
+						for _, series := range searchResults[i].TVSearchResults[j].Series {
+							if slices.Contains(series.Format, types.DiskBluray) || slices.Contains(series.Format, types.Disk4K) {
+								// remove the dvd format
+								disks := fmt.Sprintf("%v", series.Format)
+								disks = strings.ReplaceAll(disks, "DVD ", "")
+								tableRows += fmt.Sprintf(
+									`<a href=%q target="_blank">Season %d: %v`,
+									searchResults[i].TVSearchResults[j].URL, series.Number, disks)
+								tableRows += "</a><br>"
+							}
+						}
 					}
 				}
 			}

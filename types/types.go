@@ -40,6 +40,7 @@ type TVSearchResult struct {
 	Year        string
 	ReleaseDate time.Time
 	NewRelease  bool
+	BoxSet      bool
 	Series      []TVSeries
 }
 

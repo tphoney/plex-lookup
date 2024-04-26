@@ -103,7 +103,7 @@ func findMovieDetails(response string) (releaseDate time.Time) {
 	return releaseDate
 }
 
-func SearchAmazon(plexMovie types.PlexMovie, filter string) (movieSearchResult types.SearchResults, err error) {
+func SearchAmazonMovie(plexMovie types.PlexMovie, filter string) (movieSearchResult types.SearchResults, err error) {
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
 	amazonURL := amazonURL + urlEncodedTitle
 	if filter != "" {
@@ -143,13 +143,59 @@ func SearchAmazon(plexMovie types.PlexMovie, filter string) (movieSearchResult t
 	}
 	rawData := string(body)
 
-	moviesFound := findMoviesInResponse(rawData)
+	moviesFound, _ := findTitlesInResponse(rawData, true)
 	movieSearchResult.MovieSearchResults = moviesFound
 	movieSearchResult = utils.MarkBestMatch(&movieSearchResult)
 	return movieSearchResult, nil
 }
 
-func findMoviesInResponse(response string) (results []types.MovieSearchResult) {
+func SearchAmazonTV(plexTVShow *types.PlexTVShow, filter string) (tvSearchResult types.SearchResults, err error) {
+	urlEncodedTitle := url.QueryEscape(fmt.Sprintf("%s complete series", plexTVShow.Title)) // complete series
+	amazonURL := amazonURL + urlEncodedTitle
+	if filter != "" {
+		amazonURL += filter
+	}
+	amazonURL += "&submit=Search&action=search"
+	req, err := http.NewRequestWithContext(context.Background(), "GET", amazonURL, bytes.NewBuffer([]byte{}))
+
+	tvSearchResult.PlexTVShow = *plexTVShow
+	tvSearchResult.SearchURL = amazonURL
+
+	req.Header.Set("User-Agent",
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+	country := "uk"
+	if strings.Contains(filter, "german") {
+		country = "de"
+	}
+	req.Header.Set("Cookie", fmt.Sprintf("country=%s;", country))
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return tvSearchResult, err
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return tvSearchResult, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return tvSearchResult, err
+	}
+	rawData := string(body)
+
+	_, titlesFound := findTitlesInResponse(rawData, false)
+	tvSearchResult.TVSearchResults = titlesFound
+	tvSearchResult = utils.MarkBestMatch(&tvSearchResult)
+	return tvSearchResult, nil
+}
+
+func findTitlesInResponse(response string, movie bool) (movieResults []types.MovieSearchResult, tvResults []types.TVSearchResult) {
 	// Find the start and end index of the movie entry
 	for {
 		startIndex := strings.Index(response, `<a class="hoverlink" data-globalproductid=`)
@@ -164,8 +210,6 @@ func findMoviesInResponse(response string) (results []types.MovieSearchResult) {
 		if endIndex != -1 {
 			// Extract the movie entry
 			movieEntry := response[0:endIndex]
-
-			// fmt.Println(movieEntry)
 			// Find the URL of the movie
 			urlStartIndex := strings.Index(movieEntry, "href=\"") + len("href=\"")
 			urlEndIndex := strings.Index(movieEntry[urlStartIndex:], "\"") + urlStartIndex
@@ -190,7 +234,18 @@ func findMoviesInResponse(response string) (results []types.MovieSearchResult) {
 					format = types.DiskBluray
 				}
 
-				results = append(results, types.MovieSearchResult{URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle, UITitle: format})
+				if movie {
+					movieResults = append(movieResults, types.MovieSearchResult{
+						URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle, UITitle: format})
+				} else {
+					boxSet := false
+					if strings.Contains(foundTitle, ": The Complete Series") {
+						foundTitle = strings.TrimSuffix(foundTitle, ": The Complete Series")
+						boxSet = true
+					}
+					tvResults = append(tvResults, types.TVSearchResult{
+						URL: returnURL, Format: []string{format}, Year: year, FoundTitle: foundTitle, UITitle: foundTitle, BoxSet: boxSet})
+				}
 			}
 			// remove the movie entry from the response
 			response = response[endIndex:]
@@ -199,5 +254,5 @@ func findMoviesInResponse(response string) (results []types.MovieSearchResult) {
 		}
 	}
 
-	return results
+	return movieResults, tvResults
 }

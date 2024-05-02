@@ -13,6 +13,7 @@ var (
 	plexToken          = os.Getenv("PLEX_TOKEN")
 	plexMovieLibraryID = os.Getenv("PLEX_MOVIE_LIBRARY_ID")
 	plexTVLibraryID    = os.Getenv("PLEX_TV_LIBRARY_ID")
+	plexMusicLibraryID = os.Getenv("PLEX_MUSIC_LIBRARY_ID")
 )
 
 func TestFindMovieDetails(t *testing.T) {
@@ -48,7 +49,7 @@ func TestFindMovieDetails(t *testing.T) {
 }
 
 func TestGetPlexMovies(t *testing.T) {
-	if plexIP == "" || plexTVLibraryID == "" || plexToken == "" {
+	if plexIP == "" || plexMovieLibraryID == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
 	result := GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, "", nil)
@@ -74,5 +75,24 @@ func TestGetPlexTV(t *testing.T) {
 
 	if len(result[0].Seasons[0].Episodes) == 0 {
 		t.Errorf("Expected at least one episode, but got %d", len(result[0].Seasons[0].Episodes))
+	}
+}
+
+func TestGetPlexMusic(t *testing.T) {
+	if plexIP == "" || plexMusicLibraryID == "" || plexToken == "" {
+		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
+	}
+	result := GetPlexMusicArtists(plexIP, plexMusicLibraryID, plexToken)
+
+	if len(result) == 0 {
+		t.Errorf("Expected at least one album, but got %d", len(result))
+	}
+
+	if len(result) == 0 {
+		t.Errorf("Expected at least one artist, but got %d", len(result))
+	}
+	// first artist should have at least one album
+	if len(result[0].Albums) == 0 {
+		t.Errorf("Expected at least one album, but got %d", len(result[0].Albums))
 	}
 }

@@ -57,6 +57,20 @@ type PlexMovie struct {
 	DateAdded time.Time
 }
 
+type PlexMusicArtist struct {
+	Name      string
+	RatingKey string
+	DateAdded time.Time
+	Albums    []PlexMusicAlbum
+}
+
+type PlexMusicAlbum struct {
+	Title     string
+	RatingKey string
+	Year      string
+	DateAdded time.Time
+}
+
 type PlexTVShow struct {
 	Title     string
 	Year      string
@@ -89,4 +103,5 @@ type PlexInformation struct {
 	Token          string
 	MovieLibraryID string
 	TVLibraryID    string
+	MusicLibraryID string
 }

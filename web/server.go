@@ -19,10 +19,10 @@ var (
 	staticFS embed.FS
 
 	port            string = "9090"
-	PlexInformation types.PlexInformation
+	PlexInformation *types.PlexInformation
 )
 
-func StartServer(info types.PlexInformation) {
+func StartServer(info *types.PlexInformation) {
 	PlexInformation = info
 	// find the local IP address
 	ipAddress := GetOutboundIP()

@@ -2,10 +2,12 @@
 
 ## features
 
-- add amazon search for tv series
+- add a search provider mechanism for artists/albums
+- display possible reccomended artists,   curl 'https://192-168-1-150:32400/library/metadata/86662/similar?count=50&X-Plex-Token=<SECRETS>'
 
 ## bugs
 
+- allow amazon tv search for indivdual series
 - remove links to tv series we already have in plex. eg dont show adventure time series 1 and 2 ?
 - remove dead fields from the tv data types
 
@@ -18,3 +20,5 @@
 - use a proper mux for the server
 - use hx-boost
 - fix the progress bar on the tv page
+- add amazon search for tv series
+- plex music lookup

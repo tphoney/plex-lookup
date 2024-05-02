@@ -25,5 +25,5 @@ func startServer() {
 	plexInformation.TVLibraryID = os.Getenv("PLEX_TV_LIBRARY_ID")
 	plexInformation.Token = os.Getenv("PLEX_TOKEN")
 
-	web.StartServer(plexInformation)
+	web.StartServer(&plexInformation)
 }

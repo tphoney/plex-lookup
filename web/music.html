@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Plex lookup - Music</title>
+    <script src="//unpkg.com/htmx.org@1.8.2"></script>
+    <script src="static/tablesort.min.js"></script>
+    <!-- from https://github.com/oleksavyshnivsky/tablesort  -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <!-- from https://github.com/picocss/pico -->
+    <style>
+        [data-sort]:hover {
+            cursor: pointer;
+        }
+
+        [data-dir="asc"]:after {
+            content: ' ↗';
+        }
+
+        [data-dir="desc"]:after {
+            content: ' ↘';
+        }
+    </style>
+</head>
+
+<body>
+    <h1 class="container">Music</h1>
+    <div hx-get="/plexinfook" class="container" hx-trigger="load"></div>
+    <form hx-post="/processmusic" class="container" hx-target="#progress" hx-boost="true" hx-indicator="#indicator">
+        <fieldset>
+            <legend><strong>Plex Filter:</strong> only lookup music that matches the following criteria.</legend>
+        </fieldset>
+        <fieldset>
+            <legend><strong>Lookup:</strong></legend>
+            <label for="musicbrainz">
+                <input type="radio" id="musicbrainz" name="lookup" value="musicbrainz" checked/>
+                musicbrainz (beta - slow, limited to 8 requests per minute)
+            </label>
+        </fieldset>
+        <fieldset>
+            <legend><strong>Lookup Filters:</strong></legend>
+            <label for="Missing albums">
+                <input type="radio" id="missingalbums" name="lookuptype" value="missingalbums" checked/>
+                Missing albums
+            </label>
+            <label for="New artists">
+                <input type="radio" id="newartists" name="lookuptype" value="newartists" disabled="true"/>
+                New artists
+            </label>
+        </fieldset>
+        <button type="submit">Submit</button>
+    </form>
+    <div class="container"><strong id="indicator" class="htmx-indicator">Searching Plex ....</strong></div>
+    <div id="progress" hx-swap="outerHTML"></div>
+    <br>
+    <div class="container"><a href="/">Back</a></div>
+</body>
+
+</html>

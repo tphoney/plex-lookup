@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"path"
 
 	"github.com/tphoney/plex-lookup/plex"
 	"github.com/tphoney/plex-lookup/types"
@@ -38,12 +39,31 @@ func processPlexLibrariesHTML(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, renderLibraries(libraries))
 }
 
-func plexInformationOKHTML(w http.ResponseWriter, _ *http.Request) {
-	// remove the warning in the html if the plex information is set
-	if PlexInformation.IP == "" || PlexInformation.Token == "" || PlexInformation.MovieLibraryID == "" {
-		fmt.Fprint(w, `<h1><a href="/plex"> Enter your plex information here</a></h1>`)
+// plexInformationOKHTML remove the warning in the html if the plex information is set
+func plexInformationOKHTML(w http.ResponseWriter, r *http.Request) {
+	currentURL := r.Header.Get("hx-current-url")
+	// get the last part of the url
+
+	requestingPage := path.Base(currentURL)
+	if PlexInformation.IP == "" || PlexInformation.Token == "" {
+		fmt.Fprint(w, `<h1><a href="/plex"> Enter your plex token and plex ip</a></h1>`)
 	} else {
-		fmt.Fprint(w, ``)
+		switch requestingPage {
+		case "movies":
+			if PlexInformation.MovieLibraryID == "" {
+				fmt.Fprint(w, `<h1><a href="/plex"> Enter your plex movie library section ID</a></h1>`)
+			}
+		case "tv":
+			if PlexInformation.TVLibraryID == "" {
+				fmt.Fprint(w, `<h1><a href="/plex"> Enter your plex tv library section ID</a></h1>`)
+			}
+		case "music":
+			if PlexInformation.MusicLibraryID == "" {
+				fmt.Fprint(w, `<h1><a href="/plex"> Enter your plex music library section ID</a></h1>`)
+			}
+		default:
+			fmt.Fprint(w, ``)
+		}
 	}
 }
 

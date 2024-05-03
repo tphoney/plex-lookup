@@ -1,6 +1,13 @@
 github.com/cpuguy83/go-md2man/v2 v2.0.3/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
+github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
+github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
+github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
+github.com/michiwend/golang-pretty v0.0.0-20141116172505-8ac61812ea3f h1:oF0u/1VBm5gYitYvcIh443XZuYYkR50CP0Vsj3gAa1o=
+github.com/michiwend/golang-pretty v0.0.0-20141116172505-8ac61812ea3f/go.mod h1:k0nOQg5bmAmEwWAuodvib9B74Oyny6aRMpkBcVWEtKs=
+github.com/michiwend/gomusicbrainz v0.0.0-20181012083520-6c07e13dd396 h1:REpvt1iVqbiiBk2TihujngsSpHHMHiB/JBkQH/qkq8s=
+github.com/michiwend/gomusicbrainz v0.0.0-20181012083520-6c07e13dd396/go.mod h1:HKpGCk/zijJ9GXdTWgtpnd5BbKDXtN0OQ3E4/zpxOwM=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/spf13/cobra v1.8.0 h1:7aJaZx1B85qltLMc546zn58BxxfZdR/W22ej9CFoEf0=
 github.com/spf13/cobra v1.8.0/go.mod h1:WXLWApfZ71AjXPya3WOlMsY9yMs7YeiHhFVlvLyhcho=

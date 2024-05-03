@@ -13,11 +13,28 @@ const (
 type SearchResults struct {
 	PlexMovie
 	PlexTVShow
+	PlexMusicArtist
 	SearchURL          string
 	Matches4k          int
 	MatchesBluray      int
 	MovieSearchResults []MovieSearchResult
 	TVSearchResults    []TVSearchResult
+	MusicSearchResults []MusicSearchResult
+}
+
+type PlexInformation struct {
+	IP             string
+	Token          string
+	MovieLibraryID string
+	TVLibraryID    string
+	MusicLibraryID string
+}
+
+// ==============================================================================================================
+type PlexMovie struct {
+	Title     string
+	Year      string
+	DateAdded time.Time
 }
 
 type MovieSearchResult struct {
@@ -31,46 +48,7 @@ type MovieSearchResult struct {
 	NewRelease  bool
 }
 
-type TVSearchResult struct {
-	FoundTitle  string
-	UITitle     string
-	BestMatch   bool
-	URL         string
-	Format      []string
-	Year        string
-	ReleaseDate time.Time
-	NewRelease  bool
-	BoxSet      bool
-	Series      []TVSeries
-}
-
-type TVSeries struct {
-	Number      int
-	URL         string
-	Format      []string
-	ReleaseDate time.Time
-}
-
-type PlexMovie struct {
-	Title     string
-	Year      string
-	DateAdded time.Time
-}
-
-type PlexMusicArtist struct {
-	Name      string
-	RatingKey string
-	DateAdded time.Time
-	Albums    []PlexMusicAlbum
-}
-
-type PlexMusicAlbum struct {
-	Title     string
-	RatingKey string
-	Year      string
-	DateAdded time.Time
-}
-
+// ==============================================================================================================
 type PlexTVShow struct {
 	Title     string
 	Year      string
@@ -92,16 +70,58 @@ type PlexTVEpisode struct {
 	Resolution string
 }
 
+type TVSearchResult struct {
+	FoundTitle  string
+	UITitle     string
+	BestMatch   bool
+	URL         string
+	Format      []string
+	Year        string
+	ReleaseDate time.Time
+	NewRelease  bool
+	BoxSet      bool
+	Series      []TVSeriesResult
+}
+
+type TVSeriesResult struct {
+	Number      int
+	URL         string
+	Format      []string
+	ReleaseDate time.Time
+}
+
+// ==============================================================================================================
+type PlexMusicArtist struct {
+	Name      string
+	RatingKey string
+	DateAdded time.Time
+	Albums    []PlexMusicAlbum
+}
+
+type PlexMusicAlbum struct {
+	Title     string
+	RatingKey string
+	Year      string
+	DateAdded time.Time
+}
+
+type MusicSearchResult struct {
+	Name   string
+	ID     string
+	URL    string
+	Albums []MusicSearchAlbumResult
+}
+
+type MusicSearchAlbumResult struct {
+	Title string
+	ID    string
+	URL   string
+	Year  string
+}
+
+// ==============================================================================================================
 type PlexLibrary struct {
 	Title string
 	Type  string
 	ID    string
-}
-
-type PlexInformation struct {
-	IP             string
-	Token          string
-	MovieLibraryID string
-	TVLibraryID    string
-	MusicLibraryID string
 }

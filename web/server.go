@@ -45,6 +45,10 @@ func StartServer(info *types.PlexInformation) {
 	mux.HandleFunc("/processtv", processTVHTML)
 	mux.HandleFunc("/progresstv", tvProgressBarHTML)
 
+	mux.HandleFunc("/music", musicHandler)
+	mux.HandleFunc("/processmusic", processArtistHTML)
+	mux.HandleFunc("/progressartists", artistProgressBarHTML)
+
 	mux.HandleFunc("/", indexHandler)
 	err := http.ListenAndServe(fmt.Sprintf(":%s", port), mux) //nolint: gosec
 	if err != nil {

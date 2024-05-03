@@ -60,7 +60,7 @@ func SearchCinemaParadisoTV(plexTVShow *types.PlexTVShow) (tvSearchResult types.
 	return tvSearchResult, nil
 }
 
-func findTVSeriesInfo(seriesURL string) (tvSeries []types.TVSeries, err error) {
+func findTVSeriesInfo(seriesURL string) (tvSeries []types.TVSeriesResult, err error) {
 	// make a request to the url
 	req, err := http.NewRequestWithContext(context.Background(), "GET", seriesURL, bytes.NewBuffer([]byte{}))
 	if err != nil {
@@ -118,18 +118,18 @@ func makeSearchRequest(urlEncodedTitle string) (rawResponse string, err error) {
 	return rawData, nil
 }
 
-func findTVSeriesInResponse(response string) (tvSeries []types.TVSeries) {
+func findTVSeriesInResponse(response string) (tvSeries []types.TVSeriesResult) {
 	// look for the series in the response
 	r := regexp.MustCompile(`<li data-filmId="(\d*)">`)
 	match := r.FindAllStringSubmatch(response, -1)
 	for i, m := range match {
-		tvSeries = append(tvSeries, types.TVSeries{Number: i, URL: m[1]})
+		tvSeries = append(tvSeries, types.TVSeriesResult{Number: i, URL: m[1]})
 	}
 	// remove the first entry as it is general information
-	results := make([]types.TVSeries, 0, len(tvSeries))
+	results := make([]types.TVSeriesResult, 0, len(tvSeries))
 	if len(tvSeries) > 0 {
 		tvSeries = tvSeries[1:]
-		ch := make(chan *types.TVSeries, len(tvSeries))
+		ch := make(chan *types.TVSeriesResult, len(tvSeries))
 
 		semaphore := make(chan struct{}, types.ConcurrencyLimit)
 		for i := range tvSeries {
@@ -152,7 +152,7 @@ func findTVSeriesInResponse(response string) (tvSeries []types.TVSeries) {
 	return results
 }
 
-func makeSeriesRequest(tv types.TVSeries, ch chan<- *types.TVSeries) {
+func makeSeriesRequest(tv types.TVSeriesResult, ch chan<- *types.TVSeriesResult) {
 	content := []byte(fmt.Sprintf("FilmID=%s", tv.URL))
 	req, err := http.NewRequestWithContext(context.Background(), "POST", cinemaparadisoSeriesURL, bytes.NewBuffer(content))
 	if err != nil {

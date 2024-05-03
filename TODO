@@ -2,8 +2,6 @@
 
 ## features
 
-- add a search provider mechanism for artists/albums
-- add ui for music search
 - display possible reccomended artists, curl `https://192-168-1-150:32400/library/metadata/86662/similar?count=50&X-Plex-Token={SECRETS}`
 
 ## bugs
@@ -23,3 +21,5 @@
 - fix the progress bar on the tv page
 - add amazon search for tv series
 - plex music lookup
+- add a search provider mechanism for artists/albums
+- add ui for music search

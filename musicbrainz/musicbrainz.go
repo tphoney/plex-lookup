@@ -2,8 +2,11 @@ package musicbrainz
 
 import (
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/michiwend/gomusicbrainz"
+	"github.com/tphoney/plex-lookup/types"
 )
 
 // library docs https://github.com/michiwend/gomusicbrainz/blob/master/release_group.go
@@ -18,38 +21,71 @@ const (
 	lookupLimit    = 100
 )
 
-type MusicBrainzArtist struct {
-	Name string
-	ID   string
-}
-
-type MusicBrainzAlbum struct {
-	Title string
-	ID    string
-	Year  string
-}
-
-func SearchMusicBrainzArtist(artistName string) (artist MusicBrainzArtist, err error) {
+func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist) (artist types.SearchResults, err error) {
+	artist.PlexMusicArtist = *plexArtist
 	client, err := gomusicbrainz.NewWS2Client(
 		musicBrainzURL, agent, agentVersion, "")
 
 	if err != nil {
 		return artist, err
 	}
-	resp, _ := client.SearchArtist(artistName, -1, -1)
+	// encode the artist name according to lucene query syntax
+	r := strings.NewReplacer(
+		"+", `\`,
+		"-", `\`,
+		"&&", `\`,
+		"||", `\`,
+		"!", `\`,
+		"(", `\`,
+		")", `\`,
+		"{", `\`,
+		"}", `\`,
+		"[", `\`,
+		"]", `\`,
+		"^", `\`,
+		`"`, `\`,
+		"~", `\`,
+		"*", `\`,
+		"?", `\`,
+		":", `\`,
+		`\`, `\`,
+		"/", `\`)
 
-	if len(resp.Artists) > 0 {
-		artist = MusicBrainzArtist{
-			Name: resp.Artists[0].Name,
-			ID:   fmt.Sprintf("%v", resp.Artists[0].ID),
+	encodedArtist := r.Replace(plexArtist.Name)
+	resp, err := client.SearchArtist(encodedArtist, -1, -1)
+
+	if err != nil {
+		// check for a 503 error
+		if err.Error() == "EOF" {
+			fmt.Println("SearchMusicBrainzArtist rate limit exceeded")
+			time.Sleep(2 * time.Second)
+			return SearchMusicBrainzArtist(plexArtist)
 		}
-	} else {
+	}
+
+	for i := range resp.Artists {
+		if resp.Artists[i].Name != plexArtist.Name {
+			continue
+		}
+
+		found := types.MusicSearchResult{
+			Name: resp.Artists[i].Name,
+			ID:   fmt.Sprintf("%v", resp.Artists[i].ID),
+		}
+		url := fmt.Sprintf("https://musicbrainz.org/artist/%v", found.ID)
+		found.URL = url
+		// get the albums
+		found.Albums, _ = SearchMusicBrainzAlbums(found.ID)
+		artist.MusicSearchResults = append(artist.MusicSearchResults, found)
+		break
+	}
+	if len(artist.MusicSearchResults) == 0 {
 		err = fmt.Errorf("artist not found")
 	}
 	return artist, err
 }
 
-func SearchMusicBrainzAlbums(artistID string) (albums []MusicBrainzAlbum, err error) {
+func SearchMusicBrainzAlbums(artistID string) (albums []types.MusicSearchAlbumResult, err error) {
 	client, err := gomusicbrainz.NewWS2Client(
 		musicBrainzURL, agent, agentVersion, "")
 
@@ -57,16 +93,24 @@ func SearchMusicBrainzAlbums(artistID string) (albums []MusicBrainzAlbum, err er
 		return albums, err
 	}
 
-	queryURL := fmt.Sprintf("arid:%v AND primarytype:album AND status:official AND type:album",
+	queryURL := fmt.Sprintf("arid:%v AND status:official AND primarytype:album AND -secondarytype:*",
 		artistID)
-	resp, _ := client.SearchReleaseGroup(queryURL, lookupLimit, -1)
-	for _, release := range resp.ReleaseGroups {
-		if release.Type == "Album" {
-			year := release.FirstReleaseDate.Year()
-			albums = append(albums, MusicBrainzAlbum{
-				Title: release.Title,
-				ID:    fmt.Sprintf("%v", release.ID),
+	resp, err := client.SearchReleaseGroup(queryURL, lookupLimit, -1)
+	if err != nil {
+		if err.Error() == "EOF" {
+			fmt.Println("SearchMusicBrainzAlbums rate limit exceeded")
+			time.Sleep(2 * time.Second)
+			return SearchMusicBrainzAlbums(artistID)
+		}
+	}
+	for i := range resp.ReleaseGroups {
+		if resp.ReleaseGroups[i].Type == "Album" {
+			year := resp.ReleaseGroups[i].FirstReleaseDate.Year()
+			albums = append(albums, types.MusicSearchAlbumResult{
+				Title: resp.ReleaseGroups[i].Title,
+				ID:    fmt.Sprintf("%v", resp.ReleaseGroups[i].ID),
 				Year:  fmt.Sprintf("%v", year),
+				URL:   fmt.Sprintf("https://musicbrainz.org/release-group/%v", resp.ReleaseGroups[i].ID),
 			})
 		}
 	}

@@ -24,28 +24,28 @@
 </head>
 
 <body>
-    <h1 class="container">TV</h1>
+    <h1 class="container">Music</h1>
     <div hx-get="/plexinfook" class="container" hx-trigger="load"></div>
     <form hx-post="/processmusic" class="container" hx-target="#progress" hx-boost="true" hx-indicator="#indicator">
         <fieldset>
-            <legend><strong>Plex Filter:</strong> only lookup Music that match the following criteria.</legend>
+            <legend><strong>Plex Filter:</strong> only lookup music that matches the following criteria.</legend>
         </fieldset>
         <fieldset>
             <legend><strong>Lookup:</strong></legend>
             <label for="musicbrainz">
-                <input type="radio" id="musicbrainz" name="lookup" value="musicbrainz" />
-                musicbrainz
+                <input type="radio" id="musicbrainz" name="lookup" value="musicbrainz" checked/>
+                musicbrainz (beta - slow, limited to 8 requests per minute)
             </label>
         </fieldset>
         <fieldset>
             <legend><strong>Lookup Filters:</strong></legend>
-            <label for="Missing Albums">
-                <input type="radio" id="missingalbums" name="lookuptype" value="missingalbums" />
-                Missing Albums
+            <label for="Missing albums">
+                <input type="radio" id="missingalbums" name="lookuptype" value="missingalbums" checked/>
+                Missing albums
             </label>
-            <label for="New Artists">
+            <label for="New artists">
                 <input type="radio" id="newartists" name="lookuptype" value="newartists" disabled="true"/>
-                New Artists
+                New artists
             </label>
         </fieldset>
         <button type="submit">Submit</button>

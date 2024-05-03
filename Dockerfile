@@ -12,6 +12,7 @@ COPY *.go ./
 COPY amazon/*.go amazon/
 COPY cinemaparadiso/*.go cinemaparadiso/
 COPY cmd/*.go cmd/
+COPY musicbrainz/*.go musicbrainz/
 COPY plex/*.go plex/
 COPY types/*.go types/
 COPY utils/*.go utils/

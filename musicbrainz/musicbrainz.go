@@ -19,6 +19,7 @@ const (
 	agent          = "plex-lookup"
 	agentVersion   = "0.0.1"
 	lookupLimit    = 100
+	lookupTimeout  = 2
 )
 
 func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist) (artist types.SearchResults, err error) {
@@ -58,7 +59,7 @@ func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist) (artist types.Se
 		// check for a 503 error
 		if err.Error() == "EOF" {
 			fmt.Println("SearchMusicBrainzArtist rate limit exceeded")
-			time.Sleep(2 * time.Second)
+			time.Sleep(lookupTimeout * time.Second)
 			return SearchMusicBrainzArtist(plexArtist)
 		}
 	}
@@ -67,7 +68,6 @@ func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist) (artist types.Se
 		if resp.Artists[i].Name != plexArtist.Name {
 			continue
 		}
-
 		found := types.MusicSearchResult{
 			Name: resp.Artists[i].Name,
 			ID:   fmt.Sprintf("%v", resp.Artists[i].ID),
@@ -99,7 +99,7 @@ func SearchMusicBrainzAlbums(artistID string) (albums []types.MusicSearchAlbumRe
 	if err != nil {
 		if err.Error() == "EOF" {
 			fmt.Println("SearchMusicBrainzAlbums rate limit exceeded")
-			time.Sleep(2 * time.Second)
+			time.Sleep(lookupTimeout * time.Second)
 			return SearchMusicBrainzAlbums(artistID)
 		}
 	}

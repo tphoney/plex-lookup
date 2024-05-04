@@ -18,13 +18,15 @@ var webCmd = &cobra.Command{
 }
 
 func startServer() {
-	plexInformation := types.PlexInformation{}
+	config := types.Configuration{}
 	// read environment variables
-	plexInformation.IP = os.Getenv("PLEX_IP")
-	plexInformation.MovieLibraryID = os.Getenv("PLEX_MOVIE_LIBRARY_ID")
-	plexInformation.TVLibraryID = os.Getenv("PLEX_TV_LIBRARY_ID")
-	plexInformation.MusicLibraryID = os.Getenv("PLEX_MUSIC_LIBRARY_ID")
-	plexInformation.Token = os.Getenv("PLEX_TOKEN")
+	config.PlexIP = os.Getenv("PLEX_IP")
+	config.PlexMovieLibraryID = os.Getenv("PLEX_MOVIE_LIBRARY_ID")
+	config.PlexTVLibraryID = os.Getenv("PLEX_TV_LIBRARY_ID")
+	config.PlexMusicLibraryID = os.Getenv("PLEX_MUSIC_LIBRARY_ID")
+	config.PlexToken = os.Getenv("PLEX_TOKEN")
+	config.SpotifyClientID = os.Getenv("SPOTIFY_CLIENT_ID")
+	config.SpotifyClientSecret = os.Getenv("SPOTIFY_CLIENT_SECRET")
 
-	web.StartServer(&plexInformation)
+	web.StartServer(&config)
 }

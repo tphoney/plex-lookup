@@ -45,20 +45,20 @@ func plexInformationOKHTML(w http.ResponseWriter, r *http.Request) {
 	// get the last part of the url
 
 	requestingPage := path.Base(currentURL)
-	if PlexInformation.IP == "" || PlexInformation.Token == "" {
+	if config.PlexIP == "" || config.PlexToken == "" {
 		fmt.Fprint(w, `<h1><a href="/plex"> Enter your plex token and plex ip</a></h1>`)
 	} else {
 		switch requestingPage {
 		case "movies":
-			if PlexInformation.MovieLibraryID == "" {
+			if config.PlexMovieLibraryID == "" {
 				fmt.Fprint(w, `<h1><a href="/plex"> Enter your plex movie library section ID</a></h1>`)
 			}
 		case "tv":
-			if PlexInformation.TVLibraryID == "" {
+			if config.PlexTVLibraryID == "" {
 				fmt.Fprint(w, `<h1><a href="/plex"> Enter your plex tv library section ID</a></h1>`)
 			}
 		case "music":
-			if PlexInformation.MusicLibraryID == "" {
+			if config.PlexMusicLibraryID == "" {
 				fmt.Fprint(w, `<h1><a href="/plex"> Enter your plex music library section ID</a></h1>`)
 			}
 		default:
@@ -75,15 +75,15 @@ func plexSaveHandler(w http.ResponseWriter, r *http.Request) {
 	plexTVLibraryID := r.FormValue("plexTVLibraryID")
 	plexMusicLibraryID := r.FormValue("plexMusicLibraryID")
 	// validate form fields
-	PlexInformation = &types.PlexInformation{
-		IP:             plexIP,
-		Token:          plexToken,
-		MovieLibraryID: plexMovieLibraryID,
-		TVLibraryID:    plexTVLibraryID,
-		MusicLibraryID: plexMusicLibraryID,
+	config = &types.Configuration{
+		PlexIP:             plexIP,
+		PlexToken:          plexToken,
+		PlexMovieLibraryID: plexMovieLibraryID,
+		PlexTVLibraryID:    plexTVLibraryID,
+		PlexMusicLibraryID: plexMusicLibraryID,
 	}
 	fmt.Fprint(w, `<h2>Saved!</h2><a href="/">Back</a>`)
-	fmt.Printf("Saved plex information: %+v\n", PlexInformation)
+	fmt.Printf("Saved plex information: %+v\n", config)
 }
 
 func renderLibraries(libraries []types.PlexLibrary) string {

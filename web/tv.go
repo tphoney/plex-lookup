@@ -57,7 +57,7 @@ func processTVHTML(w http.ResponseWriter, r *http.Request) {
 	german := r.FormValue("german")
 	// newerVersion := r.FormValue("newerVersion")
 	// Prepare table plexTV
-	plexTV := plex.GetPlexTV(PlexInformation.IP, PlexInformation.TVLibraryID, PlexInformation.Token, filteredResolutions)
+	plexTV := plex.GetPlexTV(config.PlexIP, config.PlexTVLibraryID, config.PlexToken, filteredResolutions)
 	var searchResult types.SearchResults
 	tvJobRunning = true
 	numberOfTVProcessed = 0

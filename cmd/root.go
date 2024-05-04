@@ -24,23 +24,20 @@ var (
 
 // Execute executes the root command.
 func Execute() error {
-	return rootCmd.Execute()
-}
-
-func init() { //nolint: gochecknoinits
 	cobra.OnInitialize()
-
+	// add flags
 	rootCmd.PersistentFlags().StringVar(&plexIP, "plexIP", "", "Plex IP Address")
 	rootCmd.PersistentFlags().StringVar(&plexMovieLibraryID, "plexMovieLibraryID", "", "Plex Library ID")
 	rootCmd.PersistentFlags().StringVar(&plexToken, "plexToken", "", "Plex Token")
 	// add modifier flags
 	rootCmd.PersistentFlags().StringVar(&libraryType, "type", types.PlexMovieType, "Library Type (Movie, TV)")
-
+	// add subcommands
 	rootCmd.AddCommand(amazonCmd)
 	rootCmd.AddCommand(cinemaParadisoCmd)
 	rootCmd.AddCommand(plexCmd)
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(webCmd)
+	return rootCmd.Execute()
 }
 
 func initializeFlags() {

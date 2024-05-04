@@ -14,6 +14,7 @@ COPY cinemaparadiso/*.go cinemaparadiso/
 COPY cmd/*.go cmd/
 COPY musicbrainz/*.go musicbrainz/
 COPY plex/*.go plex/
+COPY spotify/*.go spotify/
 COPY types/*.go types/
 COPY utils/*.go utils/
 COPY web/*.go web/

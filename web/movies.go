@@ -58,7 +58,7 @@ func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 	german := r.FormValue("german")
 	newerVersion := r.FormValue("newerVersion")
 	// Prepare table plexMovies
-	plexMovies := fetchPlexMovies(PlexInformation.IP, PlexInformation.MovieLibraryID, PlexInformation.Token, filteredResolutions, german)
+	plexMovies := fetchPlexMovies(config.PlexIP, config.PlexMovieLibraryID, config.PlexToken, filteredResolutions, german)
 	var searchResult types.SearchResults
 	jobRunning = true
 	numberOfMoviesProcessed = 0

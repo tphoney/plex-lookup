@@ -22,12 +22,14 @@ type SearchResults struct {
 	MusicSearchResults []MusicSearchResult
 }
 
-type PlexInformation struct {
-	IP             string
-	Token          string
-	MovieLibraryID string
-	TVLibraryID    string
-	MusicLibraryID string
+type Configuration struct {
+	PlexIP              string
+	PlexToken           string
+	PlexMovieLibraryID  string
+	PlexTVLibraryID     string
+	PlexMusicLibraryID  string
+	SpotifyClientID     string
+	SpotifyClientSecret string
 }
 
 // ==============================================================================================================

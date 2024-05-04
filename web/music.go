@@ -9,6 +9,7 @@ import (
 
 	"github.com/tphoney/plex-lookup/musicbrainz"
 	"github.com/tphoney/plex-lookup/plex"
+	"github.com/tphoney/plex-lookup/spotify"
 	"github.com/tphoney/plex-lookup/types"
 )
 
@@ -34,10 +35,11 @@ func musicHandler(w http.ResponseWriter, _ *http.Request) {
 
 // nolint: lll, nolintlint
 func processArtistHTML(w http.ResponseWriter, r *http.Request) {
+	lookup := r.FormValue("lookup")
 	lookupType := r.FormValue("lookuptype")
 	// only get the artists from plex once
 	if len(plexMusic) == 0 {
-		plexMusic = plex.GetPlexMusicArtists(PlexInformation.IP, PlexInformation.MusicLibraryID, PlexInformation.Token)
+		plexMusic = plex.GetPlexMusicArtists(config.PlexIP, config.PlexMusicLibraryID, config.PlexToken)
 	}
 	var searchResult types.SearchResults
 	artistsJobRunning = true
@@ -48,17 +50,33 @@ func processArtistHTML(w http.ResponseWriter, r *http.Request) {
 		<progress value="%d" max= "%d"/></div>`, numberOfArtistsProcessed, totalArtists)
 
 	if lookupType == "missingalbums" {
-		go func() {
-			startTime := time.Now()
-			for i := 0; i < 50; i++ {
-				fmt.Print(".")
-				searchResult, _ = musicbrainz.SearchMusicBrainzArtist(&plexMusic[i])
-				artistsSearchResults = append(artistsSearchResults, searchResult)
-				numberOfArtistsProcessed = i
-			}
-			artistsJobRunning = false
-			fmt.Printf("Processed %d artists in %v\n", numberOfArtistsProcessed, time.Since(startTime))
-		}()
+		switch lookup {
+		case "musicbrainz":
+			go func() {
+				startTime := time.Now()
+				for i := 0; i < 50; i++ {
+					fmt.Print(".")
+					searchResult, _ = musicbrainz.SearchMusicBrainzArtist(&plexMusic[i])
+					artistsSearchResults = append(artistsSearchResults, searchResult)
+					numberOfArtistsProcessed = i
+				}
+				artistsJobRunning = false
+				fmt.Printf("Processed %d artists in %v\n", numberOfArtistsProcessed, time.Since(startTime))
+			}()
+		default:
+			// search spotify
+			go func() {
+				startTime := time.Now()
+				for i := 0; i < 50; i++ {
+					fmt.Print(".")
+					searchResult, _ = spotify.SearchSpotifyArtist(&plexMusic[i], config.SpotifyClientID, config.SpotifyClientSecret)
+					artistsSearchResults = append(artistsSearchResults, searchResult)
+					numberOfArtistsProcessed = i
+				}
+				artistsJobRunning = false
+				fmt.Printf("Processed %d artists in %v\n", numberOfArtistsProcessed, time.Since(startTime))
+			}()
+		}
 	} else {
 		fmt.Println("Processing new artists")
 		fmt.Printf("running %v\n", artistsJobRunning)

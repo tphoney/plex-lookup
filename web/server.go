@@ -18,12 +18,12 @@ var (
 	//go:embed static/*
 	staticFS embed.FS
 
-	port            string = "9090"
-	PlexInformation *types.PlexInformation
+	port   string = "9090"
+	config *types.Configuration
 )
 
-func StartServer(info *types.PlexInformation) {
-	PlexInformation = info
+func StartServer(startingConfig *types.Configuration) {
+	config = startingConfig
 	// find the local IP address
 	ipAddress := GetOutboundIP()
 	fmt.Printf("Starting server on http://%s:%s\n", ipAddress.String(), port)

@@ -2,10 +2,11 @@
 
 ## features
 
-- display possible reccomended artists, curl `https://192-168-1-150:32400/library/metadata/86662/similar?count=50&X-Plex-Token={SECRETS}`
+- similar artist search for music
 
 ## bugs
 
+- add plex name hover over for tv/movies/music, so we can identify if there is a mismatch between the plex name and the search name
 - allow amazon tv search for indivdual series
 - remove links to tv series we already have in plex. eg dont show adventure time series 1 and 2 ?
 - remove dead fields from the tv data types
@@ -23,3 +24,4 @@
 - plex music lookup
 - add a search provider mechanism for artists/albums
 - add ui for music search
+- spotify search

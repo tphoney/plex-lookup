@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/tphoney/plex-lookup/musicbrainz"
 	"github.com/tphoney/plex-lookup/plex"
 	"github.com/tphoney/plex-lookup/spotify"
 	"github.com/tphoney/plex-lookup/types"
+	"github.com/tphoney/plex-lookup/utils"
 )
 
 var (
@@ -22,6 +24,7 @@ var (
 	totalArtists             int  = 0
 	plexMusic                []types.PlexMusicArtist
 	artistsSearchResults     []types.SearchResults
+	albumReleaseYearCutoff   int = 2
 )
 
 func musicHandler(w http.ResponseWriter, _ *http.Request) {
@@ -44,7 +47,7 @@ func processArtistHTML(w http.ResponseWriter, r *http.Request) {
 	var searchResult types.SearchResults
 	artistsJobRunning = true
 	numberOfArtistsProcessed = 0
-	totalArtists = 49 // len(plexMusic) - 1
+	totalArtists = len(plexMusic) - 1
 
 	fmt.Fprintf(w, `<div hx-get="/progressartists" hx-trigger="every 100ms" class="container" id="progress">
 		<progress value="%d" max= "%d"/></div>`, numberOfArtistsProcessed, totalArtists)
@@ -67,7 +70,7 @@ func processArtistHTML(w http.ResponseWriter, r *http.Request) {
 			// search spotify
 			go func() {
 				startTime := time.Now()
-				for i := 0; i < 50; i++ {
+				for i := range plexMusic {
 					fmt.Print(".")
 					searchResult, _ = spotify.SearchSpotifyArtist(&plexMusic[i], config.SpotifyClientID, config.SpotifyClientSecret)
 					artistsSearchResults = append(artistsSearchResults, searchResult)
@@ -104,15 +107,16 @@ func artistProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 }
 
 func renderArtistsTable(searchResults []types.SearchResults) (tableRows string) {
+	searchResults = filterMusicSearchResults(searchResults)
 	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Artist</strong></th><th data-sort="int"><strong>Albums</strong></th><th><strong>Album</strong></th></tr></thead><tbody>` //nolint: lll
 	for i := range searchResults {
 		if len(searchResults[i].MusicSearchResults) > 0 {
-			tableRows += fmt.Sprintf("<tr><td><a href='%s'>%s</a></td><td>%d</td><td><ul>",
+			tableRows += fmt.Sprintf("<tr><td><a href=%q>%s</a></td><td>%d</td><td><ul>",
 				searchResults[i].MusicSearchResults[0].URL,
 				searchResults[i].PlexMusicArtist.Name,
 				len(searchResults[i].MusicSearchResults[0].Albums))
 			for j := range searchResults[i].MusicSearchResults[0].Albums {
-				tableRows += fmt.Sprintf("<li><a href='%s'>%s</a> (%s)</li>",
+				tableRows += fmt.Sprintf("<li><a href=%q>%s</a> (%s)</li>",
 					searchResults[i].MusicSearchResults[0].Albums[j].URL,
 					searchResults[i].MusicSearchResults[0].Albums[j].Title,
 					searchResults[i].MusicSearchResults[0].Albums[j].Year)
@@ -121,4 +125,65 @@ func renderArtistsTable(searchResults []types.SearchResults) (tableRows string) 
 		}
 	}
 	return tableRows // Return the generated HTML for table rows
+}
+
+func filterMusicSearchResults(searchResults []types.SearchResults) []types.SearchResults {
+	searchResults = removeOwnedAlbums(searchResults)
+	searchResults = removeOlderSearchedAlbums(searchResults)
+	return searchResults
+}
+
+func removeOlderSearchedAlbums(searchResults []types.SearchResults) []types.SearchResults {
+	cutoffYear := time.Now().Year() - albumReleaseYearCutoff
+	filteredResults := make([]types.SearchResults, 0)
+	for i := range searchResults {
+		if len(searchResults[i].MusicSearchResults) > 0 {
+			filteredAlbums := make([]types.MusicSearchAlbumResult, 0)
+			for _, album := range searchResults[i].MusicSearchResults[0].Albums {
+				albumYear, _ := strconv.Atoi(album.Year)
+				if albumYear >= cutoffYear {
+					filteredAlbums = append(filteredAlbums, album)
+				}
+			}
+			searchResults[i].MusicSearchResults[0].Albums = filteredAlbums
+			filteredResults = append(filteredResults, searchResults[i])
+		}
+	}
+	return filteredResults
+}
+
+func removeOwnedAlbums(searchResults []types.SearchResults) []types.SearchResults {
+	for i := range searchResults {
+		if len(searchResults[i].MusicSearchResults) > 0 {
+			albumsToRemove := make([]types.MusicSearchAlbumResult, 0)
+			// iterate over plex albums
+			for _, plexAlbum := range searchResults[i].PlexMusicArtist.Albums {
+				// iterate over search results
+				for _, album := range searchResults[i].MusicSearchResults[0].Albums {
+					if utils.CompareTitles(plexAlbum.Title, album.Title) {
+						albumsToRemove = append(albumsToRemove, album)
+					}
+				}
+			}
+			searchResults[i].MusicSearchResults[0].Albums = cleanAlbums(searchResults[i].MusicSearchResults[0].Albums, albumsToRemove)
+		}
+	}
+	return searchResults
+}
+
+func cleanAlbums(original, toRemove []types.MusicSearchAlbumResult) []types.MusicSearchAlbumResult {
+	cleaned := make([]types.MusicSearchAlbumResult, 0)
+	for _, album := range original {
+		found := false
+		for _, remove := range toRemove {
+			if album.Title == remove.Title && album.Year == remove.Year {
+				found = true
+				break
+			}
+		}
+		if !found {
+			cleaned = append(cleaned, album)
+		}
+	}
+	return cleaned
 }

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -114,5 +115,93 @@ func TestMarkBestMatch(t *testing.T) {
 				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result.MovieSearchResults[i])
 			}
 		}
+	}
+}
+
+func Test_albumTitlesMatch(t *testing.T) {
+	tests := []struct {
+		title1 string
+		title2 string
+		want   bool
+	}{
+		{
+			title1: "Test Album",
+			title2: "Test Album",
+			want:   true,
+		},
+		{
+			title1: "Test Album (Deluxe Edition)",
+			title2: "Test Album",
+			want:   true,
+		},
+		{
+			title1: "Test Album [Remastered]",
+			title2: "Test Album",
+			want:   true,
+		},
+		{
+			title1: "Test Album {Special Edition}",
+			title2: "Test Album",
+			want:   true,
+		},
+		{
+			title1: "Test Album (Deluxe Edition) [Remastered] {Special Edition}",
+			title2: "Test Album",
+			want:   true,
+		},
+		{
+			title1: "Test Album (Live)",
+			title2: "Test Album (Studio)",
+			want:   true,
+		},
+		{
+			title1: "Test Album [Remastered]",
+			title2: "Test Album2 [Deluxe Edition]",
+			want:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("title1=%s, title2=%s", tt.title1, tt.title2), func(t *testing.T) {
+			if got := CompareTitles(tt.title1, tt.title2); got != tt.want {
+				t.Errorf("albumTitlesMatch() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+func TestWitinOneYear(t *testing.T) {
+	// Test case 1: Same year
+	year1 := 2022
+	year2 := 2022
+	expectedResult := true
+	result := WitinOneYear(year1, year2)
+	if result != expectedResult {
+		t.Errorf("Expected %v, but got %v", expectedResult, result)
+	}
+
+	// Test case 2: Year difference of 1
+	year1 = 2022
+	year2 = 2021
+	expectedResult = true
+	result = WitinOneYear(year1, year2)
+	if result != expectedResult {
+		t.Errorf("Expected %v, but got %v", expectedResult, result)
+	}
+
+	// Test case 3: Year difference of -1
+	year1 = 2022
+	year2 = 2023
+	expectedResult = true
+	result = WitinOneYear(year1, year2)
+	if result != expectedResult {
+		t.Errorf("Expected %v, but got %v", expectedResult, result)
+	}
+
+	// Test case 4: Year difference greater than 1
+	year1 = 2022
+	year2 = 2020
+	expectedResult = false
+	result = WitinOneYear(year1, year2)
+	if result != expectedResult {
+		t.Errorf("Expected %v, but got %v", expectedResult, result)
 	}
 }

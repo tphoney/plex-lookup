@@ -76,7 +76,7 @@ func TestSearchSpotifyArtistDebug(t *testing.T) {
 	if spotifyClientID == "" || spotifyClientSecret == "" {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
-	artist := &types.PlexMusicArtist{Name: "Aaliyah"}
+	artist := &types.PlexMusicArtist{Name: "Angel Olsen"}
 	artistSearchResult, err := SearchSpotifyArtist(artist, spotifyClientID, spotifyClientSecret)
 	if err != nil {
 		t.Errorf("SearchSpotifyArtist() error = %v", err)
@@ -88,7 +88,7 @@ func TestSearchSpotifyAlbumsDebug(t *testing.T) {
 	if spotifyClientID == "" || spotifyClientSecret == "" {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
-	artistID := "0urTpYCsixqZwgNTkPJOJ4"
+	artistID := "6mKqFxGMS5TGDZI3XkT5Rt"
 	artistSearchResult, err := SearchSpotifyAlbums(artistID, spotifyClientID, spotifyClientSecret)
 	if err != nil {
 		t.Errorf("SearchSpotifyAlbum() error = %v", err)

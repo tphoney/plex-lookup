@@ -174,11 +174,13 @@ func SearchSpotifyAlbums(artistID, clientID, clientSecret string) (albums []type
 	_ = json.Unmarshal(body, &albumsResponse)
 
 	for i := range albumsResponse.Items {
+		// convert "2022-06-03" to "2022"
+		year := strings.Split(albumsResponse.Items[i].ReleaseDate, "-")[0]
 		albums = append(albums, types.MusicSearchAlbumResult{
 			Title: albumsResponse.Items[i].Name,
 			ID:    albumsResponse.Items[i].ID,
 			URL:   albumsResponse.Items[i].ExternalUrls.Spotify,
-			Year:  albumsResponse.Items[i].ReleaseDate,
+			Year:  year,
 		})
 	}
 

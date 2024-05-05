@@ -6,7 +6,6 @@
 
 ## bugs
 
-- bastille is showing "give me the future" as an album. wrong !!
 - add plex name hover over for tv/movies/music, so we can identify if there is a mismatch between the plex name and the search name
 - allow amazon tv search for indivdual series
 - remove links to tv series we already have in plex. eg dont show adventure time series 1 and 2 ?
@@ -26,3 +25,4 @@
 - add a search provider mechanism for artists/albums
 - add ui for music search
 - spotify search
+- bastille is showing "give me the future" as an album. wrong !!

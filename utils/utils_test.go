@@ -159,6 +159,12 @@ func Test_albumTitlesMatch(t *testing.T) {
 			title2: "Test Album2 [Deluxe Edition]",
 			want:   false,
 		},
+		// test for case insensitivity
+		{
+			title1: "Test Album",
+			title2: "test album",
+			want:   true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("title1=%s, title2=%s", tt.title1, tt.title2), func(t *testing.T) {

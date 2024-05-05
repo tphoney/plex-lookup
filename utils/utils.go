@@ -64,6 +64,9 @@ func CompareTitles(title1, title2 string) bool {
 	// strip whitespace
 	title1 = strings.TrimSpace(title1)
 	title2 = strings.TrimSpace(title2)
+	// lowercase
+	title1 = strings.ToLower(title1)
+	title2 = strings.ToLower(title2)
 	return title1 == title2
 }
 

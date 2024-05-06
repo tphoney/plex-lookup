@@ -6,10 +6,7 @@
 
 ## bugs
 
-- add plex name hover over for tv/movies/music, so we can identify if there is a mismatch between the plex name and the search name
 - allow amazon tv search for indivdual series
-- remove links to tv series we already have in plex. eg dont show adventure time series 1 and 2 ?
-- remove dead fields from the tv data types
 
 ## done
 
@@ -26,3 +23,5 @@
 - add ui for music search
 - spotify search
 - bastille is showing "give me the future" as an album. wrong !!
+- remove dead fields from the tv data types
+- remove links to tv series we already have in plex. eg dont show adventure time series 1 and 2 ?

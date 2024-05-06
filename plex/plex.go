@@ -518,7 +518,7 @@ func GetPlexMovies(ipAddress, libraryID, plexToken, resolution string, filters [
 	return movieList
 }
 
-func GetPlexTV(ipAddress, libraryID, plexToken string, resolutions []string) (tvShowList []types.PlexTVShow) {
+func GetPlexTV(ipAddress, libraryID, plexToken string) (tvShowList []types.PlexTVShow) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
 	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
@@ -547,7 +547,7 @@ func GetPlexTV(ipAddress, libraryID, plexToken string, resolutions []string) (tv
 	tvShowList = extractTVShows(string(body))
 	// now we need to get the episodes for each TV show
 	for i := range tvShowList {
-		tvShowList[i].Seasons = GetPlexTVSeasons(ipAddress, plexToken, tvShowList[i].RatingKey, resolutions)
+		tvShowList[i].Seasons = GetPlexTVSeasons(ipAddress, plexToken, tvShowList[i].RatingKey)
 	}
 	// remove TV shows with no seasons
 	var filteredTVShows []types.PlexTVShow
@@ -677,7 +677,7 @@ func extractMusicArtists(xmlString string) (artists []types.PlexMusicArtist, err
 	return artists, nil
 }
 
-func GetPlexTVSeasons(ipAddress, plexToken, ratingKey string, resolutions []string) (seasonList []types.PlexTVSeason) {
+func GetPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []types.PlexTVSeason) {
 	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, ratingKey)
 
 	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
@@ -707,7 +707,7 @@ func GetPlexTVSeasons(ipAddress, plexToken, ratingKey string, resolutions []stri
 	// os.WriteFile("seasons.xml", body, 0644)
 	// now we need to get the episodes for each TV show
 	for i := range seasonList {
-		episodes := GetPlexTVEpisodes(ipAddress, plexToken, seasonList[i].RatingKey, resolutions)
+		episodes := GetPlexTVEpisodes(ipAddress, plexToken, seasonList[i].RatingKey)
 		if len(episodes) > 0 {
 			seasonList[i].Episodes = episodes
 		}
@@ -716,13 +716,46 @@ func GetPlexTVSeasons(ipAddress, plexToken, ratingKey string, resolutions []stri
 	var filteredSeasons []types.PlexTVSeason
 	for i := range seasonList {
 		if len(seasonList[i].Episodes) > 0 {
+			// lets add all of the resolutions for the episodes
+			var listOfResolutions []string
+			for j := range seasonList[i].Episodes {
+				listOfResolutions = append(listOfResolutions, seasonList[i].Episodes[j].Resolution)
+			}
+			// now we have all of the resolutions for the episodes
+			seasonList[i].LowestResolution = findLowestResolution(listOfResolutions)
+
 			filteredSeasons = append(filteredSeasons, seasonList[i])
 		}
 	}
 	return filteredSeasons
 }
 
-func GetPlexTVEpisodes(ipAddress, plexToken, ratingKey string, resolutions []string) (episodeList []types.PlexTVEpisode) {
+func findLowestResolution(resolutions []string) (lowestResolution string) {
+	if slices.Contains(resolutions, types.PlexResolutionSD) {
+		return types.PlexResolutionSD
+	}
+	if slices.Contains(resolutions, types.PlexResolution240) {
+		return types.PlexResolution240
+	}
+	if slices.Contains(resolutions, types.PlexResolution480) {
+		return types.PlexResolution480
+	}
+	if slices.Contains(resolutions, types.PlexResolution576) {
+		return types.PlexResolution576
+	}
+	if slices.Contains(resolutions, types.PlexResolution720) {
+		return types.PlexResolution720
+	}
+	if slices.Contains(resolutions, types.PlexResolution1080) {
+		return types.PlexResolution1080
+	}
+	if slices.Contains(resolutions, types.PlexResolution4K) {
+		return types.PlexResolution4K
+	}
+	return ""
+}
+
+func GetPlexTVEpisodes(ipAddress, plexToken, ratingKey string) (episodeList []types.PlexTVEpisode) {
 	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, ratingKey)
 
 	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
@@ -749,16 +782,6 @@ func GetPlexTVEpisodes(ipAddress, plexToken, ratingKey string, resolutions []str
 	}
 
 	episodeList = extractTVEpisodes(string(body))
-	if len(resolutions) > 0 {
-		// filter out episodes that don't match the resolution
-		var filteredEpisodes []types.PlexTVEpisode
-		for i := range episodeList {
-			if slices.Contains(resolutions, episodeList[i].Resolution) {
-				filteredEpisodes = append(filteredEpisodes, episodeList[i])
-			}
-		}
-		episodeList = filteredEpisodes
-	}
 	return episodeList
 }
 

@@ -39,13 +39,13 @@ func moviesHandler(w http.ResponseWriter, _ *http.Request) {
 func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 	lookup := r.FormValue("lookup")
 	// plex resolutions
-	sd := r.FormValue("sd")
+	sd := r.FormValue("SD")
 	r240 := r.FormValue("240p")
 	r480 := r.FormValue("480p")
 	r576 := r.FormValue("576p")
 	r720 := r.FormValue("720p")
 	r1080 := r.FormValue("1080p")
-	r4k := r.FormValue("4k")
+	r4k := r.FormValue("4K")
 	plexResolutions := []string{sd, r240, r480, r576, r720, r1080, r4k}
 	// remove empty resolutions
 	var filteredResolutions []string

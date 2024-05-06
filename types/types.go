@@ -3,11 +3,18 @@ package types
 import "time"
 
 const (
-	DiskBluray       = "Blu-ray"
-	DiskDVD          = "DVD"
-	Disk4K           = "4K Blu-ray"
-	PlexMovieType    = "Movie"
-	ConcurrencyLimit = 10
+	DiskBluray         = "Blu-ray"
+	DiskDVD            = "DVD"
+	Disk4K             = "4K Blu-ray"
+	PlexMovieType      = "Movie"
+	PlexResolutionSD   = "sd"
+	PlexResolution240  = "240"
+	PlexResolution480  = "480"
+	PlexResolution576  = "576"
+	PlexResolution720  = "720"
+	PlexResolution1080 = "1080"
+	PlexResolution4K   = "4k"
+	ConcurrencyLimit   = 10
 )
 
 type SearchResults struct {
@@ -60,10 +67,11 @@ type PlexTVShow struct {
 }
 
 type PlexTVSeason struct {
-	Title     string
-	Number    int
-	RatingKey string
-	Episodes  []PlexTVEpisode
+	Title            string
+	Number           int
+	RatingKey        string
+	LowestResolution string
+	Episodes         []PlexTVEpisode
 }
 
 type PlexTVEpisode struct {
@@ -82,10 +90,10 @@ type TVSearchResult struct {
 	ReleaseDate time.Time
 	NewRelease  bool
 	BoxSet      bool
-	Series      []TVSeriesResult
+	Seasons     []TVSeasonResult
 }
 
-type TVSeriesResult struct {
+type TVSeasonResult struct {
 	Number      int
 	URL         string
 	Format      []string

@@ -8,7 +8,6 @@
 
 - allow amazon tv search for newer series
 - update movies to use tv like search
-- write a function to calculate plex dates
 - allow amazon tv search for indivdual series
 
 ## done
@@ -28,3 +27,4 @@
 - bastille is showing "give me the future" as an album. wrong !!
 - remove dead fields from the tv data types
 - remove links to tv series we already have in plex. eg dont show adventure time series 1 and 2 ?
+- write a function to calculate plex dates

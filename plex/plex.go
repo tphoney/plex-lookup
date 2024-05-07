@@ -715,17 +715,19 @@ func GetPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []type
 	// remove seasons with no episodes
 	var filteredSeasons []types.PlexTVSeason
 	for i := range seasonList {
-		if len(seasonList[i].Episodes) > 0 {
-			// lets add all of the resolutions for the episodes
-			var listOfResolutions []string
-			for j := range seasonList[i].Episodes {
-				listOfResolutions = append(listOfResolutions, seasonList[i].Episodes[j].Resolution)
-			}
-			// now we have all of the resolutions for the episodes
-			seasonList[i].LowestResolution = findLowestResolution(listOfResolutions)
-
-			filteredSeasons = append(filteredSeasons, seasonList[i])
+		if len(seasonList[i].Episodes) < 1 {
+			continue
 		}
+		// lets add all of the resolutions for the episodes
+		var listOfResolutions []string
+		for j := range seasonList[i].Episodes {
+			listOfResolutions = append(listOfResolutions, seasonList[i].Episodes[j].Resolution)
+		}
+		// now we have all of the resolutions for the episodes
+		seasonList[i].LowestResolution = findLowestResolution(listOfResolutions)
+		// get the last episode added date
+		seasonList[i].LastEpisodeAdded = seasonList[i].Episodes[len(seasonList[i].Episodes)-1].DateAdded
+		filteredSeasons = append(filteredSeasons, seasonList[i])
 	}
 	return filteredSeasons
 }
@@ -904,8 +906,16 @@ func extractTVEpisodes(xmlString string) (episodeList []types.PlexTVEpisode) {
 	}
 
 	for i := range container.Video {
+		intTime, err := strconv.ParseInt(container.Video[i].AddedAt, 10, 64)
+		var parsedDate time.Time
+		if err != nil {
+			parsedDate = time.Time{}
+		} else {
+			parsedDate = time.Unix(intTime, 0)
+		}
 		episodeList = append(episodeList, types.PlexTVEpisode{
-			Title: container.Video[i].Title, Resolution: container.Video[i].Media.VideoResolution, Index: container.Video[i].Index})
+			Title: container.Video[i].Title, Resolution: container.Video[i].Media.VideoResolution,
+			Index: container.Video[i].Index, DateAdded: parsedDate})
 	}
 	return episodeList
 }

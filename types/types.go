@@ -71,6 +71,7 @@ type PlexTVSeason struct {
 	Number           int
 	RatingKey        string
 	LowestResolution string
+	LastEpisodeAdded time.Time
 	Episodes         []PlexTVEpisode
 }
 
@@ -78,6 +79,7 @@ type PlexTVEpisode struct {
 	Title      string
 	Index      string
 	Resolution string
+	DateAdded  time.Time
 }
 
 type TVSearchResult struct {

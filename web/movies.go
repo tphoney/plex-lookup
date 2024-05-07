@@ -82,7 +82,7 @@ func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 				}
 				// if we are filtering by newer version, we need to search again
 				if newerVersion == stringTrue {
-					scrapedResults := amazon.ScrapeMovies(&searchResult)
+					scrapedResults := amazon.ScrapeTitles(&searchResult)
 					searchResult.MovieSearchResults = scrapedResults
 				}
 			}

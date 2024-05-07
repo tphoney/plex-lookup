@@ -14,6 +14,11 @@ import (
 	"github.com/tphoney/plex-lookup/types"
 )
 
+type FilteringOptions struct {
+	AudioLanguage string
+	NewerVersion  bool
+}
+
 var (
 	//go:embed tv.html
 	tvPage string
@@ -23,6 +28,7 @@ var (
 	totalTV             int  = 0
 	plexTV              []types.PlexTVShow
 	tvSearchResults     []types.SearchResults
+	filters             FilteringOptions
 )
 
 func tvHandler(w http.ResponseWriter, _ *http.Request) {
@@ -34,28 +40,11 @@ func tvHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// nolint: lll, nolintlint
 func processTVHTML(w http.ResponseWriter, r *http.Request) {
 	lookup := r.FormValue("lookup")
-	// plex resolutions
-	// sd := r.FormValue(types.PlexResolutionSD)
-	// r240 := r.FormValue(types.PlexResolution240)
-	// r480 := r.FormValue(types.PlexResolution480)
-	// r576 := r.FormValue(types.PlexResolution576)
-	// r720 := r.FormValue(types.PlexResolution720)
-	// r1080 := r.FormValue(types.PlexResolution1080)
-	// r4k := r.FormValue(types.PlexResolution4K)
-	// plexResolutions := []string{sd, r240, r480, r576, r720, r1080, r4k}
-	// // remove empty resolutions
-	// var filteredResolutions []string
-	// for _, resolution := range plexResolutions {
-	// 	if resolution != "" {
-	// 		filteredResolutions = append(filteredResolutions, resolution)
-	// 	}
-	// }
 	// lookup filters
-	german := r.FormValue("german")
-	// newerVersion := r.FormValue("newerVersion")
+	filters.AudioLanguage = r.FormValue("german")
+	filters.NewerVersion = r.FormValue("newerVersion") == stringTrue
 
 	if len(plexTV) == 0 {
 		plexTV = plex.GetPlexTV(config.PlexIP, config.PlexTVLibraryID, config.PlexToken)
@@ -76,16 +65,12 @@ func processTVHTML(w http.ResponseWriter, r *http.Request) {
 			if lookup == "cinemaParadiso" {
 				searchResult, _ = cinemaparadiso.SearchCinemaParadisoTV(&plexTV[i])
 			} else {
-				if german == stringTrue {
-					searchResult, _ = amazon.SearchAmazonTV(&plexTV[i], "&audio=german")
+				if filters.AudioLanguage == "german" {
+					searchResult, _ = amazon.SearchAmazonTV(&plexTV[i], fmt.Sprintf("&audio=%s", filters.AudioLanguage))
 				} else {
 					searchResult, _ = amazon.SearchAmazonTV(&plexTV[i], "")
 				}
-				// if we are filtering by newer version, we need to search again
-				// if newerVersion == stringTrue {
-				// 	scrapedResults := amazon.ScrapeMovies(&searchResult)
-				// 	searchResult.MovieSearchResults = scrapedResults
-				// }
+				// ADD CALL TO GET TV SHOW DETAILS
 			}
 			tvSearchResults = append(tvSearchResults, searchResult)
 			numberOfTVProcessed = i
@@ -155,6 +140,9 @@ func renderTVTable(searchResults []types.SearchResults) (tableRows string) {
 
 func filterTVSearchResults(searchResults []types.SearchResults) []types.SearchResults {
 	searchResults = removeOwnedTVSeasons(searchResults)
+	if filters.NewerVersion {
+		searchResults = removeOldDiscReleases(searchResults)
+	}
 	return searchResults
 }
 
@@ -166,7 +154,26 @@ func removeOwnedTVSeasons(searchResults []types.SearchResults) []types.SearchRes
 			for _, plexSeasons := range searchResults[i].PlexTVShow.Seasons {
 				// iterate over search results
 				for _, searchSeasons := range searchResults[i].TVSearchResults[0].Seasons {
-					if searchSeasons.Number == plexSeasons.Number && discBeatsPlexResolution(plexSeasons.LowestResolution, searchSeasons.Format) {
+					if searchSeasons.Number == plexSeasons.Number && !discBeatsPlexResolution(plexSeasons.LowestResolution, searchSeasons.Format) {
+						tvSeasonsToRemove = append(tvSeasonsToRemove, searchSeasons)
+					}
+				}
+			}
+			searchResults[i].TVSearchResults[0].Seasons = cleanTVSeasons(searchResults[i].TVSearchResults[0].Seasons, tvSeasonsToRemove)
+		}
+	}
+	return searchResults
+}
+
+func removeOldDiscReleases(searchResults []types.SearchResults) []types.SearchResults {
+	for i := range searchResults {
+		if len(searchResults[i].TVSearchResults) > 0 {
+			tvSeasonsToRemove := make([]types.TVSeasonResult, 0)
+			// iterate over plex tv season
+			for _, plexSeasons := range searchResults[i].PlexTVShow.Seasons {
+				// iterate over search results
+				for _, searchSeasons := range searchResults[i].TVSearchResults[0].Seasons {
+					if searchSeasons.ReleaseDate.Compare(plexSeasons.LastEpisodeAdded) == 1 {
 						tvSeasonsToRemove = append(tvSeasonsToRemove, searchSeasons)
 					}
 				}

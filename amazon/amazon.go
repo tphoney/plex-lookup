@@ -19,9 +19,9 @@ const (
 	amazonURL = "https://www.blu-ray.com/movies/search.php?keyword="
 )
 
-func ScrapeMovies(movieSearchResult *types.SearchResults) (scrapedResults []types.MovieSearchResult) {
+func ScrapeTitles(searchResults *types.SearchResults) (scrapedResults []types.MovieSearchResult) {
 	var results, lookups []types.MovieSearchResult
-	for _, searchResult := range movieSearchResult.MovieSearchResults {
+	for _, searchResult := range searchResults.MovieSearchResults {
 		if !searchResult.BestMatch {
 			results = append(results, searchResult)
 		} else {
@@ -37,7 +37,7 @@ func ScrapeMovies(movieSearchResult *types.SearchResults) (scrapedResults []type
 			go func() {
 				semaphore <- struct{}{}
 				defer func() { <-semaphore }()
-				scrapeMovie(&lookups[i], movieSearchResult.PlexMovie.DateAdded, ch)
+				scrapeTitle(&lookups[i], searchResults.PlexMovie.DateAdded, ch)
 			}()
 		}
 
@@ -49,7 +49,7 @@ func ScrapeMovies(movieSearchResult *types.SearchResults) (scrapedResults []type
 	return results
 }
 
-func scrapeMovie(movie *types.MovieSearchResult, dateAdded time.Time, ch chan<- *types.MovieSearchResult) {
+func scrapeTitle(movie *types.MovieSearchResult, dateAdded time.Time, ch chan<- *types.MovieSearchResult) {
 	req, err := http.NewRequestWithContext(context.Background(), "GET", movie.URL, bytes.NewBuffer([]byte{}))
 	movie.ReleaseDate = time.Time{}
 	if err != nil {
@@ -78,14 +78,14 @@ func scrapeMovie(movie *types.MovieSearchResult, dateAdded time.Time, ch chan<- 
 		return
 	}
 	rawData := string(body)
-	movie.ReleaseDate = findMovieDetails(rawData)
+	movie.ReleaseDate = findTitleDetails(rawData)
 	if movie.ReleaseDate.After(dateAdded) {
 		movie.NewRelease = true
 	}
 	ch <- movie
 }
 
-func findMovieDetails(response string) (releaseDate time.Time) {
+func findTitleDetails(response string) (releaseDate time.Time) {
 	r := regexp.MustCompile(`<a class="grey noline" alt=".*">(.*?)</a></span>`)
 
 	match := r.FindStringSubmatch(response)
@@ -196,7 +196,7 @@ func SearchAmazonTV(plexTVShow *types.PlexTVShow, filter string) (tvSearchResult
 }
 
 func findTitlesInResponse(response string, movie bool) (movieResults []types.MovieSearchResult, tvResults []types.TVSearchResult) {
-	// Find the start and end index of the movie entry
+	// Find the start and end index of the entry
 	for {
 		startIndex := strings.Index(response, `<a class="hoverlink" data-globalproductid=`)
 		// remove everything before the start index
@@ -208,16 +208,16 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 
 		// If both start and end index are found
 		if endIndex != -1 {
-			// Extract the movie entry
-			movieEntry := response[0:endIndex]
-			// Find the URL of the movie
-			urlStartIndex := strings.Index(movieEntry, "href=\"") + len("href=\"")
-			urlEndIndex := strings.Index(movieEntry[urlStartIndex:], "\"") + urlStartIndex
-			returnURL := movieEntry[urlStartIndex:urlEndIndex]
-			// Find the title of the movie
+			// Extract the entry
+			entry := response[0:endIndex]
+			// Find the URL
+			urlStartIndex := strings.Index(entry, "href=\"") + len("href=\"")
+			urlEndIndex := strings.Index(entry[urlStartIndex:], "\"") + urlStartIndex
+			returnURL := entry[urlStartIndex:urlEndIndex]
+			// Find the title
 			r := regexp.MustCompile(`title="(.*?)\s*\((.*?)\)"`)
 			// Find the first match
-			match := r.FindStringSubmatch(movieEntry)
+			match := r.FindStringSubmatch(entry)
 
 			if match != nil {
 				// Extract and print title and year

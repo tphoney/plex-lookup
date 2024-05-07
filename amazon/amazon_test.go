@@ -53,7 +53,7 @@ func TestFindMovieDetails(t *testing.T) {
 		t.Errorf("Error reading testdata/anchorman.html: %s", err)
 	}
 
-	processed := findMovieDetails(string(rawdata))
+	processed := findTitleDetails(string(rawdata))
 	expected := time.Date(2010, time.October, 4, 0, 0, 0, 0, time.UTC)
 	if processed.Compare(expected) != 0 {
 		t.Errorf("Expected %s, but got %s", expected, processed)

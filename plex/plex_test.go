@@ -63,7 +63,7 @@ func TestGetPlexTV(t *testing.T) {
 	if plexIP == "" || plexTVLibraryID == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
-	result := GetPlexTV(plexIP, plexTVLibraryID, plexToken, []string{})
+	result := GetPlexTV(plexIP, plexTVLibraryID, plexToken)
 
 	if len(result) == 0 {
 		t.Errorf("Expected at least one TV show, but got %d", len(result))
@@ -75,6 +75,21 @@ func TestGetPlexTV(t *testing.T) {
 
 	if len(result[0].Seasons[0].Episodes) == 0 {
 		t.Errorf("Expected at least one episode, but got %d", len(result[0].Seasons[0].Episodes))
+	}
+}
+
+func TestDebugGetPlexTVSeasons(t *testing.T) {
+	if plexIP == "" || plexTVLibraryID == "" || plexToken == "" {
+		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
+	}
+	result := GetPlexTVSeasons(plexIP, plexToken, "5383")
+
+	if len(result) == 0 {
+		t.Errorf("Expected at least one TV show, but got %d", len(result))
+	}
+
+	if len(result[0].Episodes) == 0 {
+		t.Errorf("Expected at least one episode, but got %d", len(result[0].Episodes))
 	}
 }
 
@@ -94,5 +109,36 @@ func TestGetPlexMusic(t *testing.T) {
 	// first artist should have at least one album
 	if len(result[0].Albums) == 0 {
 		t.Errorf("Expected at least one album, but got %d", len(result[0].Albums))
+	}
+}
+
+func Test_findLowestResolution(t *testing.T) {
+	tests := []struct {
+		name                 string
+		resolutions          []string
+		wantLowestResolution string
+	}{
+		{
+			name:                 "SD is lowest",
+			resolutions:          []string{types.PlexResolutionSD, types.PlexResolution240, types.PlexResolution720, types.PlexResolution1080},
+			wantLowestResolution: types.PlexResolutionSD,
+		},
+		{
+			name:                 "4k is lowest",
+			resolutions:          []string{types.PlexResolution4K, types.PlexResolution4K},
+			wantLowestResolution: types.PlexResolution4K,
+		},
+		{
+			name:                 "720 is lowest",
+			resolutions:          []string{types.PlexResolution720, types.PlexResolution1080, types.PlexResolution720, types.PlexResolution1080},
+			wantLowestResolution: types.PlexResolution720,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotLowestResolution := findLowestResolution(tt.resolutions); gotLowestResolution != tt.wantLowestResolution {
+				t.Errorf("findLowestResolution() = %v, want %v", gotLowestResolution, tt.wantLowestResolution)
+			}
+		})
 	}
 }

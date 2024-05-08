@@ -1,4 +1,4 @@
-package web
+package tv
 
 import (
 	_ "embed"
@@ -14,11 +14,6 @@ import (
 	"github.com/tphoney/plex-lookup/types"
 )
 
-type FilteringOptions struct {
-	AudioLanguage string
-	NewerVersion  bool
-}
-
 var (
 	//go:embed tv.html
 	tvPage string
@@ -28,10 +23,14 @@ var (
 	totalTV             int  = 0
 	plexTV              []types.PlexTVShow
 	tvSearchResults     []types.SearchResults
-	filters             FilteringOptions
+	filters             types.FilteringOptions
 )
 
-func tvHandler(w http.ResponseWriter, _ *http.Request) {
+type TVConfig struct {
+	Config *types.Configuration
+}
+
+func TVHandler(w http.ResponseWriter, _ *http.Request) {
 	tmpl := template.Must(template.New("tv").Parse(tvPage))
 	err := tmpl.Execute(w, nil)
 	if err != nil {
@@ -40,14 +39,14 @@ func tvHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func processTVHTML(w http.ResponseWriter, r *http.Request) {
+func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	lookup := r.FormValue("lookup")
 	// lookup filters
 	filters.AudioLanguage = r.FormValue("german")
-	filters.NewerVersion = r.FormValue("newerVersion") == stringTrue
+	filters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
 
 	if len(plexTV) == 0 {
-		plexTV = plex.GetPlexTV(config.PlexIP, config.PlexTVLibraryID, config.PlexToken)
+		plexTV = plex.GetPlexTV(c.Config.PlexIP, c.Config.PlexTVLibraryID, c.Config.PlexToken)
 	}
 
 	var searchResult types.SearchResults
@@ -55,7 +54,7 @@ func processTVHTML(w http.ResponseWriter, r *http.Request) {
 	numberOfTVProcessed = 0
 	totalTV = len(plexTV) - 1
 
-	fmt.Fprintf(w, `<div hx-get="/progresstv" hx-trigger="every 100ms" class="container" id="progress">
+	fmt.Fprintf(w, `<div hx-get="/tvprogress" hx-trigger="every 100ms" class="container" id="progress">
 		<progress value="%d" max= "%d"/></div>`, numberOfTVProcessed, totalTV)
 
 	go func() {
@@ -80,9 +79,9 @@ func processTVHTML(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
-func tvProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
+func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 	if tvJobRunning {
-		fmt.Fprintf(w, `<div hx-get="/progresstv" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
+		fmt.Fprintf(w, `<div hx-get="/tvprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
 		<progress value="%d" max= "%d"/></div>`, numberOfTVProcessed, totalTV)
 	}
 	if totalTV == numberOfTVProcessed && totalTV != 0 {

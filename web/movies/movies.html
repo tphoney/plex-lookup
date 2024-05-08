@@ -25,12 +25,12 @@
 
 <body>
     <h1 class="container">Movies</h1>
-    <div hx-get="/plexinfook" class="container" hx-trigger="load"></div>
-    <form hx-post="/processmovies" class="container" hx-target="#progress" hx-boost="true">
+    <div hx-get="/settings/plexinfook" class="container" hx-trigger="load"></div>
+    <form hx-post="/moviesprocess" class="container" hx-target="#progress" hx-boost="true">
         <fieldset>
             <legend><strong>Plex Filter:</strong> only compare movies that match the following criteria.</legend>
             <label for="title" data-sort="title">
-                <input type="checkbox" id="SD" name="SD" value="sd">
+                <input type="checkbox" id="sd" name="sd" value="sd">
                 SD
             </label>
             <label for="title" data-sort="title">
@@ -50,7 +50,7 @@
                 1080p
             </label>
             <label for="title" data-sort="title">
-                <input type="checkbox" id="4K" name="4K" value="4k">
+                <input type="checkbox" id="4k" name="4k" value="4k">
                 4K
             </label>
         </fieldset>

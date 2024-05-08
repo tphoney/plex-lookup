@@ -1,4 +1,4 @@
-package web
+package music
 
 import (
 	_ "embed"

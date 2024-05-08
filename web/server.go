@@ -9,6 +9,10 @@ import (
 	"net/http"
 
 	"github.com/tphoney/plex-lookup/types"
+	"github.com/tphoney/plex-lookup/web/movies"
+	"github.com/tphoney/plex-lookup/web/music"
+	"github.com/tphoney/plex-lookup/web/settings"
+	"github.com/tphoney/plex-lookup/web/tv"
 )
 
 var (
@@ -32,24 +36,24 @@ func StartServer(startingConfig *types.Configuration) {
 	// serve static files
 	mux.Handle("/static/", http.FileServer(http.FS(staticFS)))
 
-	mux.HandleFunc("/plex", plexHandler)
-	mux.HandleFunc("/plexlibraries", processPlexLibrariesHTML)
-	mux.HandleFunc("/plexinfook", plexInformationOKHTML)
-	mux.HandleFunc("/plexsave", plexSaveHandler)
+	mux.HandleFunc("/settings", settings.SettingsHandler)
+	mux.HandleFunc("/settings/plexlibraries", settings.ProcessPlexLibrariesHTML)
+	mux.HandleFunc("/settings/plexinfook", settings.SettingsConfig{Config: config}.PlexInformationOKHTML)
 
-	mux.HandleFunc("/movies", moviesHandler)
-	mux.HandleFunc("/processmovies", processMoviesHTML)
-	mux.HandleFunc("/progress", progressBarHTML)
+	mux.HandleFunc("/movies", movies.MoviesHandler)
+	mux.HandleFunc("/moviesprocess", movies.MoviesConfig{Config: config}.ProcessHTML)
+	mux.HandleFunc("/moviesprogress", movies.ProgressBarHTML)
 
-	mux.HandleFunc("/tv", tvHandler)
-	mux.HandleFunc("/processtv", processTVHTML)
-	mux.HandleFunc("/progresstv", tvProgressBarHTML)
+	mux.HandleFunc("/tv", tv.TVHandler)
+	mux.HandleFunc("/tvprocess", tv.TVConfig{Config: config}.ProcessHTML)
+	mux.HandleFunc("/tvprogress", tv.ProgressBarHTML)
 
-	mux.HandleFunc("/music", musicHandler)
-	mux.HandleFunc("/processmusic", processArtistHTML)
-	mux.HandleFunc("/progressartists", artistProgressBarHTML)
+	mux.HandleFunc("/music", music.MusicHandler)
+	mux.HandleFunc("/musicprocess", music.MusicConfig{Config: config}.ProcessHTML)
+	mux.HandleFunc("/musicprogress", music.ProgressBarHTML)
 
 	mux.HandleFunc("/", indexHandler)
+	mux.HandleFunc("/settings/save", settingsSaveHandler)
 	err := http.ListenAndServe(fmt.Sprintf(":%s", port), mux) //nolint: gosec
 	if err != nil {
 		fmt.Printf("Failed to start server on port %s: %s\n", port, err)
@@ -64,6 +68,18 @@ func indexHandler(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "Failed to render index", http.StatusInternalServerError)
 		return
 	}
+}
+
+func settingsSaveHandler(w http.ResponseWriter, r *http.Request) {
+	oldConfig := config
+	// Retrieve form fields (replace with proper values)
+	config.PlexIP = r.FormValue("plexIP")
+	config.PlexToken = r.FormValue("plexToken")
+	config.PlexMovieLibraryID = r.FormValue("plexMovieLibraryID")
+	config.PlexTVLibraryID = r.FormValue("plexTVLibraryID")
+	config.PlexMusicLibraryID = r.FormValue("plexMusicLibraryID")
+	fmt.Fprint(w, `<h2>Saved!</h2><a href="/">Back</a>`)
+	fmt.Printf("Saved Settings\nold\n%+v\nnew\n%+v\n", oldConfig, config)
 }
 
 func GetOutboundIP() net.IP {

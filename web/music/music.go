@@ -1,4 +1,4 @@
-package web
+package music
 
 import (
 	_ "embed"
@@ -24,10 +24,14 @@ var (
 	totalArtists             int  = 0
 	plexMusic                []types.PlexMusicArtist
 	artistsSearchResults     []types.SearchResults
-	albumReleaseYearCutoff   int = 2
+	albumReleaseYearCutoff   int = 5
 )
 
-func musicHandler(w http.ResponseWriter, _ *http.Request) {
+type MusicConfig struct {
+	Config *types.Configuration
+}
+
+func MusicHandler(w http.ResponseWriter, _ *http.Request) {
 	tmpl := template.Must(template.New("music").Parse(musicPage))
 	err := tmpl.Execute(w, nil)
 	if err != nil {
@@ -37,19 +41,19 @@ func musicHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 // nolint: lll, nolintlint
-func processArtistHTML(w http.ResponseWriter, r *http.Request) {
+func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	lookup := r.FormValue("lookup")
 	lookupType := r.FormValue("lookuptype")
 	// only get the artists from plex once
 	if len(plexMusic) == 0 {
-		plexMusic = plex.GetPlexMusicArtists(config.PlexIP, config.PlexMusicLibraryID, config.PlexToken)
+		plexMusic = plex.GetPlexMusicArtists(c.Config.PlexIP, c.Config.PlexMusicLibraryID, c.Config.PlexToken)
 	}
 	var searchResult types.SearchResults
 	artistsJobRunning = true
 	numberOfArtistsProcessed = 0
 	totalArtists = len(plexMusic) - 1
 
-	fmt.Fprintf(w, `<div hx-get="/progressartists" hx-trigger="every 100ms" class="container" id="progress">
+	fmt.Fprintf(w, `<div hx-get="/musicprogress" hx-trigger="every 100ms" class="container" id="progress">
 		<progress value="%d" max= "%d"/></div>`, numberOfArtistsProcessed, totalArtists)
 
 	if lookupType == "missingalbums" {
@@ -72,7 +76,7 @@ func processArtistHTML(w http.ResponseWriter, r *http.Request) {
 				startTime := time.Now()
 				for i := range plexMusic {
 					fmt.Print(".")
-					searchResult, _ = spotify.SearchSpotifyArtist(&plexMusic[i], config.SpotifyClientID, config.SpotifyClientSecret)
+					searchResult, _ = spotify.SearchSpotifyArtist(&plexMusic[i], c.Config.SpotifyClientID, c.Config.SpotifyClientSecret)
 					artistsSearchResults = append(artistsSearchResults, searchResult)
 					numberOfArtistsProcessed = i
 				}
@@ -89,9 +93,9 @@ func processArtistHTML(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func artistProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
+func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 	if artistsJobRunning {
-		fmt.Fprintf(w, `<div hx-get="/progressartists" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
+		fmt.Fprintf(w, `<div hx-get="/musicprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
 		<progress value="%d" max= "%d"/></div>`, numberOfArtistsProcessed, totalArtists)
 	}
 	if totalArtists == numberOfArtistsProcessed && totalArtists != 0 {
@@ -111,12 +115,12 @@ func renderArtistsTable(searchResults []types.SearchResults) (tableRows string) 
 	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Artist</strong></th><th data-sort="int"><strong>Albums</strong></th><th><strong>Album</strong></th></tr></thead><tbody>` //nolint: lll
 	for i := range searchResults {
 		if len(searchResults[i].MusicSearchResults) > 0 {
-			tableRows += fmt.Sprintf("<tr><td><a href=%q>%s</a></td><td>%d</td><td><ul>",
+			tableRows += fmt.Sprintf(`<tr><td><a href=%q target="_blank">%s</a></td><td>%d</td><td><ul>`,
 				searchResults[i].MusicSearchResults[0].URL,
 				searchResults[i].PlexMusicArtist.Name,
 				len(searchResults[i].MusicSearchResults[0].Albums))
 			for j := range searchResults[i].MusicSearchResults[0].Albums {
-				tableRows += fmt.Sprintf("<li><a href=%q>%s</a> (%s)</li>",
+				tableRows += fmt.Sprintf(`<li><a href=%q target="_blank">%s</a> (%s)</li>`,
 					searchResults[i].MusicSearchResults[0].Albums[j].URL,
 					searchResults[i].MusicSearchResults[0].Albums[j].Title,
 					searchResults[i].MusicSearchResults[0].Albums[j].Year)

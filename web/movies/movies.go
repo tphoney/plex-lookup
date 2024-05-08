@@ -1,4 +1,4 @@
-package web
+package movies
 
 import (
 	_ "embed"
@@ -13,10 +13,6 @@ import (
 	"github.com/tphoney/plex-lookup/types"
 )
 
-const (
-	stringTrue = "true"
-)
-
 var (
 	//go:embed movies.html
 	moviesPage string
@@ -25,9 +21,14 @@ var (
 	jobRunning              bool = false
 	totalMovies             int  = 0
 	searchResults           []types.SearchResults
+	plexMovies              []types.PlexMovie
 )
 
-func moviesHandler(w http.ResponseWriter, _ *http.Request) {
+type MoviesConfig struct {
+	Config *types.Configuration
+}
+
+func MoviesHandler(w http.ResponseWriter, _ *http.Request) {
 	tmpl := template.Must(template.New("movies").Parse(moviesPage))
 	err := tmpl.Execute(w, nil)
 	if err != nil {
@@ -36,16 +37,16 @@ func moviesHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
+func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	lookup := r.FormValue("lookup")
 	// plex resolutions
-	sd := r.FormValue("SD")
-	r240 := r.FormValue("240p")
-	r480 := r.FormValue("480p")
-	r576 := r.FormValue("576p")
-	r720 := r.FormValue("720p")
-	r1080 := r.FormValue("1080p")
-	r4k := r.FormValue("4K")
+	sd := r.FormValue("sd")
+	r240 := r.FormValue("240")
+	r480 := r.FormValue("480")
+	r576 := r.FormValue("576")
+	r720 := r.FormValue("720")
+	r1080 := r.FormValue("1080")
+	r4k := r.FormValue("4k")
 	plexResolutions := []string{sd, r240, r480, r576, r720, r1080, r4k}
 	// remove empty resolutions
 	var filteredResolutions []string
@@ -58,14 +59,16 @@ func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 	german := r.FormValue("german")
 	newerVersion := r.FormValue("newerVersion")
 	// Prepare table plexMovies
-	plexMovies := fetchPlexMovies(config.PlexIP, config.PlexMovieLibraryID, config.PlexToken, filteredResolutions, german)
+
+	plexMovies = fetchPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken, filteredResolutions, german)
+
 	var searchResult types.SearchResults
 	jobRunning = true
 	numberOfMoviesProcessed = 0
 	totalMovies = len(plexMovies) - 1
 
 	// write progress bar
-	fmt.Fprintf(w, `<div hx-get="/progress" hx-trigger="every 100ms" class="container" id="progress">
+	fmt.Fprintf(w, `<div hx-get="/moviesprogress" hx-trigger="every 100ms" class="container" id="progress">
 	<progress value="%d" max= "%d"/></div>`, numberOfMoviesProcessed, totalMovies)
 
 	go func() {
@@ -75,13 +78,13 @@ func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 			if lookup == "cinemaParadiso" {
 				searchResult, _ = cinemaparadiso.SearchCinemaParadisoMovie(movie)
 			} else {
-				if german == stringTrue {
+				if german == types.StringTrue {
 					searchResult, _ = amazon.SearchAmazonMovie(movie, "&audio=german")
 				} else {
 					searchResult, _ = amazon.SearchAmazonMovie(movie, "")
 				}
 				// if we are filtering by newer version, we need to search again
-				if newerVersion == stringTrue {
+				if newerVersion == types.StringTrue {
 					scrapedResults := amazon.ScrapeTitles(&searchResult)
 					searchResult.MovieSearchResults = scrapedResults
 				}
@@ -94,9 +97,9 @@ func processMoviesHTML(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
-func progressBarHTML(w http.ResponseWriter, _ *http.Request) {
+func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 	if jobRunning {
-		fmt.Fprintf(w, `<div hx-get="/progress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
+		fmt.Fprintf(w, `<div hx-get="/moviesprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
 		<progress value="%d" max= "%d"/></div>`, numberOfMoviesProcessed, totalMovies)
 	}
 	if totalMovies == numberOfMoviesProcessed && totalMovies != 0 {
@@ -143,7 +146,7 @@ func renderTable(movieCollection []types.SearchResults) (tableRows string) {
 
 func fetchPlexMovies(plexIP, plexMovieLibraryID, plexToken string, plexResolutions []string, german string) (allMovies []types.PlexMovie) {
 	filter := []plex.Filter{}
-	if german == stringTrue {
+	if german == types.StringTrue {
 		filter = []plex.Filter{
 			{
 				Name:     "audioLanguage",

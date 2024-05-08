@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Plex lookup - TV shows</title>
+    <title>Plex lookup - Music</title>
     <script src="//unpkg.com/htmx.org@1.8.2"></script>
     <script src="static/tablesort.min.js"></script>
     <!-- from https://github.com/oleksavyshnivsky/tablesort  -->
@@ -24,29 +24,31 @@
 </head>
 
 <body>
-    <h1 class="container">TV</h1>
-    <div hx-get="/plexinfook" class="container" hx-trigger="load"></div>
-    <form hx-post="/processtv" class="container" hx-target="#progress" hx-boost="true" hx-indicator="#indicator">
+    <h1 class="container">Music</h1>
+    <div hx-get="/settings/plexinfook" class="container" hx-trigger="load"></div>
+    <form hx-post="/musicprocess" class="container" hx-target="#progress" hx-boost="true" hx-indicator="#indicator">
+        <fieldset>
+            <legend><strong>Plex Filter:</strong> only lookup music that matches the following criteria.</legend>
+        </fieldset>
         <fieldset>
             <legend><strong>Lookup:</strong></legend>
-            <label for="amazon">
-                <input type="radio" id="amazon" name="lookup" value="amazon" />
-                Amazon
+            <label for="musicbrainz">
+                <input type="radio" id="musicbrainz" name="lookup" value="musicbrainz" />
+                musicbrainz (beta - slow, limited to 8 requests per minute)
             </label>
-            <label for="cinemaParadiso">
-                <input type="radio" id="cinemaParadiso" name="lookup" value="cinemaParadiso" checked />
-                Cinema Paradiso
-            </label>
+            <label for="spotify">
+                <input type="radio" id="spotify" name="lookup" value="spotify" checked />
+                spotify
         </fieldset>
         <fieldset>
             <legend><strong>Lookup Filters:</strong></legend>
-            <label for="german">
-                <input type="checkbox" id="german" name="german" value="german">
-                German audio
+            <label for="Missing albums">
+                <input type="radio" id="missingalbums" name="lookuptype" value="missingalbums" checked />
+                Missing albums (last 5 years)
             </label>
-            <label for="newerVersion">
-                <input type="checkbox" id="newerVersion" name="newerVersion" value="true">
-                Newer Version: Disc release date > Plex added date.
+            <label for="New artists">
+                <input type="radio" id="newartists" name="lookuptype" value="newartists" disabled="true" />
+                New artists
             </label>
         </fieldset>
         <button type="submit">Submit</button>

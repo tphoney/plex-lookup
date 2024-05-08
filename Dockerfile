@@ -17,9 +17,16 @@ COPY plex/*.go plex/
 COPY spotify/*.go spotify/
 COPY types/*.go types/
 COPY utils/*.go utils/
-COPY web/*.go web/
-COPY web/*.html web/
-COPY web/static/* web/static/
+
+COPY web/movies/*.go web/movies/
+COPY web/movies/*.html web/movies/
+COPY web/music/*.go web/music/
+COPY web/music/*.html web/music/
+COPY web/tv/*.go web/tv/
+COPY web/tv/*.html web/tv/
+COPY web/settings/*.go web/settings/
+COPY web/settings/*.html web/settings/
+COPY web/server.go web/index.html web/static/ /web/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux go build -o /plex-lookup

@@ -518,6 +518,24 @@ func GetPlexMovies(ipAddress, libraryID, plexToken, resolution string, filters [
 	return movieList
 }
 
+func extractMovies(xmlString string) (movieList []types.PlexMovie) {
+	var container MovieContainer
+	err := xml.Unmarshal([]byte(xmlString), &container)
+	if err != nil {
+		fmt.Println("Error parsing XML:", err)
+		return
+	}
+
+	for i := range container.Video {
+		movieList = append(movieList, types.PlexMovie{
+			Title:     container.Video[i].Title,
+			Year:      container.Video[i].Year,
+			DateAdded: parsePlexDate(container.Video[i].AddedAt)})
+	}
+	return movieList
+}
+
+// =================================================================================================
 func GetPlexTV(ipAddress, libraryID, plexToken string) (tvShowList []types.PlexTVShow) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
@@ -559,6 +577,149 @@ func GetPlexTV(ipAddress, libraryID, plexToken string) (tvShowList []types.PlexT
 	return filteredTVShows
 }
 
+func GetPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []types.PlexTVSeason) {
+	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, ratingKey)
+
+	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return seasonList
+	}
+
+	req.Header.Set("X-Plex-Token", plexToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return seasonList
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return seasonList
+	}
+
+	seasonList = extractTVSeasons(string(body))
+	// os.WriteFile("seasons.xml", body, 0644)
+	// now we need to get the episodes for each TV show
+	for i := range seasonList {
+		episodes := GetPlexTVEpisodes(ipAddress, plexToken, seasonList[i].RatingKey)
+		if len(episodes) > 0 {
+			seasonList[i].Episodes = episodes
+		}
+	}
+	// remove seasons with no episodes
+	var filteredSeasons []types.PlexTVSeason
+	for i := range seasonList {
+		if len(seasonList[i].Episodes) < 1 {
+			continue
+		}
+		// lets add all of the resolutions for the episodes
+		var listOfResolutions []string
+		for j := range seasonList[i].Episodes {
+			listOfResolutions = append(listOfResolutions, seasonList[i].Episodes[j].Resolution)
+		}
+		// now we have all of the resolutions for the episodes
+		seasonList[i].LowestResolution = findLowestResolution(listOfResolutions)
+		// get the last episode added date
+		seasonList[i].LastEpisodeAdded = seasonList[i].Episodes[len(seasonList[i].Episodes)-1].DateAdded
+		filteredSeasons = append(filteredSeasons, seasonList[i])
+	}
+	return filteredSeasons
+}
+
+func GetPlexTVEpisodes(ipAddress, plexToken, ratingKey string) (episodeList []types.PlexTVEpisode) {
+	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, ratingKey)
+
+	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return episodeList
+	}
+
+	req.Header.Set("X-Plex-Token", plexToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return episodeList
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return episodeList
+	}
+
+	episodeList = extractTVEpisodes(string(body))
+	return episodeList
+}
+
+func extractTVShows(xmlString string) (showList []types.PlexTVShow) {
+	var container TVContainer
+	err := xml.Unmarshal([]byte(xmlString), &container)
+	if err != nil {
+		fmt.Println("Error parsing XML:", err)
+		return
+	}
+
+	for i := range container.Directory {
+		showList = append(showList, types.PlexTVShow{
+			Title: container.Directory[i].Title, Year: container.Directory[i].Year,
+			DateAdded: parsePlexDate(container.Directory[i].AddedAt), RatingKey: container.Directory[i].RatingKey})
+	}
+	return showList
+}
+
+func extractTVSeasons(xmlString string) (seasonList []types.PlexTVSeason) {
+	var container SeasonContainer
+	err := xml.Unmarshal([]byte(xmlString), &container)
+	if err != nil {
+		fmt.Println("Error parsing XML:", err)
+		return
+	}
+
+	for i := range container.Directory {
+		if strings.HasPrefix(container.Directory[i].Title, "Season") {
+			seasonNumber, _ := strconv.Atoi(container.Directory[i].Index)
+			seasonList = append(seasonList, types.PlexTVSeason{
+				Title: container.Directory[i].Title, RatingKey: container.Directory[i].RatingKey, Number: seasonNumber})
+		}
+	}
+	return seasonList
+}
+
+func extractTVEpisodes(xmlString string) (episodeList []types.PlexTVEpisode) {
+	var container EpisodeContainer
+	err := xml.Unmarshal([]byte(xmlString), &container)
+	if err != nil {
+		fmt.Println("Error parsing XML:", err)
+		return
+	}
+
+	for i := range container.Video {
+		intTime, err := strconv.ParseInt(container.Video[i].AddedAt, 10, 64)
+		var parsedDate time.Time
+		if err != nil {
+			parsedDate = time.Time{}
+		} else {
+			parsedDate = time.Unix(intTime, 0)
+		}
+		episodeList = append(episodeList, types.PlexTVEpisode{
+			Title: container.Video[i].Title, Resolution: container.Video[i].Media.VideoResolution,
+			Index: container.Video[i].Index, DateAdded: parsedDate})
+	}
+	return episodeList
+}
+
+// =================================================================================================
 func GetPlexMusicArtists(ipAddress, libraryID, plexToken string) (artists []types.PlexMusicArtist) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
@@ -630,31 +791,6 @@ func GetPlexMusicAlbums(ipAddress, plexToken, libraryID, ratingKey string) (albu
 	return albums
 }
 
-func extractMusicAlbums(xmlString string) (albums []types.PlexMusicAlbum, err error) {
-	var container AlbumContainer
-	err = xml.Unmarshal([]byte(xmlString), &container)
-	if err != nil {
-		fmt.Println("Error parsing XML:", err)
-		return albums, err
-	}
-
-	for i := range container.Directory {
-		intTime, err := strconv.ParseInt(container.Directory[i].AddedAt, 10, 64)
-		var parsedDate time.Time
-		if err != nil {
-			parsedDate = time.Time{}
-		} else {
-			parsedDate = time.Unix(intTime, 0)
-		}
-		albums = append(albums, types.PlexMusicAlbum{
-			Title:     container.Directory[i].Title,
-			Year:      container.Directory[i].Year,
-			DateAdded: parsedDate,
-			RatingKey: container.Directory[i].RatingKey})
-	}
-	return albums, nil
-}
-
 func extractMusicArtists(xmlString string) (artists []types.PlexMusicArtist, err error) {
 	var container ArtistContainer
 	err = xml.Unmarshal([]byte(xmlString), &container)
@@ -664,127 +800,30 @@ func extractMusicArtists(xmlString string) (artists []types.PlexMusicArtist, err
 	}
 
 	for i := range container.Directory {
-		intTime, err := strconv.ParseInt(container.Directory[i].AddedAt, 10, 64)
-		var parsedDate time.Time
-		if err != nil {
-			parsedDate = time.Time{}
-		} else {
-			parsedDate = time.Unix(intTime, 0)
-		}
 		artists = append(artists, types.PlexMusicArtist{
-			Name: container.Directory[i].Title, RatingKey: container.Directory[i].RatingKey, DateAdded: parsedDate})
+			Name:      container.Directory[i].Title,
+			RatingKey: container.Directory[i].RatingKey,
+			DateAdded: parsePlexDate(container.Directory[i].AddedAt)})
 	}
 	return artists, nil
 }
 
-func GetPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []types.PlexTVSeason) {
-	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, ratingKey)
-
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+func extractMusicAlbums(xmlString string) (albums []types.PlexMusicAlbum, err error) {
+	var container AlbumContainer
+	err = xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
-		return seasonList
+		fmt.Println("Error parsing XML:", err)
+		return albums, err
 	}
 
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return seasonList
+	for i := range container.Directory {
+		albums = append(albums, types.PlexMusicAlbum{
+			Title:     container.Directory[i].Title,
+			Year:      container.Directory[i].Year,
+			DateAdded: parsePlexDate(container.Directory[i].AddedAt),
+			RatingKey: container.Directory[i].RatingKey})
 	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return seasonList
-	}
-
-	seasonList = extractTVSeasons(string(body))
-	// os.WriteFile("seasons.xml", body, 0644)
-	// now we need to get the episodes for each TV show
-	for i := range seasonList {
-		episodes := GetPlexTVEpisodes(ipAddress, plexToken, seasonList[i].RatingKey)
-		if len(episodes) > 0 {
-			seasonList[i].Episodes = episodes
-		}
-	}
-	// remove seasons with no episodes
-	var filteredSeasons []types.PlexTVSeason
-	for i := range seasonList {
-		if len(seasonList[i].Episodes) < 1 {
-			continue
-		}
-		// lets add all of the resolutions for the episodes
-		var listOfResolutions []string
-		for j := range seasonList[i].Episodes {
-			listOfResolutions = append(listOfResolutions, seasonList[i].Episodes[j].Resolution)
-		}
-		// now we have all of the resolutions for the episodes
-		seasonList[i].LowestResolution = findLowestResolution(listOfResolutions)
-		// get the last episode added date
-		seasonList[i].LastEpisodeAdded = seasonList[i].Episodes[len(seasonList[i].Episodes)-1].DateAdded
-		filteredSeasons = append(filteredSeasons, seasonList[i])
-	}
-	return filteredSeasons
-}
-
-func findLowestResolution(resolutions []string) (lowestResolution string) {
-	if slices.Contains(resolutions, types.PlexResolutionSD) {
-		return types.PlexResolutionSD
-	}
-	if slices.Contains(resolutions, types.PlexResolution240) {
-		return types.PlexResolution240
-	}
-	if slices.Contains(resolutions, types.PlexResolution480) {
-		return types.PlexResolution480
-	}
-	if slices.Contains(resolutions, types.PlexResolution576) {
-		return types.PlexResolution576
-	}
-	if slices.Contains(resolutions, types.PlexResolution720) {
-		return types.PlexResolution720
-	}
-	if slices.Contains(resolutions, types.PlexResolution1080) {
-		return types.PlexResolution1080
-	}
-	if slices.Contains(resolutions, types.PlexResolution4K) {
-		return types.PlexResolution4K
-	}
-	return ""
-}
-
-func GetPlexTVEpisodes(ipAddress, plexToken, ratingKey string) (episodeList []types.PlexTVEpisode) {
-	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, ratingKey)
-
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
-	if err != nil {
-		fmt.Println("Error creating request:", err)
-		return episodeList
-	}
-
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return episodeList
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return episodeList
-	}
-
-	episodeList = extractTVEpisodes(string(body))
-	return episodeList
+	return albums, nil
 }
 
 func GetPlexLibraries(ipAddress, plexToken string) (libraryList []types.PlexLibrary, err error) {
@@ -832,90 +871,38 @@ func extractLibraries(xmlString string) (libraryList []types.PlexLibrary, err er
 	return libraryList, nil
 }
 
-func extractMovies(xmlString string) (movieList []types.PlexMovie) {
-	var container MovieContainer
-	err := xml.Unmarshal([]byte(xmlString), &container)
-	if err != nil {
-		fmt.Println("Error parsing XML:", err)
-		return
+// =================================================================================================
+func findLowestResolution(resolutions []string) (lowestResolution string) {
+	if slices.Contains(resolutions, types.PlexResolutionSD) {
+		return types.PlexResolutionSD
 	}
-
-	for i := range container.Video {
-		intTime, err := strconv.ParseInt(container.Video[i].AddedAt, 10, 64)
-		var parsedDate time.Time
-		if err != nil {
-			parsedDate = time.Time{}
-		} else {
-			parsedDate = time.Unix(intTime, 0)
-		}
-
-		movieList = append(movieList, types.PlexMovie{
-			Title: container.Video[i].Title, Year: container.Video[i].Year, DateAdded: parsedDate})
+	if slices.Contains(resolutions, types.PlexResolution240) {
+		return types.PlexResolution240
 	}
-	return movieList
+	if slices.Contains(resolutions, types.PlexResolution480) {
+		return types.PlexResolution480
+	}
+	if slices.Contains(resolutions, types.PlexResolution576) {
+		return types.PlexResolution576
+	}
+	if slices.Contains(resolutions, types.PlexResolution720) {
+		return types.PlexResolution720
+	}
+	if slices.Contains(resolutions, types.PlexResolution1080) {
+		return types.PlexResolution1080
+	}
+	if slices.Contains(resolutions, types.PlexResolution4K) {
+		return types.PlexResolution4K
+	}
+	return ""
 }
 
-func extractTVShows(xmlString string) (showList []types.PlexTVShow) {
-	var container TVContainer
-	err := xml.Unmarshal([]byte(xmlString), &container)
+func parsePlexDate(plexDate string) (parsedDate time.Time) {
+	intTime, err := strconv.ParseInt(plexDate, 10, 64)
 	if err != nil {
-		fmt.Println("Error parsing XML:", err)
-		return
+		parsedDate = time.Time{}
+	} else {
+		parsedDate = time.Unix(intTime, 0)
 	}
-
-	for i := range container.Directory {
-		intTime, err := strconv.ParseInt(container.Directory[i].AddedAt, 10, 64)
-		var parsedDate time.Time
-		if err != nil {
-			parsedDate = time.Time{}
-		} else {
-			parsedDate = time.Unix(intTime, 0)
-		}
-
-		showList = append(showList, types.PlexTVShow{
-			Title: container.Directory[i].Title, Year: container.Directory[i].Year,
-			DateAdded: parsedDate, RatingKey: container.Directory[i].RatingKey})
-	}
-	return showList
-}
-
-func extractTVSeasons(xmlString string) (seasonList []types.PlexTVSeason) {
-	var container SeasonContainer
-	err := xml.Unmarshal([]byte(xmlString), &container)
-	if err != nil {
-		fmt.Println("Error parsing XML:", err)
-		return
-	}
-
-	for i := range container.Directory {
-		if strings.HasPrefix(container.Directory[i].Title, "Season") {
-			seasonNumber, _ := strconv.Atoi(container.Directory[i].Index)
-			seasonList = append(seasonList, types.PlexTVSeason{
-				Title: container.Directory[i].Title, RatingKey: container.Directory[i].RatingKey, Number: seasonNumber})
-		}
-	}
-	return seasonList
-}
-
-func extractTVEpisodes(xmlString string) (episodeList []types.PlexTVEpisode) {
-	var container EpisodeContainer
-	err := xml.Unmarshal([]byte(xmlString), &container)
-	if err != nil {
-		fmt.Println("Error parsing XML:", err)
-		return
-	}
-
-	for i := range container.Video {
-		intTime, err := strconv.ParseInt(container.Video[i].AddedAt, 10, 64)
-		var parsedDate time.Time
-		if err != nil {
-			parsedDate = time.Time{}
-		} else {
-			parsedDate = time.Unix(intTime, 0)
-		}
-		episodeList = append(episodeList, types.PlexTVEpisode{
-			Title: container.Video[i].Title, Resolution: container.Video[i].Media.VideoResolution,
-			Index: container.Video[i].Index, DateAdded: parsedDate})
-	}
-	return episodeList
+	return parsedDate
 }

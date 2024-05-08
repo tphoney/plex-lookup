@@ -142,3 +142,29 @@ func Test_findLowestResolution(t *testing.T) {
 		})
 	}
 }
+
+func Test_parsePlexDate(t *testing.T) {
+	tests := []struct {
+		name           string
+		plexDate       string
+		wantParsedDate time.Time
+	}{
+		{
+			name:           "validate int date",
+			plexDate:       "1676229015",
+			wantParsedDate: time.Date(2021, time.February, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			name:           "validate int date",
+			plexDate:       "0",
+			wantParsedDate: time.Date(1970, time.January, 1, 0, 0, 16, 0, time.UTC),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if gotParsedDate := parsePlexDate(tt.plexDate); gotParsedDate.Compare(tt.wantParsedDate) == 0 {
+				t.Errorf("parsePlexDate()\n%v\nwant\n%v", gotParsedDate, tt.wantParsedDate)
+			}
+		})
+	}
+}

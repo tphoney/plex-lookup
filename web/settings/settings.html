@@ -2,15 +2,15 @@
 <html>
 
 <head>
-    <title>Plex Settings</title>
+    <title>Plex-lookup Settings</title>
     <script src="//unpkg.com/htmx.org@1.8.2"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
     <!-- from https://github.com/picocss/pico -->
 </head>
 
 <body>
-    <h1 class="container">Plex Settings</h1>
-    <form hx-post="/plexlibraries" class="container" hx-target="#table" hx-boost="true">
+    <h1 class="container">Plex-lookup Settings</h1>
+    <form hx-post="/settings/plexlibraries" class="container" hx-target="#table" hx-boost="true">
         <p class="container">Enter the <em
                 data-tooltip="Find your Plex server IP by going to your server then go to settings, then remote-access. It is the private IP address."><a
                     href="https://plex.tv/web" target="_blank">Plex

@@ -15,6 +15,7 @@ const (
 	PlexResolution1080 = "1080"
 	PlexResolution4K   = "4k"
 	ConcurrencyLimit   = 10
+	StringTrue         = "true"
 )
 
 type SearchResults struct {
@@ -37,6 +38,11 @@ type Configuration struct {
 	PlexMusicLibraryID  string
 	SpotifyClientID     string
 	SpotifyClientSecret string
+}
+
+type FilteringOptions struct {
+	AudioLanguage string
+	NewerVersion  bool
 }
 
 // ==============================================================================================================

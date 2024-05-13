@@ -68,7 +68,7 @@ func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist) (artist types.Se
 		if resp.Artists[i].Name != plexArtist.Name {
 			continue
 		}
-		found := types.MusicSearchResult{
+		found := types.MusicArtistSearchResult{
 			Name: resp.Artists[i].Name,
 			ID:   fmt.Sprintf("%v", resp.Artists[i].ID),
 		}
@@ -85,7 +85,7 @@ func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist) (artist types.Se
 	return artist, err
 }
 
-func SearchMusicBrainzAlbums(artistID string) (albums []types.MusicSearchAlbumResult, err error) {
+func SearchMusicBrainzAlbums(artistID string) (albums []types.MusicAlbumSearchResult, err error) {
 	client, err := gomusicbrainz.NewWS2Client(
 		musicBrainzURL, agent, agentVersion, "")
 
@@ -106,7 +106,7 @@ func SearchMusicBrainzAlbums(artistID string) (albums []types.MusicSearchAlbumRe
 	for i := range resp.ReleaseGroups {
 		if resp.ReleaseGroups[i].Type == "Album" {
 			year := resp.ReleaseGroups[i].FirstReleaseDate.Year()
-			albums = append(albums, types.MusicSearchAlbumResult{
+			albums = append(albums, types.MusicAlbumSearchResult{
 				Title: resp.ReleaseGroups[i].Title,
 				ID:    fmt.Sprintf("%v", resp.ReleaseGroups[i].ID),
 				Year:  fmt.Sprintf("%v", year),

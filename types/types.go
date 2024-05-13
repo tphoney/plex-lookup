@@ -27,7 +27,7 @@ type SearchResults struct {
 	MatchesBluray      int
 	MovieSearchResults []MovieSearchResult
 	TVSearchResults    []TVSearchResult
-	MusicSearchResults []MusicSearchResult
+	MusicSearchResults []MusicArtistSearchResult
 }
 
 type Configuration struct {
@@ -123,18 +123,26 @@ type PlexMusicAlbum struct {
 	DateAdded time.Time
 }
 
-type MusicSearchResult struct {
-	Name   string
-	ID     string
-	URL    string
-	Albums []MusicSearchAlbumResult
+type MusicArtistSearchResult struct {
+	Name        string
+	ID          string
+	URL         string
+	OwnedAlbums int
+	Albums      []MusicAlbumSearchResult
 }
 
-type MusicSearchAlbumResult struct {
+type MusicAlbumSearchResult struct {
 	Title string
 	ID    string
 	URL   string
 	Year  string
+}
+
+type MusicSimilarArtistResult struct {
+	Name            string
+	URL             string
+	Owned           bool
+	SimilarityCount int
 }
 
 // ==============================================================================================================

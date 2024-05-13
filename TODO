@@ -2,10 +2,9 @@
 
 ## features
 
-- similar artist search for music
-
 ## bugs
 
+- parallel requests for spotify search
 - allow amazon tv search for newer series
 - update movies to use tv like search
 - allow amazon tv search for indivdual series
@@ -28,3 +27,4 @@
 - remove dead fields from the tv data types
 - remove links to tv series we already have in plex. eg dont show adventure time series 1 and 2 ?
 - write a function to calculate plex dates
+- similar artist search for music

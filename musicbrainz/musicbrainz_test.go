@@ -18,12 +18,12 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 			args: &types.PlexMusicArtist{Name: "The Beatles"},
 			wantArtist: types.SearchResults{
 				SearchURL: "https://musicbrainz.org/artist/b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
-				MusicSearchResults: []types.MusicSearchResult{
+				MusicSearchResults: []types.MusicArtistSearchResult{
 
 					{
 						Name:   "The Beatles",
 						ID:     "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
-						Albums: make([]types.MusicSearchAlbumResult, 16),
+						Albums: make([]types.MusicAlbumSearchResult, 16),
 					},
 				},
 			},
@@ -34,11 +34,11 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 			args: &types.PlexMusicArtist{Name: "AC/DC"},
 			wantArtist: types.SearchResults{
 				SearchURL: "https://musicbrainz.org/artist/66c662b6-6e2f-4930-8610-912e24c63ed1",
-				MusicSearchResults: []types.MusicSearchResult{
+				MusicSearchResults: []types.MusicArtistSearchResult{
 					{
 						Name:   "AC/DC",
 						ID:     "66c662b6-6e2f-4930-8610-912e24c63ed1",
-						Albums: make([]types.MusicSearchAlbumResult, 18),
+						Albums: make([]types.MusicAlbumSearchResult, 17),
 					},
 				},
 			},

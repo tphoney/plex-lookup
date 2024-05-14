@@ -76,10 +76,6 @@ func renderLibraries(libraries []types.PlexLibrary) string {
 	for _, library := range libraries {
 		html += fmt.Sprintf(`<tr><td>%s</td><td>%s</td><td>%s</td></tr>`, library.Title, library.Type, library.ID)
 	}
-	html += `</tbody></table>
-<input type="text" placeholder="Plex Movie Library Section ID" name="plexMovieLibraryID"id="plexMovieLibraryID">
-<input type="text" placeholder="Plex TV Series Library Section ID" name="plexTVLibraryID"id="plexTVLibraryID">
-<input type="text" placeholder="Plex Music Library Section ID" name="plexMusicLibraryID"id="plexMusicLibraryID">
-<button hx-post="/settings/save" hx-include="#plexMovieLibraryID,#plexTVLibraryID,#plexMusicLibraryID,#plexIP,#plexToken" hx-swap="outerHTML">Save</button>` //nolint: lll
+	html += "</tbody></table>"
 	return html
 }

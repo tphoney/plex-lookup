@@ -116,50 +116,27 @@ func TestSpotifyLookupSimilarArtists(t *testing.T) {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
 	tests := []struct {
-		name       string
-		artistID   string
-		wantErr    bool
-		wantLength int
+		name         string
+		searchResult types.SearchResults
+		wantErr      bool
+		wantLength   int
 	}{
 		{
-			name:       "similar artists exist",
-			artistID:   "711MCceyCBcFnzjGY4Q7Un",
-			wantErr:    false,
-			wantLength: 20,
+			name:         "similar artists exist",
+			searchResult: types.SearchResults{MusicSearchResults: []types.MusicArtistSearchResult{{ID: "711MCceyCBcFnzjGY4Q7Un"}}},
+			wantErr:      false,
+			wantLength:   20,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotArtists, err := SearchSpotifySimilarArtist(tt.artistID, spotifyClientID, spotifyClientSecret)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("SpotifyLookupSimilarArtists() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if len(gotArtists.Artists) != tt.wantLength {
-				t.Errorf("SpotifyLookupSimilarArtists() = %v, want %v", len(gotArtists.Artists), tt.wantLength)
+			ch := make(chan SimilarArtistsResponse, 1)
+			searchResult := tt.searchResult // Create a local variable to avoid implicit memory aliasing
+			SearchSpotifySimilarArtist(&searchResult, spotifyClientID, spotifyClientSecret, ch)
+			got := <-ch
+			if len(got.Artists) != tt.wantLength {
+				t.Errorf("SpotifyLookupSimilarArtists() = %v, want %v", len(got.Artists), tt.wantLength)
 			}
 		})
 	}
 }
-
-// func TestFindSimilarArtists(t *testing.T) {
-// 	if spotifyClientID == "" || spotifyClientSecret == "" {
-// 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
-// 	}
-// 	ownedArtists := []types.MusicArtistSearchResult{
-// 		{
-// 			Name: "The Beatles",s
-// 			ID:   "3WrFJ7ztbogyGnTHbHJFl2",
-// 			URL:  "https://open.spotify.com/artist/3WrFJ7ztbogyGnTHbHJFl2",
-// 		},
-// 		{
-// 			Name: "Queens of the Stone Age",
-// 			ID:   "4pejUc4iciQfgdX6OKulQn",
-// 			URL:  "https://open.spotify.com/artist/4pejUc4iciQfgdX6OKulQn",
-// 		},
-// 		{
-// 			Name: "Eagles of Death Metal",
-// 			ID:   "02uYdhMhCgdB49hZlYRm9o",
-// 			URL:  "https://open.spotify.com/artist/02uYdhMhCgdB49hZlYRm9o",
-// 		},
-// 	}

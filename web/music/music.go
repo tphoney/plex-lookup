@@ -90,7 +90,13 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	} else {
 		switch lookup {
 		case "spotify":
-
+			go func() {
+				getSpotifyArtistsInParallel(c.Config.SpotifyClientID, c.Config.SpotifyClientSecret)
+				numberOfArtistsProcessed = 0
+				getSpotifySimilarArtistsInParallel(c.Config.SpotifyClientID, c.Config.SpotifyClientSecret)
+				totalArtists = numberOfArtistsProcessed
+				artistsJobRunning = false
+			}()
 			fmt.Println("Searching Spotify for similar artists")
 		default:
 			fmt.Fprintf(w, `<div class="alert alert-danger" role="alert">Similar Artist search is not available for this lookup provider</div>`)
@@ -165,8 +171,61 @@ func getSpotifyAlbumsInParallel(id, token string) {
 	fmt.Printf("Processed %d artists in %v", len(bla), time.Since(startTime))
 }
 
-func getSimilarArtistsInParallel(id, token string) {
+func getSpotifySimilarArtistsInParallel(id, token string) {
 	fmt.Println("Searching Spotify for similar artists")
+	startTime := time.Now()
+	ch := make(chan spotify.SimilarArtistsResponse, len(artistsSearchResults))
+	semaphore := make(chan struct{}, spotifyThreads)
+	for i := range artistsSearchResults {
+		go func(i int) {
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			spotify.SearchSpotifySimilarArtist(&artistsSearchResults[i], id, token, ch)
+		}(i)
+	}
+	// gather results
+	rawSimilarArtists := make([]spotify.SimilarArtistsResponse, 0)
+	for range artistsSearchResults {
+		result := <-ch
+		rawSimilarArtists = append(rawSimilarArtists, result)
+		fmt.Print(".")
+		numberOfArtistsProcessed++
+	}
+	fmt.Printf("Retrieved %d similar artists in %v\n", len(rawSimilarArtists), time.Since(startTime))
+	// seed the similar artists map with our owned artists
+	similarArtistsResults = make(map[string]types.MusicSimilarArtistResult)
+	for i := range artistsSearchResults {
+		// skip artists with no search results
+		if len(artistsSearchResults[i].MusicSearchResults) == 0 {
+			continue
+		}
+		similarArtistsResults[artistsSearchResults[i].MusicSearchResults[0].ID] = types.MusicSimilarArtistResult{
+			Name:            artistsSearchResults[i].MusicSearchResults[0].Name,
+			URL:             artistsSearchResults[i].MusicSearchResults[0].URL,
+			Owned:           true,
+			SimilarityCount: 0,
+		}
+	}
+	// iterate over searches
+	for i := range rawSimilarArtists {
+		// iterate over artists in each search
+		for j := range rawSimilarArtists[i].Artists {
+			artist, ok := similarArtistsResults[rawSimilarArtists[i].Artists[j].ID]
+			if !ok {
+				similarArtistsResults[rawSimilarArtists[i].Artists[j].ID] = types.MusicSimilarArtistResult{
+					Name:            rawSimilarArtists[i].Artists[j].Name,
+					URL:             fmt.Sprintf("https://open.spotify.com/artist/%s", rawSimilarArtists[i].Artists[j].ID),
+					Owned:           false,
+					SimilarityCount: 1,
+				}
+			} else {
+				// increment the similarity count
+				artist.SimilarityCount++
+				similarArtistsResults[rawSimilarArtists[i].Artists[j].ID] = artist
+			}
+		}
+	}
+	fmt.Printf("Processed %d similar artists in %v\n", len(rawSimilarArtists), time.Since(startTime))
 }
 
 func renderArtistAlbumsTable() (tableRows string) {
@@ -192,7 +251,7 @@ func renderArtistAlbumsTable() (tableRows string) {
 }
 
 func renderSimilarArtistsTable() (tableRows string) {
-	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Artist</strong></th><th data-sort="string"><strong>Owned</strong></th><th data-sort="string"><strong>Similarity Count</strong></th></tr></thead><tbody>` //nolint: lll
+	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Artist</strong></th><th data-sort="string"><strong>Owned</strong></th><th data-sort="int"><strong>Similarity Count</strong></th></tr></thead><tbody>` //nolint: lll
 	for i := range similarArtistsResults {
 		ownedString := "No"
 		if similarArtistsResults[i].Owned {

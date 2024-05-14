@@ -240,92 +240,69 @@ func SearchSpotifyAlbum(m *types.SearchResults, clientID, clientSecret string, c
 	ch <- m
 }
 
-func FindSimilarArtists(ownedArtists []types.MusicArtistSearchResult, clientID, clientSecret string) (
-	similar map[string]types.MusicSimilarArtistResult, err error) {
-	// make a map of SearchSimilarArtists
-	similar = make(map[string]types.MusicSimilarArtistResult, len(ownedArtists))
-	// get oauth token
-	err = SpotifyOauthToken(context.Background(), clientID, clientSecret)
+func SearchSpotifySimilarArtist(m *types.SearchResults, clientID, clientSecret string, ch chan<- SimilarArtistsResponse) {
+	err := SpotifyOauthToken(context.Background(), clientID, clientSecret)
 	if err != nil {
-		return similar, fmt.Errorf("FindSimilarArtists: unable to get oauth token: %s", err.Error())
+		fmt.Printf("SearchSpotifySimilarArtist: unable to get oauth token: %s\n", err.Error())
+		ch <- SimilarArtistsResponse{}
+		return
 	}
-	for i := range ownedArtists {
-		// check if the artist is in the similar map already
-		artist, ok := similar[ownedArtists[i].ID]
-		if !ok {
-			// add the artist to the map
-			similar[ownedArtists[i].ID] = types.MusicSimilarArtistResult{
-				Name:            ownedArtists[i].Name,
-				URL:             ownedArtists[i].URL,
-				Owned:           true,
-				SimilarityCount: 0,
-			}
-		} else {
-			// set owned to true
-			artist.Owned = true
-			similar[ownedArtists[i].ID] = artist
-		}
-		// get the similar artists
-		similarArtists, err := SearchSpotifySimilarArtist(ownedArtists[i].ID, clientID, clientSecret)
-		if err != nil {
-			fmt.Printf("FindSimilarArtists: unable to get similar artists: %s\n", err.Error())
-			continue
-		}
-		// iterate through the similar artists, if they are not in the owned artists, add them to the similar artists
-		for j := range similarArtists.Artists {
-			if _, ok := similar[similarArtists.Artists[j].ID]; !ok {
-				similar[similarArtists.Artists[j].ID] = types.MusicSimilarArtistResult{
-					Name:            similarArtists.Artists[j].Name,
-					URL:             fmt.Sprintf("https://open.spotify.com/artist/%s", similarArtists.Artists[j].ID),
-					Owned:           false,
-					SimilarityCount: 1,
-				}
-			} else {
-				// increment the similarity count
-				artist := similar[similarArtists.Artists[j].ID]
-				artist.SimilarityCount++
-				similar[similarArtists.Artists[j].ID] = artist
-			}
-		}
+	if len(m.MusicSearchResults) == 0 {
+		// no artist found for the plex artist
+		fmt.Printf("SearchSpotifySimilarArtist: no artist found for %s\n", m.PlexMusicArtist.Name)
+		ch <- SimilarArtistsResponse{}
+		return
 	}
-	return similar, nil
-}
-
-func SearchSpotifySimilarArtist(artistID, clientID, clientSecret string) (similar SimilarArtistsResponse, err error) {
-	err = SpotifyOauthToken(context.Background(), clientID, clientSecret)
-	if err != nil {
-		return similar, fmt.Errorf("spotifyLookupArtistSimilar: unable to get oauth token: %s", err.Error())
-	}
-	similarArtistURL := fmt.Sprintf("%s/artists/%s/related-artists", spotifyAPIURL, artistID)
+	similarArtistURL := fmt.Sprintf("%s/artists/%s/related-artists", spotifyAPIURL, m.MusicSearchResults[0].ID)
 	client := &http.Client{
 		Timeout: time.Second * lookupTimeout,
 	}
 	req, httpErr := http.NewRequestWithContext(context.Background(), http.MethodGet, similarArtistURL, http.NoBody)
 	if httpErr != nil {
-		return similar, fmt.Errorf("spotifyLookupArtistSimilar: get failed from spotify: %s", httpErr.Error())
+		fmt.Printf("SearchSpotifySimilarArtist: get failed from spotify: %s\n", httpErr.Error())
+		ch <- SimilarArtistsResponse{}
+		return
 	}
 	bearer := fmt.Sprintf("Bearer %s", oauthToken)
 	req.Header.Add("Authorization", bearer)
-	response, err := client.Do(req)
-	if err != nil {
-		return similar, fmt.Errorf("spotifyLookupArtistSimilar: get failed from spotify: %s", err.Error())
+	var response *http.Response
+	for {
+		response, err = client.Do(req)
+		if err != nil {
+			response.Body.Close()
+			fmt.Printf("SearchSpotifySimilarArtist: get failed from spotify: %s\n", err.Error())
+			ch <- SimilarArtistsResponse{}
+			return
+		}
+		if response.StatusCode == http.StatusTooManyRequests {
+			wait := response.Header.Get("Retry-After")
+			waitSeconds, _ := strconv.Atoi(wait)
+			if waitSeconds > lookupTimeout {
+				fmt.Printf("SearchSpotifySimilarArtist: rate limited for %d seconds\n", waitSeconds)
+			}
+			time.Sleep(time.Duration(waitSeconds) * time.Second)
+			continue
+		}
+		if response.StatusCode == http.StatusOK {
+			break
+		}
 	}
-	if response.StatusCode == http.StatusTooManyRequests {
-		return similar, fmt.Errorf("lookupArtist: rate limited by spotify")
-	}
+
 	defer response.Body.Close()
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return similar, fmt.Errorf("spotifyLookupArtistSimilar: unable to parse response from spotify: %s", err.Error())
+		fmt.Printf("SearchSpotifySimilarArtist: unable to parse response from spotify: %s\n", err.Error())
+		ch <- SimilarArtistsResponse{}
+		return
 	}
-
 	var similarArtistsResponse SimilarArtistsResponse
 	jsonErr := json.Unmarshal(body, &similarArtistsResponse)
 	if jsonErr != nil {
-		return similar, fmt.Errorf("spotifyLookupArtistSimilar: unable to unmarshal response from spotify: %s", jsonErr.Error())
+		fmt.Printf("SearchSpotifySimilarArtist: unable to unmarshal response from spotify: %s\n", jsonErr.Error())
+		ch <- SimilarArtistsResponse{}
+		return
 	}
-	similar.Artists = similarArtistsResponse.Artists
-	return similarArtistsResponse, nil
+	ch <- similarArtistsResponse
 }
 
 // function that gets an oauth token from spotify from the client id and secret

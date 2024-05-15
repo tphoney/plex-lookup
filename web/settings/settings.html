@@ -9,8 +9,9 @@
 </head>
 
 <body>
-    <h1 class="container">Plex-lookup Settings</h1>
-    <form hx-post="/settings/plexlibraries" class="container" hx-target="#table" hx-boost="true">
+    <h1 class="container">Settings</h1>
+    <h2 class="container">Plex</h2>
+    <div class="container">
         <p class="container">Enter the <em
                 data-tooltip="Find your Plex server IP by going to your server then go to settings, then remote-access. It is the private IP address."><a
                     href="https://plex.tv/web" target="_blank">Plex
@@ -22,9 +23,31 @@
         </p>
         <input type="text" placeholder="Plex Server IP" name="plexIP" id="plexIP">
         <input type="text" placeholder="Plex X-Plex-Token" name="plexToken" id="plexToken">
-        <button type="lookupPlex">Lookup Plex libraries</button>
-    </form>
-    <div id="table" class="container"></div>
+        <button type="lookupPlex" hx-post="/settings/plexlibraries" class="container" hx-target="#table"
+            hx-include="#plexIP, #plexToken" hx-boost="true">Lookup Plex libraries</button>
+        <div id="table" class="container"></div>
+        <input type="text" placeholder="Plex Movie Library Section ID" name="plexMovieLibraryID"
+            id="plexMovieLibraryID">
+        <input type="text" placeholder="Plex TV Series Library Section ID" name="plexTVLibraryID" id="plexTVLibraryID">
+        <input type="text" placeholder="Plex Music Library Section ID" name="plexMusicLibraryID"
+            id="plexMusicLibraryID">
+    </div>
+    <h2 class="container">Spotify</h2>
+    <p class="container">Enter your Spotify client ID and secret to get started. You will need to follow the Spotify
+        documentation to get these. <a href="https://developer.spotify.com/documentation/web-api/concepts/apps"
+            target="_blank">Create
+            an app on the Spotify developer dashboard</a>
+        then get the client ID and secret.
+    </p>
+    <div class="container">
+        <input type="text" placeholder="Spotify client ID" name="spotifyClientID" id="spotifyClientID">
+        <input type="text" placeholder="Spotify Secret" name="spotifyClientSecret" id="spotifyClientSecret">
+    </div>
+    <div class="container">
+        <button hx-post="/settings/save"
+            hx-include="#plexMovieLibraryID, #plexTVLibraryID, #plexMusicLibraryID, #plexIP, #plexToken, #spotifyClientID, #spotifyClientSecret"
+            hx-swap="outerHTML">Save</button>
+    </div>
 </body>
 
 </html>

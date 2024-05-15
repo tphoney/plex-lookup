@@ -16,58 +16,31 @@ func TestSearchSpotifyArtist(t *testing.T) {
 	if spotifyClientID == "" || spotifyClientSecret == "" {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
-	tests := []struct {
-		name       string
-		args       *types.PlexMusicArtist
-		wantArtist types.SearchResults
-		wantErr    bool
-	}{
-		{
-			name: "artist exists",
-			args: &types.PlexMusicArtist{Name: "The Beatles"},
-			wantArtist: types.SearchResults{
-				SearchURL: "https://open.spotify.com/artist/711MCceyCBcFnzjGY4Q7Un",
-				MusicSearchResults: []types.MusicSearchResult{
-					{
-						Name:   "The Beatles",
-						ID:     "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
-						Albums: make([]types.MusicSearchAlbumResult, 27),
-					},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "artist has special characters",
-			args: &types.PlexMusicArtist{Name: "AC/DC"},
-			wantArtist: types.SearchResults{
-				SearchURL: "https://open.spotify.com/artist/711MCceyCBcFnzjGY4Q7Un",
-				MusicSearchResults: []types.MusicSearchResult{
-					{
-						Name:   "AC/DC",
-						ID:     "711MCceyCBcFnzjGY4Q7Un",
-						Albums: make([]types.MusicSearchAlbumResult, 21),
-					},
-				},
-			},
-			wantErr: false,
-		},
+
+	plexArtist := &types.PlexMusicArtist{Name: "The Beatles"}
+
+	ch := make(chan *types.SearchResults, 1)
+	SearchSpotifyArtist(plexArtist, spotifyClientID, spotifyClientSecret, ch)
+
+	got := <-ch
+	if len(got.MusicSearchResults) != 1 {
+		t.Errorf("SearchSpotifyArtist() returned %d results, expected 1", len(got.MusicSearchResults))
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotArtist, err := SearchSpotifyArtist(tt.args, spotifyClientID, spotifyClientSecret)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("SearchSpotifyArtist() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotArtist.MusicSearchResults[0].Name != tt.wantArtist.MusicSearchResults[0].Name {
-				t.Errorf("SearchSpotifyArtist() Name = %v, want %v", gotArtist, tt.wantArtist)
-			}
-			if len(gotArtist.MusicSearchResults[0].Albums) != len(tt.wantArtist.MusicSearchResults[0].Albums) {
-				t.Errorf("SearchSpotifyArtist() Albums size = %v, want %v",
-					len(gotArtist.MusicSearchResults[0].Albums), len(tt.wantArtist.MusicSearchResults[0].Albums))
-			}
-		})
+
+	expectedArtist := types.MusicArtistSearchResult{
+		Name: "The Beatles",
+		ID:   "3WrFJ7ztbogyGnTHbHJFl2",
+		URL:  "https://open.spotify.com/artist/3WrFJ7ztbogyGnTHbHJFl2",
+	}
+
+	if got.MusicSearchResults[0].Name != expectedArtist.Name {
+		t.Errorf("SearchSpotifyArtist() returned %s, expected %s", got.MusicSearchResults[0].Name, expectedArtist.Name)
+	}
+	if got.MusicSearchResults[0].ID != expectedArtist.ID {
+		t.Errorf("SearchSpotifyArtist() returned %s, expected %s", got.MusicSearchResults[0].ID, expectedArtist.ID)
+	}
+	if got.MusicSearchResults[0].URL != expectedArtist.URL {
+		t.Errorf("SearchSpotifyArtist() returned %s, expected %s", got.MusicSearchResults[0].URL, expectedArtist.URL)
 	}
 }
 
@@ -76,24 +49,13 @@ func TestSearchSpotifyArtistDebug(t *testing.T) {
 	if spotifyClientID == "" || spotifyClientSecret == "" {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
-	artist := &types.PlexMusicArtist{Name: "Angel Olsen"}
-	artistSearchResult, err := SearchSpotifyArtist(artist, spotifyClientID, spotifyClientSecret)
-	if err != nil {
-		t.Errorf("SearchSpotifyArtist() error = %v", err)
-	}
-	t.Logf("SearchSpotifyArtist() = %v", artistSearchResult)
-}
+	plexArtist := &types.PlexMusicArtist{Name: "Angel Olsen"}
 
-func TestSearchSpotifyAlbumsDebug(t *testing.T) {
-	if spotifyClientID == "" || spotifyClientSecret == "" {
-		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
-	}
-	artistID := "6mKqFxGMS5TGDZI3XkT5Rt"
-	artistSearchResult, err := SearchSpotifyAlbums(artistID, spotifyClientID, spotifyClientSecret)
-	if err != nil {
-		t.Errorf("SearchSpotifyAlbum() error = %v", err)
-	}
-	t.Logf("SearchSpotifyAlbum() = %v", artistSearchResult)
+	ch := make(chan *types.SearchResults, 1)
+	SearchSpotifyArtist(plexArtist, spotifyClientID, spotifyClientSecret, ch)
+
+	got := <-ch
+	t.Logf("SearchSpotifyArtist() = %+v", got)
 }
 
 func TestSearchSpotifyAlbums(t *testing.T) {
@@ -101,7 +63,7 @@ func TestSearchSpotifyAlbums(t *testing.T) {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
 	type args struct {
-		artistID string
+		m *types.SearchResults
 	}
 	tests := []struct {
 		name       string
@@ -111,20 +73,69 @@ func TestSearchSpotifyAlbums(t *testing.T) {
 	}{
 		{
 			name:       "albums exist",
-			args:       args{artistID: "711MCceyCBcFnzjGY4Q7Un"},
+			args:       args{m: &types.SearchResults{MusicSearchResults: []types.MusicArtistSearchResult{{ID: "711MCceyCBcFnzjGY4Q7Un"}}}},
 			albumCount: 21,
 			wantErr:    false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotAlbums, err := SearchSpotifyAlbums(tt.args.artistID, spotifyClientID, spotifyClientSecret)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("SearchSpotifyAlbums() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			ch := make(chan *types.SearchResults, 1)
+			SearchSpotifyAlbum(tt.args.m, spotifyClientID, spotifyClientSecret, ch)
+			got := <-ch
+
+			if len(got.MusicSearchResults[0].Albums) != tt.albumCount {
+				t.Errorf("SearchSpotifyAlbums() = %v, want %v", len(got.MusicSearchResults[0].Albums), tt.albumCount)
 			}
-			if len(gotAlbums) != tt.albumCount {
-				t.Errorf("SearchSpotifyAlbums() = %v, want %v", len(gotAlbums), tt.albumCount)
+		})
+	}
+}
+
+func TestSearchSpotifyAlbumsDebug(t *testing.T) {
+	if spotifyClientID == "" || spotifyClientSecret == "" {
+		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
+	}
+	want := types.SearchResults{
+		MusicSearchResults: []types.MusicArtistSearchResult{
+			{
+				Name: "",
+				ID:   "16GcWuvvybAoaHr0NqT8Eh",
+				URL:  "",
+			},
+		},
+	}
+	ch := make(chan *types.SearchResults, 1)
+	SearchSpotifyAlbum(&want, spotifyClientID, spotifyClientSecret, ch)
+	got := <-ch
+
+	t.Logf("SearchSpotifyAlbum() = %v", got.MusicSearchResults)
+}
+
+func TestSpotifyLookupSimilarArtists(t *testing.T) {
+	if spotifyClientID == "" || spotifyClientSecret == "" {
+		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
+	}
+	tests := []struct {
+		name         string
+		searchResult types.SearchResults
+		wantErr      bool
+		wantLength   int
+	}{
+		{
+			name:         "similar artists exist",
+			searchResult: types.SearchResults{MusicSearchResults: []types.MusicArtistSearchResult{{ID: "711MCceyCBcFnzjGY4Q7Un"}}},
+			wantErr:      false,
+			wantLength:   20,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ch := make(chan SimilarArtistsResponse, 1)
+			searchResult := tt.searchResult // Create a local variable to avoid implicit memory aliasing
+			SearchSpotifySimilarArtist(&searchResult, spotifyClientID, spotifyClientSecret, ch)
+			got := <-ch
+			if len(got.Artists) != tt.wantLength {
+				t.Errorf("SpotifyLookupSimilarArtists() = %v, want %v", len(got.Artists), tt.wantLength)
 			}
 		})
 	}

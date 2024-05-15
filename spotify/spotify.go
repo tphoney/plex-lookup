@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -93,44 +94,72 @@ type AlbumsResponse struct {
 	Total    int64 `json:"total"`
 }
 
-func SearchSpotifyArtist(plexArtist *types.PlexMusicArtist, clientID, clientSecret string) (artist types.SearchResults, err error) {
-	artist.PlexMusicArtist = *plexArtist
+type SimilarArtistsResponse struct {
+	Artists []struct {
+		Name string `json:"name"`
+		ID   string `json:"id"`
+	}
+}
+
+func SearchSpotifyArtist(plexArtist *types.PlexMusicArtist, clientID, clientSecret string, ch chan<- *types.SearchResults) {
+	// context with a timeout of 30 seconds
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(lookupTimeout))
+	defer cancel()
+	searchResults := types.SearchResults{}
+	searchResults.PlexMusicArtist = *plexArtist
 	// get oauth token
-	if oauthToken == "" {
-		oauthToken, err = spotifyOauthToken(context.Background(), clientID, clientSecret)
-		if err != nil {
-			return artist, fmt.Errorf("SearchSpotifyArtist: unable to get oauth token: %s", err.Error())
-		}
+	err := SpotifyOauthToken(ctx, clientID, clientSecret)
+	if err != nil {
+		fmt.Printf("SearchSpotifyArtist: unable to get oauth token: %s\n", err.Error())
+		ch <- &searchResults
+		return
 	}
 	urlEncodedArtist := url.QueryEscape(plexArtist.Name)
 	artistURL := fmt.Sprintf("%s/search?q=%s&type=artist&limit=10", spotifyAPIURL, urlEncodedArtist)
 	client := &http.Client{
 		Timeout: time.Second * lookupTimeout,
 	}
-	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, artistURL, http.NoBody)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, artistURL, http.NoBody)
 	bearer := fmt.Sprintf("Bearer %s", oauthToken)
 	req.Header.Add("Authorization", bearer)
-	response, err := client.Do(req)
-	if err != nil {
-		return artist, fmt.Errorf("lookupArtist: get failed from spotify: %s", err.Error())
-	}
-	if response.StatusCode == http.StatusTooManyRequests {
-		return artist, fmt.Errorf("lookupArtist: rate limited by spotify")
+	var response *http.Response
+	for {
+		response, err = client.Do(req)
+		if err != nil {
+			response.Body.Close()
+			fmt.Printf("lookupArtist: get failed from spotify: %s\n", err.Error())
+			ch <- &searchResults
+			return
+		}
+		if response.StatusCode == http.StatusTooManyRequests {
+			// rate limited
+			wait := response.Header.Get("Retry-After")
+			waitSeconds, _ := strconv.Atoi(wait)
+			time.Sleep(time.Duration(waitSeconds) * time.Second)
+			continue
+		}
+		if response.StatusCode == http.StatusOK {
+			break
+		}
 	}
 	defer response.Body.Close()
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return artist, fmt.Errorf("lookupArtist: unable to parse response from spotify: %s", err.Error())
+		fmt.Printf("lookupArtist: unable to read response from spotify: %s\n", err.Error())
+		ch <- &searchResults
+		return
 	}
 	var artistResponse ArtistResponse
 	jsonErr := json.Unmarshal(body, &artistResponse)
 	if jsonErr != nil {
-		return artist, fmt.Errorf("lookupArtist: unable to parse response from spotify: %s", jsonErr.Error())
+		fmt.Printf("lookupArtist: unable to parse response from spotify: %s\n", jsonErr.Error())
+		ch <- &searchResults
+		return
 	}
 	for i := range artistResponse.Artists.Items {
 		if artistStringMatcher(plexArtist.Name, artistResponse.Artists.Items[i].Name) {
 			// only get the first match
-			artist.MusicSearchResults = append(artist.MusicSearchResults, types.MusicSearchResult{
+			searchResults.MusicSearchResults = append(searchResults.MusicSearchResults, types.MusicArtistSearchResult{
 				Name: artistResponse.Artists.Items[i].Name,
 				ID:   artistResponse.Artists.Items[i].ID,
 				URL:  artistResponse.Artists.Items[i].ExternalUrls.Spotify,
@@ -139,44 +168,67 @@ func SearchSpotifyArtist(plexArtist *types.PlexMusicArtist, clientID, clientSecr
 			break
 		}
 	}
-	if len(artist.MusicSearchResults) == 0 {
-		return artist, err
-	}
-	// get the albums
-	artist.MusicSearchResults[0].Albums, err = SearchSpotifyAlbums(artist.MusicSearchResults[0].ID, clientID, clientSecret)
-	return artist, nil
+	ch <- &searchResults
 }
 
-func SearchSpotifyAlbums(artistID, clientID, clientSecret string) (albums []types.MusicSearchAlbumResult, err error) {
-	if oauthToken == "" {
-		oauthToken, err = spotifyOauthToken(context.Background(), clientID, clientSecret)
-		if err != nil {
-			return albums, fmt.Errorf("SearchSpotifyAlbums: unable to get oauth token: %s", err.Error())
-		}
+func SearchSpotifyAlbum(m *types.SearchResults, clientID, clientSecret string, ch chan<- *types.SearchResults) {
+	// get oauth token
+	err := SpotifyOauthToken(context.Background(), clientID, clientSecret)
+	if err != nil {
+		fmt.Printf("SearchSpotifyAlbums: unable to get oauth token: %s\n", err.Error())
+		ch <- m
+		return
 	}
-	albumURL := fmt.Sprintf("%s/artists/%s/albums?include_groups=album&limit=50&", spotifyAPIURL, artistID)
+	if len(m.MusicSearchResults) == 0 {
+		// no artist found for the plex artist
+		fmt.Printf("SearchSpotifyAlbums: no artist found for %s\n", m.PlexMusicArtist.Name)
+		ch <- m
+		return
+	}
+	albumURL := fmt.Sprintf("%s/artists/%s/albums?include_groups=album&limit=50&", spotifyAPIURL, m.MusicSearchResults[0].ID)
 	client := &http.Client{
 		Timeout: time.Second * lookupTimeout,
 	}
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, albumURL, http.NoBody)
 	bearer := fmt.Sprintf("Bearer %s", oauthToken)
 	req.Header.Add("Authorization", bearer)
-	response, err := client.Do(req)
-	if err != nil {
-		return albums, fmt.Errorf("lookupArtistAlbums: get failed from spotify: %s", err.Error())
+	var response *http.Response
+	for {
+		response, err = client.Do(req)
+		if err != nil {
+			response.Body.Close()
+			fmt.Printf("lookupArtistAlbums: get failed from spotify: %s\n", err.Error())
+			ch <- m
+			return
+		}
+		if response.StatusCode == http.StatusTooManyRequests {
+			wait := response.Header.Get("Retry-After")
+			waitSeconds, _ := strconv.Atoi(wait)
+			if waitSeconds > lookupTimeout {
+				fmt.Printf("lookupArtistAlbums: rate limited for %d seconds\n", waitSeconds)
+			}
+			time.Sleep(time.Duration(waitSeconds) * time.Second)
+			continue
+		}
+		if response.StatusCode == http.StatusOK {
+			break
+		}
 	}
 	defer response.Body.Close()
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return albums, fmt.Errorf("lookupArtistAlbums: unable to parse response from spotify: %s", err.Error())
+		fmt.Printf("lookupArtistAlbums: unable to parse response from spotify: %s\n", err.Error())
+		ch <- m
+		return
 	}
 	var albumsResponse AlbumsResponse
 	_ = json.Unmarshal(body, &albumsResponse)
 
+	albums := make([]types.MusicAlbumSearchResult, 0)
 	for i := range albumsResponse.Items {
 		// convert "2022-06-03" to "2022"
 		year := strings.Split(albumsResponse.Items[i].ReleaseDate, "-")[0]
-		albums = append(albums, types.MusicSearchAlbumResult{
+		albums = append(albums, types.MusicAlbumSearchResult{
 			Title: albumsResponse.Items[i].Name,
 			ID:    albumsResponse.Items[i].ID,
 			URL:   albumsResponse.Items[i].ExternalUrls.Spotify,
@@ -184,12 +236,81 @@ func SearchSpotifyAlbums(artistID, clientID, clientSecret string) (albums []type
 		})
 	}
 
-	return albums, err
+	m.MusicSearchResults[0].Albums = albums
+	ch <- m
+}
+
+func SearchSpotifySimilarArtist(m *types.SearchResults, clientID, clientSecret string, ch chan<- SimilarArtistsResponse) {
+	err := SpotifyOauthToken(context.Background(), clientID, clientSecret)
+	if err != nil {
+		fmt.Printf("SearchSpotifySimilarArtist: unable to get oauth token: %s\n", err.Error())
+		ch <- SimilarArtistsResponse{}
+		return
+	}
+	if len(m.MusicSearchResults) == 0 {
+		// no artist found for the plex artist
+		fmt.Printf("SearchSpotifySimilarArtist: no artist found for %s\n", m.PlexMusicArtist.Name)
+		ch <- SimilarArtistsResponse{}
+		return
+	}
+	similarArtistURL := fmt.Sprintf("%s/artists/%s/related-artists", spotifyAPIURL, m.MusicSearchResults[0].ID)
+	client := &http.Client{
+		Timeout: time.Second * lookupTimeout,
+	}
+	req, httpErr := http.NewRequestWithContext(context.Background(), http.MethodGet, similarArtistURL, http.NoBody)
+	if httpErr != nil {
+		fmt.Printf("SearchSpotifySimilarArtist: get failed from spotify: %s\n", httpErr.Error())
+		ch <- SimilarArtistsResponse{}
+		return
+	}
+	bearer := fmt.Sprintf("Bearer %s", oauthToken)
+	req.Header.Add("Authorization", bearer)
+	var response *http.Response
+	for {
+		response, err = client.Do(req)
+		if err != nil {
+			response.Body.Close()
+			fmt.Printf("SearchSpotifySimilarArtist: get failed from spotify: %s\n", err.Error())
+			ch <- SimilarArtistsResponse{}
+			return
+		}
+		if response.StatusCode == http.StatusTooManyRequests {
+			wait := response.Header.Get("Retry-After")
+			waitSeconds, _ := strconv.Atoi(wait)
+			if waitSeconds > lookupTimeout {
+				fmt.Printf("SearchSpotifySimilarArtist: rate limited for %d seconds\n", waitSeconds)
+			}
+			time.Sleep(time.Duration(waitSeconds) * time.Second)
+			continue
+		}
+		if response.StatusCode == http.StatusOK {
+			break
+		}
+	}
+
+	defer response.Body.Close()
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		fmt.Printf("SearchSpotifySimilarArtist: unable to parse response from spotify: %s\n", err.Error())
+		ch <- SimilarArtistsResponse{}
+		return
+	}
+	var similarArtistsResponse SimilarArtistsResponse
+	jsonErr := json.Unmarshal(body, &similarArtistsResponse)
+	if jsonErr != nil {
+		fmt.Printf("SearchSpotifySimilarArtist: unable to unmarshal response from spotify: %s\n", jsonErr.Error())
+		ch <- SimilarArtistsResponse{}
+		return
+	}
+	ch <- similarArtistsResponse
 }
 
 // function that gets an oauth token from spotify from the client id and secret
-func spotifyOauthToken(ctx context.Context, clientID, clientSecret string) (oauth string, err error) {
+func SpotifyOauthToken(ctx context.Context, clientID, clientSecret string) (err error) {
 	// get oauth token
+	if oauthToken != "" {
+		return nil
+	}
 	oauthURL := "https://accounts.spotify.com/api/token"
 	client := &http.Client{
 		Timeout: time.Second * lookupTimeout,
@@ -202,12 +323,12 @@ func spotifyOauthToken(ctx context.Context, clientID, clientSecret string) (oaut
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	response, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("spotifyOauthToken: get failed from spotify: %s", err.Error())
+		return fmt.Errorf("spotifyOauthToken: get failed from spotify: %s", err.Error())
 	}
 	defer response.Body.Close()
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return "", fmt.Errorf("spotifyOauthToken: unable to read response from spotify: %s", err.Error())
+		return fmt.Errorf("spotifyOauthToken: unable to read response from spotify: %s", err.Error())
 	}
 	var oauthResponse struct {
 		AccessToken string `json:"access_token"`
@@ -215,9 +336,10 @@ func spotifyOauthToken(ctx context.Context, clientID, clientSecret string) (oaut
 	}
 	err = json.Unmarshal(body, &oauthResponse)
 	if err != nil {
-		return "", fmt.Errorf("getOauthToken: unable to parse response from spotify: %s", err.Error())
+		return fmt.Errorf("getOauthToken: unable to parse response from spotify: %s", err.Error())
 	}
-	return oauthResponse.AccessToken, nil
+	oauthToken = oauthResponse.AccessToken
+	return nil
 }
 
 func artistStringMatcher(dbName, webName string) bool {

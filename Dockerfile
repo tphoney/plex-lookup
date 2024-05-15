@@ -26,7 +26,9 @@ COPY web/tv/*.go web/tv/
 COPY web/tv/*.html web/tv/
 COPY web/settings/*.go web/settings/
 COPY web/settings/*.html web/settings/
-COPY web/server.go web/index.html web/static/ /web/
+COPY web/server.go web/
+COPY web/index.html web/
+COPY web/static/ web/static/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux go build -o /plex-lookup

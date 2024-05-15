@@ -27,10 +27,10 @@ func Test_removeOwnedAlbums(t *testing.T) {
 							},
 						},
 					},
-					MusicSearchResults: []types.MusicSearchResult{
+					MusicSearchResults: []types.MusicArtistSearchResult{
 						{
 							Name: "Test Artist",
-							Albums: []types.MusicSearchAlbumResult{
+							Albums: []types.MusicAlbumSearchResult{
 								{
 									Title: "Test Album",
 									Year:  "2022",
@@ -55,10 +55,11 @@ func Test_removeOwnedAlbums(t *testing.T) {
 							},
 						},
 					},
-					MusicSearchResults: []types.MusicSearchResult{
+					MusicSearchResults: []types.MusicArtistSearchResult{
 						{
-							Name: "Test Artist",
-							Albums: []types.MusicSearchAlbumResult{
+							Name:        "Test Artist",
+							OwnedAlbums: 1,
+							Albums: []types.MusicAlbumSearchResult{
 								{
 									Title: "Test Album 2",
 									Year:  "2021",
@@ -87,10 +88,10 @@ func Test_removeOwnedAlbums(t *testing.T) {
 							},
 						},
 					},
-					MusicSearchResults: []types.MusicSearchResult{
+					MusicSearchResults: []types.MusicArtistSearchResult{
 						{
 							Name: "Another Artist",
-							Albums: []types.MusicSearchAlbumResult{
+							Albums: []types.MusicAlbumSearchResult{
 								{
 									Title: "Another Album",
 									Year:  "2021",
@@ -123,10 +124,11 @@ func Test_removeOwnedAlbums(t *testing.T) {
 							},
 						},
 					},
-					MusicSearchResults: []types.MusicSearchResult{
+					MusicSearchResults: []types.MusicArtistSearchResult{
 						{
-							Name: "Another Artist",
-							Albums: []types.MusicSearchAlbumResult{
+							Name:        "Another Artist",
+							OwnedAlbums: 2,
+							Albums: []types.MusicAlbumSearchResult{
 								{
 									Title: "Another Album 3",
 									Year:  "2023",
@@ -167,10 +169,10 @@ func Test_removeOlderSearchedAlbums(t *testing.T) {
 							},
 						},
 					},
-					MusicSearchResults: []types.MusicSearchResult{
+					MusicSearchResults: []types.MusicArtistSearchResult{
 						{
 							Name: "Test Artist",
-							Albums: []types.MusicSearchAlbumResult{
+							Albums: []types.MusicAlbumSearchResult{
 								{
 									Title: "Test Album 2",
 									Year:  "2016",
@@ -191,10 +193,10 @@ func Test_removeOlderSearchedAlbums(t *testing.T) {
 							},
 						},
 					},
-					MusicSearchResults: []types.MusicSearchResult{
+					MusicSearchResults: []types.MusicArtistSearchResult{
 						{
 							Name:   "Test Artist",
-							Albums: []types.MusicSearchAlbumResult{},
+							Albums: []types.MusicAlbumSearchResult{},
 						},
 					},
 				},
@@ -212,7 +214,7 @@ func Test_removeOlderSearchedAlbums(t *testing.T) {
 	}
 }
 func Test_cleanAlbums(t *testing.T) {
-	original := []types.MusicSearchAlbumResult{
+	original := []types.MusicAlbumSearchResult{
 		{
 			Title: "Album 1",
 			Year:  "2022",
@@ -226,7 +228,7 @@ func Test_cleanAlbums(t *testing.T) {
 			Year:  "2020",
 		},
 	}
-	toRemove := []types.MusicSearchAlbumResult{
+	toRemove := []types.MusicAlbumSearchResult{
 		{
 			Title: "Album 2",
 			Year:  "2021",
@@ -236,7 +238,7 @@ func Test_cleanAlbums(t *testing.T) {
 			Year:  "2020",
 		},
 	}
-	want := []types.MusicSearchAlbumResult{
+	want := []types.MusicAlbumSearchResult{
 		{
 			Title: "Album 1",
 			Year:  "2022",

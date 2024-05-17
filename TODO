@@ -8,6 +8,8 @@
 - allow amazon tv search for newer series
 - music, a-ha/ash doesnt match as an artist why ?
 
+- for movies dont refresh plexmovie list every time
+
 ## done
 
 - fix links on the tv page to a tv series to cinema paradiso. use a hx-post
@@ -30,3 +32,4 @@
 - parallel requests for spotify search
 - update movies, remove the plex resolution filter add plex resolution as a column
 - parallelise cinema-paradiso movie search 6m20 to 2m25
+- parallelise cinema-paradiso tv search

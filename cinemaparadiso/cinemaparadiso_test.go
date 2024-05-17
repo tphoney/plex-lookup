@@ -103,11 +103,15 @@ func TestSearchCinemaParadisoTV(t *testing.T) {
 		Title: "Adventure Time",
 		Year:  "2010",
 	}
-	result, err := SearchCinemaParadisoTV(&show)
-	if err != nil {
-		t.Errorf("Error searching for TV show: %s", err)
+	ch := make(chan types.SearchResults, 1)
+	searchCinemaParadisoTV(&show, ch)
+	got := <-ch
+
+	if len(got.TVSearchResults) == 0 {
+		t.Errorf("Expected search results, but got none")
 	}
-	if result.SearchURL == "" {
+
+	if got.SearchURL == "" {
 		t.Errorf("Expected searchurl, but got none")
 	}
 }
@@ -121,7 +125,7 @@ func TestSearchCinemaParadisoMovies(t *testing.T) {
 		Year:  "1998",
 	}
 	ch := make(chan types.SearchResults, 1)
-	SearchCinemaParadisoMovie(movie, ch)
+	searchCinemaParadisoMovie(movie, ch)
 	result := <-ch
 
 	if len(result.MovieSearchResults) == 0 {

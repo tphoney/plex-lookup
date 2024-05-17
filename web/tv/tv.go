@@ -23,6 +23,7 @@ var (
 	totalTV             int  = 0
 	plexTV              []types.PlexTVShow
 	tvSearchResults     []types.SearchResults
+	lookup              string
 	filters             types.FilteringOptions
 )
 
@@ -40,14 +41,16 @@ func TVHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
-	lookup := r.FormValue("lookup")
+	lookup = r.FormValue("lookup")
 	// lookup filters
 	filters.AudioLanguage = r.FormValue("german")
 	filters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
-
 	if len(plexTV) == 0 {
 		plexTV = plex.GetPlexTV(c.Config.PlexIP, c.Config.PlexTVLibraryID, c.Config.PlexToken)
 	}
+	//nolint: gocritic
+	// plexTV = plexTV[:10]
+	//lint: gocritic
 
 	var searchResult types.SearchResults
 	tvJobRunning = true
@@ -59,20 +62,19 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		startTime := time.Now()
-		for i := range plexTV {
-			fmt.Print(".")
-			if lookup == "cinemaParadiso" {
-				searchResult, _ = cinemaparadiso.SearchCinemaParadisoTV(&plexTV[i])
-			} else {
+		if lookup == "cinemaParadiso" {
+			tvSearchResults = cinemaparadiso.GetCinemaParadisoTVInParallel(plexTV)
+		} else {
+			for i := range plexTV {
+				fmt.Print(".")
 				if filters.AudioLanguage == "german" {
 					searchResult, _ = amazon.SearchAmazonTV(&plexTV[i], fmt.Sprintf("&audio=%s", filters.AudioLanguage))
 				} else {
 					searchResult, _ = amazon.SearchAmazonTV(&plexTV[i], "")
 				}
-				// ADD CALL TO GET TV SHOW DETAILS
+				tvSearchResults = append(tvSearchResults, searchResult)
+				numberOfTVProcessed = i
 			}
-			tvSearchResults = append(tvSearchResults, searchResult)
-			numberOfTVProcessed = i
 		}
 		tvJobRunning = false
 		fmt.Printf("\nProcessed %d TV Shows in %v\n", totalTV, time.Since(startTime))
@@ -80,19 +82,36 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 }
 
 func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
-	if tvJobRunning {
-		fmt.Fprintf(w, `<div hx-get="/tvprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
+	if lookup == "cinemaParadiso" {
+		numberOfTVProcessed = cinemaparadiso.GetTVJobProgress()
+		if tvJobRunning {
+			fmt.Fprintf(w, `<div hx-get="/tvprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
 		<progress value="%d" max= "%d"/></div>`, numberOfTVProcessed, totalTV)
-	}
-	if totalTV == numberOfTVProcessed && totalTV != 0 {
-		fmt.Fprintf(w,
-			`<table class="table-sortable">%s</tbody></table>
+		} else {
+			fmt.Fprintf(w,
+				`<table class="table-sortable">%s</tbody></table>
 		</script><script>document.querySelector('.table-sortable').tsortable()</script>`,
-			renderTVTable(tvSearchResults))
-		// reset variables
-		numberOfTVProcessed = 0
-		totalTV = 0
-		tvSearchResults = []types.SearchResults{}
+				renderTVTable(tvSearchResults))
+			// reset variables
+			numberOfTVProcessed = 0
+			totalTV = 0
+			tvSearchResults = []types.SearchResults{}
+		}
+	} else {
+		if tvJobRunning {
+			fmt.Fprintf(w, `<div hx-get="/tvprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
+		<progress value="%d" max= "%d"/></div>`, numberOfTVProcessed, totalTV)
+		}
+		if totalTV == numberOfTVProcessed && totalTV != 0 {
+			fmt.Fprintf(w,
+				`<table class="table-sortable">%s</tbody></table>
+		</script><script>document.querySelector('.table-sortable').tsortable()</script>`,
+				renderTVTable(tvSearchResults))
+			// reset variables
+			numberOfTVProcessed = 0
+			totalTV = 0
+			tvSearchResults = []types.SearchResults{}
+		}
 	}
 }
 

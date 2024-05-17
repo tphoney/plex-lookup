@@ -47,7 +47,7 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	plexMovies = fetchPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken, german)
 	//nolint: gocritic
 	// plexMovies = plexMovies[:10]
-	//nolint: gocritic
+	//lint: gocritic
 	var searchResult types.SearchResults
 	jobRunning = true
 	numberOfMoviesProcessed = 0
@@ -88,7 +88,7 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 	if lookup == "cinemaParadiso" {
 		// check job status
-		numberOfMoviesProcessed = cinemaparadiso.GetJobProgress()
+		numberOfMoviesProcessed = cinemaparadiso.GetMovieJobProgress()
 		if jobRunning {
 			fmt.Fprintf(w, `<div hx-get="/moviesprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
 			<progress value="%d" max= "%d"/></div>`, numberOfMoviesProcessed, totalMovies)

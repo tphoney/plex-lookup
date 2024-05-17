@@ -21,21 +21,52 @@ const (
 	cinemaparadisoSeriesURL = "https://www.cinemaparadiso.co.uk/ajax/CPMain.wsFilmDescription,CPMain.ashx?_method=ShowSeries&_session=r"
 )
 
-func SearchCinemaParadisoMovie(plexMovie types.PlexMovie) (movieSearchResult types.SearchResults, err error) {
+var (
+	numberMoviesProcessed int = 0
+)
+
+func GetCinemaParadisoMoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.SearchResults) {
+	ch := make(chan types.SearchResults, len(plexMovies))
+	semaphore := make(chan struct{}, types.ConcurrencyLimit)
+
+	for i := range plexMovies {
+		go func(i int) {
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			SearchCinemaParadisoMovie(plexMovies[i], ch)
+		}(i)
+	}
+
+	searchResults = make([]types.SearchResults, 0, len(plexMovies))
+	for range plexMovies {
+		result := <-ch
+		searchResults = append(searchResults, result)
+		numberMoviesProcessed++
+	}
+	numberMoviesProcessed = 0 // job is done
+	return searchResults
+}
+
+func GetJobProgress() int {
+	return numberMoviesProcessed
+}
+
+func SearchCinemaParadisoMovie(plexMovie types.PlexMovie, movieSearchResult chan<- types.SearchResults) {
+	result := types.SearchResults{}
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
-	movieSearchResult.PlexMovie = plexMovie
-	movieSearchResult.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
+	result.PlexMovie = plexMovie
+	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
 	rawData, err := makeSearchRequest(urlEncodedTitle)
 	if err != nil {
 		fmt.Println("Error making web request:", err)
-		return movieSearchResult, err
+		movieSearchResult <- result
+		return
 	}
 
 	moviesFound, _ := findTitlesInResponse(rawData, true)
-	movieSearchResult.MovieSearchResults = moviesFound
-	movieSearchResult = utils.MarkBestMatch(&movieSearchResult)
-
-	return movieSearchResult, nil
+	result.MovieSearchResults = moviesFound
+	result = utils.MarkBestMatch(&result)
+	movieSearchResult <- result
 }
 
 func SearchCinemaParadisoTV(plexTVShow *types.PlexTVShow) (tvSearchResult types.SearchResults, err error) {

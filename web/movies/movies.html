@@ -28,33 +28,6 @@
     <div hx-get="/settings/plexinfook" class="container" hx-trigger="load"></div>
     <form hx-post="/moviesprocess" class="container" hx-target="#progress" hx-boost="true">
         <fieldset>
-            <legend><strong>Plex Filter:</strong> only compare movies that match the following criteria.</legend>
-            <label for="title" data-sort="title">
-                <input type="checkbox" id="sd" name="sd" value="sd">
-                SD
-            </label>
-            <label for="title" data-sort="title">
-                <input type="checkbox" id="480" name="480" value="480">
-                480p
-            </label>
-            <label for="title" data-sort="title">
-                <input type="checkbox" id="576" name="576" value="576">
-                576p
-            </label>
-            <label for="title" data-sort="title">
-                <input type="checkbox" id="720" name="720" value="720">
-                720p
-            </label>
-            <label for="title" data-sort="title">
-                <input type="checkbox" id="1080" name="1080" value="1080">
-                1080p
-            </label>
-            <label for="title" data-sort="title">
-                <input type="checkbox" id="4k" name="4k" value="4k">
-                4K
-            </label>
-        </fieldset>
-        <fieldset>
             <legend><strong>Lookup:</strong></legend>
             <label for="amazon">
                 <input type="radio" id="amazon" name="lookup" value="amazon" />

@@ -25,9 +25,10 @@ func TestFindMovieDetails(t *testing.T) {
 	processed := extractMovies(string(rawdata))
 	expected := []types.PlexMovie{
 		{
-			Title:     "Chaos Theory",
-			Year:      "2007",
-			DateAdded: time.Date(2023, time.January, 21, 15, 03, 10, 0, time.FixedZone("GMT", 0)),
+			Title:      "Chaos Theory",
+			Year:       "2007",
+			Resolution: "sd",
+			DateAdded:  time.Date(2023, time.January, 21, 15, 03, 10, 0, time.FixedZone("GMT", 0)),
 		},
 	}
 
@@ -46,13 +47,17 @@ func TestFindMovieDetails(t *testing.T) {
 	if processed[0].DateAdded.Compare(expected[0].DateAdded) != 0 {
 		t.Errorf("Expected date %s, but got %s", expected[0].DateAdded, processed[0].DateAdded)
 	}
+
+	if processed[0].Resolution != expected[0].Resolution {
+		t.Errorf("Expected resolution %s, but got %s", expected[0].Resolution, processed[0].Resolution)
+	}
 }
 
 func TestGetPlexMovies(t *testing.T) {
 	if plexIP == "" || plexMovieLibraryID == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
-	result := GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, "", nil)
+	result := GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, nil)
 
 	if len(result) == 0 {
 		t.Errorf("Expected at least one TV show, but got %d", len(result))

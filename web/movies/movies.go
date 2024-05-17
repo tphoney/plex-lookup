@@ -39,29 +39,14 @@ func MoviesHandler(w http.ResponseWriter, _ *http.Request) {
 
 func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	lookup := r.FormValue("lookup")
-	// plex resolutions
-	sd := r.FormValue("sd")
-	r240 := r.FormValue("240")
-	r480 := r.FormValue("480")
-	r576 := r.FormValue("576")
-	r720 := r.FormValue("720")
-	r1080 := r.FormValue("1080")
-	r4k := r.FormValue("4k")
-	plexResolutions := []string{sd, r240, r480, r576, r720, r1080, r4k}
-	// remove empty resolutions
-	var filteredResolutions []string
-	for _, resolution := range plexResolutions {
-		if resolution != "" {
-			filteredResolutions = append(filteredResolutions, resolution)
-		}
-	}
 	// lookup filters
 	german := r.FormValue("german")
 	newerVersion := r.FormValue("newerVersion")
-	// Prepare table plexMovies
-
-	plexMovies = fetchPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken, filteredResolutions, german)
-
+	// fetch from plex
+	plexMovies = fetchPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken, german)
+	//nolint: gocritic
+	// plexMovies = plexMovies[:10]
+	//nolint: gocritic
 	var searchResult types.SearchResults
 	jobRunning = true
 	numberOfMoviesProcessed = 0
@@ -116,12 +101,12 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 }
 
 func renderTable(movieCollection []types.SearchResults) (tableRows string) {
-	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
+	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="string"><strong>Plex Resolution</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
 	for i := range movieCollection {
 		tableRows += fmt.Sprintf(
-			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%d</td><td>%d</td>`,
+			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%s</td><td>%d</td><td>%d</td>`,
 			movieCollection[i].SearchURL, movieCollection[i].PlexMovie.Title, movieCollection[i].PlexMovie.Year,
-			movieCollection[i].MatchesBluray, movieCollection[i].Matches4k)
+			movieCollection[i].PlexMovie.Resolution, movieCollection[i].MatchesBluray, movieCollection[i].Matches4k)
 		if movieCollection[i].MatchesBluray+movieCollection[i].Matches4k > 0 {
 			tableRows += "<td>"
 			for _, result := range movieCollection[i].MovieSearchResults {
@@ -144,7 +129,7 @@ func renderTable(movieCollection []types.SearchResults) (tableRows string) {
 	return tableRows // Return the generated HTML for table rows
 }
 
-func fetchPlexMovies(plexIP, plexMovieLibraryID, plexToken string, plexResolutions []string, german string) (allMovies []types.PlexMovie) {
+func fetchPlexMovies(plexIP, plexMovieLibraryID, plexToken, german string) (allMovies []types.PlexMovie) {
 	filter := []plex.Filter{}
 	if german == types.StringTrue {
 		filter = []plex.Filter{
@@ -160,12 +145,6 @@ func fetchPlexMovies(plexIP, plexMovieLibraryID, plexToken string, plexResolutio
 			// },
 		}
 	}
-	if len(plexResolutions) == 0 {
-		allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, "", filter)...)
-	} else {
-		for _, resolution := range plexResolutions {
-			allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, resolution, filter)...)
-		}
-	}
+	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, filter)...)
 	return allMovies
 }

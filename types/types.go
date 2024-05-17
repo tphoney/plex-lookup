@@ -47,9 +47,10 @@ type FilteringOptions struct {
 
 // ==============================================================================================================
 type PlexMovie struct {
-	Title     string
-	Year      string
-	DateAdded time.Time
+	Title      string
+	Year       string
+	Resolution string
+	DateAdded  time.Time
 }
 
 type MovieSearchResult struct {

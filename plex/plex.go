@@ -473,13 +473,8 @@ type Filter struct {
 	Modifier string
 }
 
-func GetPlexMovies(ipAddress, libraryID, plexToken, resolution string, filters []Filter) (movieList []types.PlexMovie) {
-	url := fmt.Sprintf("http://%s:32400/library/sections/%s", ipAddress, libraryID)
-	if resolution == "" {
-		url += "/all"
-	} else {
-		url += fmt.Sprintf("/resolution/%s", resolution)
-	}
+func GetPlexMovies(ipAddress, libraryID, plexToken string, filters []Filter) (movieList []types.PlexMovie) {
+	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
 	for i := range filters {
 		if i == 0 {
@@ -514,7 +509,7 @@ func GetPlexMovies(ipAddress, libraryID, plexToken, resolution string, filters [
 	}
 
 	movieList = extractMovies(string(body))
-	fmt.Printf("Movies at resolution %s: %v\n", resolution, movieList)
+	fmt.Printf("Movies: %v\n", movieList)
 	return movieList
 }
 
@@ -528,9 +523,10 @@ func extractMovies(xmlString string) (movieList []types.PlexMovie) {
 
 	for i := range container.Video {
 		movieList = append(movieList, types.PlexMovie{
-			Title:     container.Video[i].Title,
-			Year:      container.Video[i].Year,
-			DateAdded: parsePlexDate(container.Video[i].AddedAt)})
+			Title:      container.Video[i].Title,
+			Year:       container.Video[i].Year,
+			Resolution: container.Video[i].Media.VideoResolution,
+			DateAdded:  parsePlexDate(container.Video[i].AddedAt)})
 	}
 	return movieList
 }

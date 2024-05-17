@@ -43,11 +43,13 @@ func TVHandler(w http.ResponseWriter, _ *http.Request) {
 func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	lookup = r.FormValue("lookup")
 	// lookup filters
-	filters.AudioLanguage = r.FormValue("german")
-	filters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
-	if len(plexTV) == 0 {
+	newFilters := types.FilteringOptions{}
+	newFilters.AudioLanguage = r.FormValue("language")
+	newFilters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
+	if len(plexTV) == 0 || filters != newFilters {
 		plexTV = plex.GetPlexTV(c.Config.PlexIP, c.Config.PlexTVLibraryID, c.Config.PlexToken)
 	}
+	filters = newFilters
 	//nolint: gocritic
 	// plexTV = plexTV[:10]
 	//lint: gocritic

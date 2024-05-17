@@ -23,6 +23,7 @@ var (
 	searchResults           []types.SearchResults
 	plexMovies              []types.PlexMovie
 	lookup                  string
+	filters                 types.FilteringOptions
 )
 
 type MoviesConfig struct {
@@ -41,10 +42,14 @@ func MoviesHandler(w http.ResponseWriter, _ *http.Request) {
 func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	lookup = r.FormValue("lookup")
 	// lookup filters
-	german := r.FormValue("german")
-	newerVersion := r.FormValue("newerVersion")
+	newfilters := types.FilteringOptions{}
+	newfilters.AudioLanguage = r.FormValue("language")
+	newfilters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
 	// fetch from plex
-	plexMovies = fetchPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken, german)
+	if len(plexMovies) == 0 || filters != newfilters {
+		plexMovies = fetchPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken, filters.AudioLanguage)
+	}
+	filters = newfilters
 	//nolint: gocritic
 	// plexMovies = plexMovies[:10]
 	//lint: gocritic
@@ -65,13 +70,13 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 			for i, movie := range plexMovies {
 				fmt.Print(".")
 
-				if german == types.StringTrue {
+				if filters.AudioLanguage == "german" {
 					searchResult, _ = amazon.SearchAmazonMovie(movie, "&audio=german")
 				} else {
 					searchResult, _ = amazon.SearchAmazonMovie(movie, "")
 				}
 				// if we are filtering by newer version, we need to search again
-				if newerVersion == types.StringTrue {
+				if filters.NewerVersion {
 					scrapedResults := amazon.ScrapeTitles(&searchResult)
 					searchResult.MovieSearchResults = scrapedResults
 				}
@@ -151,9 +156,9 @@ func renderTable(movieCollection []types.SearchResults) (tableRows string) {
 	return tableRows // Return the generated HTML for table rows
 }
 
-func fetchPlexMovies(plexIP, plexMovieLibraryID, plexToken, german string) (allMovies []types.PlexMovie) {
+func fetchPlexMovies(plexIP, plexMovieLibraryID, plexToken, language string) (allMovies []types.PlexMovie) {
 	filter := []plex.Filter{}
-	if german == types.StringTrue {
+	if language == "german" {
 		filter = []plex.Filter{
 			{
 				Name:     "audioLanguage",

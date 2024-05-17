@@ -24,16 +24,13 @@ func performCinemaParadisoLookup() {
 	if libraryType == types.PlexMovieType {
 		plexMovies := initializePlexMovies()
 		// lets search movies in cinemaparadiso
-		for _, movie := range plexMovies {
-			movieResult, err := cinemaparadiso.SearchCinemaParadisoMovie(movie)
-			if err != nil {
-				fmt.Printf("Error searching for movie %s: %s\n", movieResult.PlexMovie.Title, err)
-				continue
-			}
-			// if hit, and contains any format that isnt dvd, print the movie
-			for _, individualResult := range movieResult.MovieSearchResults {
+		searchResults := cinemaparadiso.GetCinemaParadisoMoviesInParallel(plexMovies)
+		// if hit, and contains any format that isnt dvd, print the movie
+		for i := range searchResults {
+			for _, individualResult := range searchResults[i].MovieSearchResults {
 				if individualResult.BestMatch && (individualResult.Format == types.DiskBluray || individualResult.Format == types.Disk4K) {
-					fmt.Printf("%s %v: %s\n", movieResult.PlexMovie.Title, movieResult.PlexMovie.Year, individualResult.URL)
+					fmt.Printf("%s - %s (%s): %s\n", searchResults[i].PlexMovie.Title, individualResult.Format,
+						searchResults[i].PlexMovie.Year, individualResult.URL)
 				}
 			}
 		}

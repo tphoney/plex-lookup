@@ -22,6 +22,8 @@ var (
 	totalMovies             int  = 0
 	searchResults           []types.SearchResults
 	plexMovies              []types.PlexMovie
+	lookup                  string
+	filters                 types.FilteringOptions
 )
 
 type MoviesConfig struct {
@@ -38,15 +40,19 @@ func MoviesHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
-	lookup := r.FormValue("lookup")
+	lookup = r.FormValue("lookup")
 	// lookup filters
-	german := r.FormValue("german")
-	newerVersion := r.FormValue("newerVersion")
+	newfilters := types.FilteringOptions{}
+	newfilters.AudioLanguage = r.FormValue("language")
+	newfilters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
 	// fetch from plex
-	plexMovies = fetchPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken, german)
+	if len(plexMovies) == 0 || filters != newfilters {
+		plexMovies = fetchPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken, filters.AudioLanguage)
+	}
+	filters = newfilters
 	//nolint: gocritic
 	// plexMovies = plexMovies[:10]
-	//nolint: gocritic
+	//lint: gocritic
 	var searchResult types.SearchResults
 	jobRunning = true
 	numberOfMoviesProcessed = 0
@@ -58,24 +64,26 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		startTime := time.Now()
-		for i, movie := range plexMovies {
-			fmt.Print(".")
-			if lookup == "cinemaParadiso" {
-				searchResult, _ = cinemaparadiso.SearchCinemaParadisoMovie(movie)
-			} else {
-				if german == types.StringTrue {
+		if lookup == "cinemaParadiso" {
+			searchResults = cinemaparadiso.GetCinemaParadisoMoviesInParallel(plexMovies)
+		} else {
+			for i, movie := range plexMovies {
+				fmt.Print(".")
+
+				if filters.AudioLanguage == "german" {
 					searchResult, _ = amazon.SearchAmazonMovie(movie, "&audio=german")
 				} else {
 					searchResult, _ = amazon.SearchAmazonMovie(movie, "")
 				}
 				// if we are filtering by newer version, we need to search again
-				if newerVersion == types.StringTrue {
+				if filters.NewerVersion {
 					scrapedResults := amazon.ScrapeTitles(&searchResult)
 					searchResult.MovieSearchResults = scrapedResults
 				}
+
+				searchResults = append(searchResults, searchResult)
+				numberOfMoviesProcessed = i
 			}
-			searchResults = append(searchResults, searchResult)
-			numberOfMoviesProcessed = i
 		}
 		jobRunning = false
 		fmt.Printf("\nProcessed %d movies in %v\n", totalMovies, time.Since(startTime))
@@ -83,20 +91,39 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 }
 
 func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
-	if jobRunning {
-		fmt.Fprintf(w, `<div hx-get="/moviesprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
-		<progress value="%d" max= "%d"/></div>`, numberOfMoviesProcessed, totalMovies)
-	}
-	if totalMovies == numberOfMoviesProcessed && totalMovies != 0 {
-		// display a table
-		fmt.Fprintf(w,
-			`<table class="table-sortable">%s</tbody></table>
-			 <script>document.querySelector('.table-sortable').tsortable()</script>`,
-			renderTable(searchResults))
-		// reset variables
-		numberOfMoviesProcessed = 0
-		totalMovies = 0
-		searchResults = []types.SearchResults{}
+	if lookup == "cinemaParadiso" {
+		// check job status
+		numberOfMoviesProcessed = cinemaparadiso.GetMovieJobProgress()
+		if jobRunning {
+			fmt.Fprintf(w, `<div hx-get="/moviesprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
+			<progress value="%d" max= "%d"/></div>`, numberOfMoviesProcessed, totalMovies)
+		} else {
+			// display a table
+			fmt.Fprintf(w,
+				`<table class="table-sortable">%s</tbody></table>
+				 <script>document.querySelector('.table-sortable').tsortable()</script>`,
+				renderTable(searchResults))
+			// reset variables
+			numberOfMoviesProcessed = 0
+			totalMovies = 0
+			searchResults = []types.SearchResults{}
+		}
+	} else {
+		if jobRunning {
+			fmt.Fprintf(w, `<div hx-get="/moviesprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
+			<progress value="%d" max= "%d"/></div>`, numberOfMoviesProcessed, totalMovies)
+		}
+		if totalMovies == numberOfMoviesProcessed && totalMovies != 0 {
+			// display a table
+			fmt.Fprintf(w,
+				`<table class="table-sortable">%s</tbody></table>
+				 <script>document.querySelector('.table-sortable').tsortable()</script>`,
+				renderTable(searchResults))
+			// reset variables
+			numberOfMoviesProcessed = 0
+			totalMovies = 0
+			searchResults = []types.SearchResults{}
+		}
 	}
 }
 
@@ -129,9 +156,9 @@ func renderTable(movieCollection []types.SearchResults) (tableRows string) {
 	return tableRows // Return the generated HTML for table rows
 }
 
-func fetchPlexMovies(plexIP, plexMovieLibraryID, plexToken, german string) (allMovies []types.PlexMovie) {
+func fetchPlexMovies(plexIP, plexMovieLibraryID, plexToken, language string) (allMovies []types.PlexMovie) {
 	filter := []plex.Filter{}
-	if german == types.StringTrue {
+	if language == "german" {
 		filter = []plex.Filter{
 			{
 				Name:     "audioLanguage",

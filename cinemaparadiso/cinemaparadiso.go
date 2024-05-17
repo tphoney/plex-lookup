@@ -21,43 +21,103 @@ const (
 	cinemaparadisoSeriesURL = "https://www.cinemaparadiso.co.uk/ajax/CPMain.wsFilmDescription,CPMain.ashx?_method=ShowSeries&_session=r"
 )
 
-func SearchCinemaParadisoMovie(plexMovie types.PlexMovie) (movieSearchResult types.SearchResults, err error) {
+var (
+	numberMoviesProcessed int = 0
+	numberTVProcessed     int = 0
+)
+
+func GetCinemaParadisoMoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.SearchResults) {
+	ch := make(chan types.SearchResults, len(plexMovies))
+	semaphore := make(chan struct{}, types.ConcurrencyLimit)
+
+	for i := range plexMovies {
+		go func(i int) {
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			searchCinemaParadisoMovie(plexMovies[i], ch)
+		}(i)
+	}
+
+	searchResults = make([]types.SearchResults, 0, len(plexMovies))
+	for range plexMovies {
+		result := <-ch
+		searchResults = append(searchResults, result)
+		numberMoviesProcessed++
+	}
+	numberMoviesProcessed = 0 // job is done
+	return searchResults
+}
+
+func GetCinemaParadisoTVInParallel(plexTVShows []types.PlexTVShow) (searchResults []types.SearchResults) {
+	ch := make(chan types.SearchResults, len(plexTVShows))
+	semaphore := make(chan struct{}, types.ConcurrencyLimit)
+
+	for i := range plexTVShows {
+		go func(i int) {
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			searchCinemaParadisoTV(&plexTVShows[i], ch)
+		}(i)
+	}
+
+	searchResults = make([]types.SearchResults, 0, len(plexTVShows))
+	for range plexTVShows {
+		result := <-ch
+		searchResults = append(searchResults, result)
+		numberTVProcessed++
+	}
+	numberTVProcessed = 0 // job is done
+	return searchResults
+}
+
+func GetMovieJobProgress() int {
+	return numberMoviesProcessed
+}
+
+func GetTVJobProgress() int {
+	return numberTVProcessed
+}
+
+func searchCinemaParadisoMovie(plexMovie types.PlexMovie, movieSearchResult chan<- types.SearchResults) {
+	result := types.SearchResults{}
+	result.PlexMovie = plexMovie
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
-	movieSearchResult.PlexMovie = plexMovie
-	movieSearchResult.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
+	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
 	rawData, err := makeSearchRequest(urlEncodedTitle)
 	if err != nil {
 		fmt.Println("Error making web request:", err)
-		return movieSearchResult, err
+		movieSearchResult <- result
+		return
 	}
 
 	moviesFound, _ := findTitlesInResponse(rawData, true)
-	movieSearchResult.MovieSearchResults = moviesFound
-	movieSearchResult = utils.MarkBestMatch(&movieSearchResult)
-
-	return movieSearchResult, nil
+	result.MovieSearchResults = moviesFound
+	result = utils.MarkBestMatch(&result)
+	movieSearchResult <- result
 }
 
-func SearchCinemaParadisoTV(plexTVShow *types.PlexTVShow) (tvSearchResult types.SearchResults, err error) {
+func searchCinemaParadisoTV(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.SearchResults) {
+	result := types.SearchResults{}
 	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)
-	tvSearchResult.PlexTVShow = *plexTVShow
-	tvSearchResult.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
+	result.PlexTVShow = *plexTVShow
+	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
 	rawData, err := makeSearchRequest(urlEncodedTitle)
 	if err != nil {
-		fmt.Println("Error making web request:", err)
-		return tvSearchResult, err
+		fmt.Println("searchCinemaParadisoTV: Error making web request:", err)
+		tvSearchResult <- result
+		return
 	}
 
 	_, tvFound := findTitlesInResponse(rawData, false)
-	tvSearchResult.TVSearchResults = tvFound
-	tvSearchResult = utils.MarkBestMatch(&tvSearchResult)
+	result.TVSearchResults = tvFound
+	result = utils.MarkBestMatch(&result)
 	// now we can get the series information for each best match
-	for i := range tvSearchResult.TVSearchResults {
-		if tvSearchResult.TVSearchResults[i].BestMatch {
-			tvSearchResult.TVSearchResults[i].Seasons, _ = findTVSeriesInfo(tvSearchResult.TVSearchResults[i].URL)
+	for i := range result.TVSearchResults {
+		if result.TVSearchResults[i].BestMatch {
+			result.TVSearchResults[i].Seasons, _ = findTVSeriesInfo(result.TVSearchResults[i].URL)
 		}
 	}
-	return tvSearchResult, nil
+	tvSearchResult <- result
 }
 
 func findTVSeriesInfo(seriesURL string) (tvSeries []types.TVSeasonResult, err error) {
@@ -129,20 +189,14 @@ func findTVSeriesInResponse(response string) (tvSeries []types.TVSeasonResult) {
 	results := make([]types.TVSeasonResult, 0, len(tvSeries))
 	if len(tvSeries) > 0 {
 		tvSeries = tvSeries[1:]
-		ch := make(chan *types.TVSeasonResult, len(tvSeries))
 
-		semaphore := make(chan struct{}, types.ConcurrencyLimit)
 		for i := range tvSeries {
-			go func() {
-				semaphore <- struct{}{}
-				defer func() { <-semaphore }()
-				makeSeriesRequest(tvSeries[i], ch)
-			}()
-		}
-
-		for i := 0; i < len(tvSeries); i++ {
-			result := <-ch
-			results = append(results, *result)
+			seriesResult, err := makeSeriesRequest(tvSeries[i])
+			if err != nil {
+				fmt.Println("Error making series request:", err)
+				continue
+			}
+			results = append(results, seriesResult)
 		}
 	}
 	// sort the results by number
@@ -152,30 +206,24 @@ func findTVSeriesInResponse(response string) (tvSeries []types.TVSeasonResult) {
 	return results
 }
 
-func makeSeriesRequest(tv types.TVSeasonResult, ch chan<- *types.TVSeasonResult) {
+func makeSeriesRequest(tv types.TVSeasonResult) (types.TVSeasonResult, error) {
 	content := []byte(fmt.Sprintf("FilmID=%s", tv.URL))
 	req, err := http.NewRequestWithContext(context.Background(), "POST", cinemaparadisoSeriesURL, bytes.NewBuffer(content))
 	if err != nil {
-		fmt.Println("Error creating request:", err)
-		ch <- &tv
-		return
+		return tv, fmt.Errorf("makeSeriesRequest: error creating request: %w", err)
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Error sending request:", err)
-		ch <- &tv
-		return
+		return tv, fmt.Errorf("makeSeriesRequest: error sending request: %w", err)
 	}
 
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		ch <- &tv
-		return
+		return tv, fmt.Errorf("makeSeriesRequest: error reading response body: %w", err)
 	}
 	rawData := string(body)
 	// write the raw data to a file
@@ -194,7 +242,7 @@ func makeSeriesRequest(tv types.TVSeasonResult, ch chan<- *types.TVSeasonResult)
 		}
 		tv.ReleaseDate = releaseDate
 	}
-	ch <- &tv
+	return tv, nil
 }
 
 func findTitlesInResponse(response string, movie bool) (movieResults []types.MovieSearchResult, tvResults []types.TVSearchResult) {

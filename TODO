@@ -6,9 +6,8 @@
 
 - allow amazon tv search for indivdual series
 - allow amazon tv search for newer series
-- update movies to use tv like search
-- update movies, remove the plex resolution filter add plex resolution as a column
 - music, a-ha/ash doesnt match as an artist why ?
+- move language filtering out of plex search,should only happens in web tv & movie
 
 ## done
 
@@ -30,3 +29,7 @@
 - write a function to calculate plex dates
 - similar artist search for music
 - parallel requests for spotify search
+- update movies, remove the plex resolution filter add plex resolution as a column
+- parallelise cinema-paradiso movie search 6m20 to 2m25
+- parallelise cinema-paradiso tv search
+- for movies/tc dont refresh plex list every time, unless necessary

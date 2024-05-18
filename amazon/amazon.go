@@ -16,8 +16,37 @@ import (
 )
 
 const (
-	amazonURL = "https://www.blu-ray.com/movies/search.php?keyword="
+	amazonURL      = "https://www.blu-ray.com/movies/search.php?keyword="
+	LanguageGerman = "german"
 )
+
+var numberMoviesProcessed int = 0
+
+func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language string) (searchResults []types.SearchResults) {
+	ch := make(chan types.SearchResults, len(plexMovies))
+	semaphore := make(chan struct{}, types.ConcurrencyLimit)
+
+	for i := range plexMovies {
+		go func(i int) {
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			searchAmazonMovie(plexMovies[i], language, ch)
+		}(i)
+	}
+
+	searchResults = make([]types.SearchResults, 0, len(plexMovies))
+	for range plexMovies {
+		result := <-ch
+		searchResults = append(searchResults, result)
+		numberMoviesProcessed++
+	}
+	numberMoviesProcessed = 0 // job is done
+	return searchResults
+}
+
+func GetMovieJobProgress() int {
+	return numberMoviesProcessed
+}
 
 func ScrapeTitles(searchResults *types.SearchResults) (scrapedResults []types.MovieSearchResult) {
 	var results, lookups []types.MovieSearchResult
@@ -82,36 +111,44 @@ func findTitleDetails(response string) (releaseDate time.Time) {
 	return releaseDate
 }
 
-func SearchAmazonMovie(plexMovie types.PlexMovie, filter string) (movieSearchResult types.SearchResults, err error) {
-	movieSearchResult.PlexMovie = plexMovie
-	movieSearchResult.SearchURL = amazonURL
+func searchAmazonMovie(plexMovie types.PlexMovie, language string, movieSearchResult chan<- types.SearchResults) {
+	result := types.SearchResults{}
+	result.PlexMovie = plexMovie
+	result.SearchURL = ""
 
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
 	amazonURL := amazonURL + urlEncodedTitle
-	if filter != "" {
-		amazonURL += filter
+	// this searches for the movie in a language
+	switch language {
+	case LanguageGerman:
+		amazonURL += "&audio=" + language
+	default:
+		// do nothing
 	}
 	amazonURL += "&submit=Search&action=search"
 
-	rawData, err := makeRequest(amazonURL, "") // fix the german filter here
+	rawData, err := makeRequest(amazonURL, language)
 	if err != nil {
-		return movieSearchResult, err
+		fmt.Println("searchAmazonMovie: Error making request:", err)
+		movieSearchResult <- result
+		return
 	}
 
 	moviesFound, _ := findTitlesInResponse(rawData, true)
-	movieSearchResult.MovieSearchResults = moviesFound
-	movieSearchResult = utils.MarkBestMatch(&movieSearchResult)
-	return movieSearchResult, nil
+	result.MovieSearchResults = moviesFound
+	result = utils.MarkBestMatch(&result)
+	movieSearchResult <- result
 }
 
-func makeRequest(inputURL, country string) (response string, err error) {
+func makeRequest(inputURL, language string) (response string, err error) {
 	req, err := http.NewRequestWithContext(context.Background(), "GET", inputURL, bytes.NewBuffer([]byte{}))
 
 	req.Header.Set("User-Agent",
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
 
-	switch country {
-	case "german":
+	// this forces results from a specific amazon region
+	switch language {
+	case LanguageGerman:
 		req.Header.Set("Cookie", "country=de;")
 	default:
 		req.Header.Set("Cookie", "country=uk;")
@@ -140,21 +177,20 @@ func makeRequest(inputURL, country string) (response string, err error) {
 	return rawResponse, nil
 }
 
-func SearchAmazonTV(plexTVShow *types.PlexTVShow, filter string) (tvSearchResult types.SearchResults, err error) {
+func SearchAmazonTV(plexTVShow *types.PlexTVShow, language string) (tvSearchResult types.SearchResults, err error) {
 	tvSearchResult.PlexTVShow = *plexTVShow
 	tvSearchResult.SearchURL = amazonURL
 
 	urlEncodedTitle := url.QueryEscape(fmt.Sprintf("%s complete series", plexTVShow.Title)) // complete series
 	amazonURL := amazonURL + urlEncodedTitle
-	if filter != "" {
-		amazonURL += filter
+	// this searches for the movie in a language
+	switch language {
+	case LanguageGerman:
+		amazonURL += "&audio=" + language
+	default:
+		// do nothing
 	}
-	amazonURL += "&submit=Search&action=search"
-	//
-	//fix the filter for german here
-	//
-	//
-	rawData, err := makeRequest(amazonURL, "")
+	rawData, err := makeRequest(amazonURL, language)
 	if err != nil {
 		return tvSearchResult, err
 	}

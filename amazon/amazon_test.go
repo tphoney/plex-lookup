@@ -40,9 +40,9 @@ func TestFindMoviesInResponse(t *testing.T) {
 }
 
 func TestSearchAmazon(t *testing.T) {
-	result, err := SearchAmazonMovie(types.PlexMovie{Title: "napoleon dynamite", Year: "2004"}, "")
-	if err != nil {
-		t.Errorf("Error searching Amazon: %s", err)
+	result := SearchAmazonMoviesInParallel([]types.PlexMovie{{Title: "napoleon dynamite", Year: "2004"}}, "")
+	if len(result) == 0 {
+		t.Errorf("Expected search results, but got none")
 	}
 	fmt.Println(result)
 }

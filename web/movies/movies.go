@@ -51,9 +51,8 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	}
 	filters = newfilters
 	//nolint: gocritic
-	// plexMovies = plexMovies[:10]
+	plexMovies = plexMovies[:10]
 	//lint: gocritic
-	var searchResult types.SearchResults
 	jobRunning = true
 	numberOfMoviesProcessed = 0
 	totalMovies = len(plexMovies) - 1
@@ -67,24 +66,13 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		if lookup == "cinemaParadiso" {
 			searchResults = cinemaparadiso.GetCinemaParadisoMoviesInParallel(plexMovies)
 		} else {
-			for i, movie := range plexMovies {
-				fmt.Print(".")
-
-				if filters.AudioLanguage == "german" {
-					searchResult, _ = amazon.SearchAmazonMovie(movie, "&audio=german")
-				} else {
-					searchResult, _ = amazon.SearchAmazonMovie(movie, "")
-				}
-				// if we are filtering by newer version, we need to search again
-				if filters.NewerVersion {
-					scrapedResults := amazon.ScrapeTitles(&searchResult)
-					searchResult.MovieSearchResults = scrapedResults
-				}
-
-				searchResults = append(searchResults, searchResult)
-				numberOfMoviesProcessed = i
-			}
+			searchResults = amazon.SearchAmazonMoviesInParallel(plexMovies, filters.AudioLanguage)
+			// if we are filtering by newer version, we need to search again
+			// if filters.NewerVersion {
+			// 	searchResults = amazon.ScrapeTitles(&searchResults)
+			// }
 		}
+
 		jobRunning = false
 		fmt.Printf("\nProcessed %d movies in %v\n", totalMovies, time.Since(startTime))
 	}()
@@ -94,36 +82,23 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 	if lookup == "cinemaParadiso" {
 		// check job status
 		numberOfMoviesProcessed = cinemaparadiso.GetMovieJobProgress()
-		if jobRunning {
-			fmt.Fprintf(w, `<div hx-get="/moviesprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
-			<progress value="%d" max= "%d"/></div>`, numberOfMoviesProcessed, totalMovies)
-		} else {
-			// display a table
-			fmt.Fprintf(w,
-				`<table class="table-sortable">%s</tbody></table>
-				 <script>document.querySelector('.table-sortable').tsortable()</script>`,
-				renderTable(searchResults))
-			// reset variables
-			numberOfMoviesProcessed = 0
-			totalMovies = 0
-			searchResults = []types.SearchResults{}
-		}
 	} else {
-		if jobRunning {
-			fmt.Fprintf(w, `<div hx-get="/moviesprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
+		// check job status
+		numberOfMoviesProcessed = amazon.GetMovieJobProgress()
+	}
+	if jobRunning {
+		fmt.Fprintf(w, `<div hx-get="/moviesprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
 			<progress value="%d" max= "%d"/></div>`, numberOfMoviesProcessed, totalMovies)
-		}
-		if totalMovies == numberOfMoviesProcessed && totalMovies != 0 {
-			// display a table
-			fmt.Fprintf(w,
-				`<table class="table-sortable">%s</tbody></table>
+	} else {
+		// display a table
+		fmt.Fprintf(w,
+			`<table class="table-sortable">%s</tbody></table>
 				 <script>document.querySelector('.table-sortable').tsortable()</script>`,
-				renderTable(searchResults))
-			// reset variables
-			numberOfMoviesProcessed = 0
-			totalMovies = 0
-			searchResults = []types.SearchResults{}
-		}
+			renderTable(searchResults))
+		// reset variables
+		numberOfMoviesProcessed = 0
+		totalMovies = 0
+		searchResults = []types.SearchResults{}
 	}
 }
 

@@ -20,7 +20,10 @@ const (
 	LanguageGerman = "german"
 )
 
-var numberMoviesProcessed int = 0
+var (
+	numberMoviesProcessed int = 0
+	numberTVProcessed     int = 0
+)
 
 func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language string) (searchResults []types.SearchResults) {
 	ch := make(chan types.SearchResults, len(plexMovies))
@@ -44,8 +47,34 @@ func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language string)
 	return searchResults
 }
 
+func SearchAmazonTVInParallel(plexTVShows []types.PlexTVShow, language string) (searchResults []types.SearchResults) {
+	ch := make(chan types.SearchResults, len(plexTVShows))
+	semaphore := make(chan struct{}, types.ConcurrencyLimit)
+
+	for i := range plexTVShows {
+		go func(i int) {
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			searchAmazonTV(&plexTVShows[i], language, ch)
+		}(i)
+	}
+
+	searchResults = make([]types.SearchResults, 0, len(plexTVShows))
+	for range plexTVShows {
+		result := <-ch
+		searchResults = append(searchResults, result)
+		numberTVProcessed++
+	}
+	numberTVProcessed = 0 // job is done
+	return searchResults
+}
+
 func GetMovieJobProgress() int {
 	return numberMoviesProcessed
+}
+
+func GetTVJobProgress() int {
+	return numberTVProcessed
 }
 
 func ScrapeTitles(searchResults *types.SearchResults) (scrapedResults []types.MovieSearchResult) {
@@ -140,46 +169,10 @@ func searchAmazonMovie(plexMovie types.PlexMovie, language string, movieSearchRe
 	movieSearchResult <- result
 }
 
-func makeRequest(inputURL, language string) (response string, err error) {
-	req, err := http.NewRequestWithContext(context.Background(), "GET", inputURL, bytes.NewBuffer([]byte{}))
-
-	req.Header.Set("User-Agent",
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-
-	// this forces results from a specific amazon region
-	switch language {
-	case LanguageGerman:
-		req.Header.Set("Cookie", "country=de;")
-	default:
-		req.Header.Set("Cookie", "country=uk;")
-	}
-
-	if err != nil {
-		fmt.Println("Error creating request:", err)
-		return response, err
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return response, err
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return response, err
-	}
-	rawResponse := string(body)
-	return rawResponse, nil
-}
-
-func SearchAmazonTV(plexTVShow *types.PlexTVShow, language string) (tvSearchResult types.SearchResults, err error) {
-	tvSearchResult.PlexTVShow = *plexTVShow
-	tvSearchResult.SearchURL = amazonURL
+func searchAmazonTV(plexTVShow *types.PlexTVShow, language string, tvSearchResult chan<- types.SearchResults) {
+	result := types.SearchResults{}
+	result.PlexTVShow = *plexTVShow
+	result.SearchURL = amazonURL
 
 	urlEncodedTitle := url.QueryEscape(fmt.Sprintf("%s complete series", plexTVShow.Title)) // complete series
 	amazonURL := amazonURL + urlEncodedTitle
@@ -190,15 +183,19 @@ func SearchAmazonTV(plexTVShow *types.PlexTVShow, language string) (tvSearchResu
 	default:
 		// do nothing
 	}
+	amazonURL += "&submit=Search&action=search"
+
 	rawData, err := makeRequest(amazonURL, language)
 	if err != nil {
-		return tvSearchResult, err
+		fmt.Println("searchAmazonTV: Error making request:", err)
+		tvSearchResult <- result
+		return
 	}
 
 	_, titlesFound := findTitlesInResponse(rawData, false)
-	tvSearchResult.TVSearchResults = titlesFound
-	tvSearchResult = utils.MarkBestMatch(&tvSearchResult)
-	return tvSearchResult, nil
+	result.TVSearchResults = titlesFound
+	result = utils.MarkBestMatch(&result)
+	tvSearchResult <- result
 }
 
 func findTitlesInResponse(response string, movie bool) (movieResults []types.MovieSearchResult, tvResults []types.TVSearchResult) {
@@ -261,4 +258,41 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 	}
 
 	return movieResults, tvResults
+}
+
+func makeRequest(inputURL, language string) (response string, err error) {
+	req, err := http.NewRequestWithContext(context.Background(), "GET", inputURL, bytes.NewBuffer([]byte{}))
+
+	req.Header.Set("User-Agent",
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+
+	// this forces results from a specific amazon region
+	switch language {
+	case LanguageGerman:
+		req.Header.Set("Cookie", "country=de;")
+	default:
+		req.Header.Set("Cookie", "country=uk;")
+	}
+
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return response, err
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return response, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return response, err
+	}
+	rawResponse := string(body)
+	return rawResponse, nil
 }

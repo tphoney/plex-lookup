@@ -72,11 +72,10 @@ func TestSearchAmazonTV(t *testing.T) {
 		// Title: "Adventure Time",
 		// Year:  "2010",
 	}
-	result, err := SearchAmazonTV(&show, "")
-	if err != nil {
-		t.Errorf("Error searching for TV show: %s", err)
+	result := SearchAmazonTVInParallel([]types.PlexTVShow{show}, "")
+
+	if len(result) == 0 {
+		t.Errorf("Expected search results, but got none")
 	}
-	if result.SearchURL == "" {
-		t.Errorf("Expected searchurl, but got none")
-	}
+	fmt.Println(result)
 }

@@ -50,34 +50,13 @@ func ScrapeTitles(searchResults *types.SearchResults) (scrapedResults []types.Mo
 }
 
 func scrapeTitle(movie *types.MovieSearchResult, dateAdded time.Time, ch chan<- *types.MovieSearchResult) {
-	req, err := http.NewRequestWithContext(context.Background(), "GET", movie.URL, bytes.NewBuffer([]byte{}))
 	movie.ReleaseDate = time.Time{}
+	rawData, err := makeRequest(movie.URL, "")
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("scrapeTitle: Error making request:", err)
 		ch <- movie
 		return
 	}
-
-	req.Header.Set("User-Agent",
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		ch <- movie
-		return
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		ch <- movie
-		return
-	}
-	rawData := string(body)
 	movie.ReleaseDate = findTitleDetails(rawData)
 	if movie.ReleaseDate.After(dateAdded) {
 		movie.NewRelease = true
@@ -104,44 +83,20 @@ func findTitleDetails(response string) (releaseDate time.Time) {
 }
 
 func SearchAmazonMovie(plexMovie types.PlexMovie, filter string) (movieSearchResult types.SearchResults, err error) {
+	movieSearchResult.PlexMovie = plexMovie
+	movieSearchResult.SearchURL = amazonURL
+
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
 	amazonURL := amazonURL + urlEncodedTitle
 	if filter != "" {
 		amazonURL += filter
 	}
 	amazonURL += "&submit=Search&action=search"
-	req, err := http.NewRequestWithContext(context.Background(), "GET", amazonURL, bytes.NewBuffer([]byte{}))
 
-	movieSearchResult.PlexMovie = plexMovie
-	movieSearchResult.SearchURL = amazonURL
-
-	req.Header.Set("User-Agent",
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-	country := "uk"
-	if strings.Contains(filter, "german") {
-		country = "de"
-	}
-	req.Header.Set("Cookie", fmt.Sprintf("country=%s;", country))
+	rawData, err := makeRequest(amazonURL, "") // fix the german filter here
 	if err != nil {
-		fmt.Println("Error creating request:", err)
 		return movieSearchResult, err
 	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return movieSearchResult, err
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return movieSearchResult, err
-	}
-	rawData := string(body)
 
 	moviesFound, _ := findTitlesInResponse(rawData, true)
 	movieSearchResult.MovieSearchResults = moviesFound
@@ -149,35 +104,29 @@ func SearchAmazonMovie(plexMovie types.PlexMovie, filter string) (movieSearchRes
 	return movieSearchResult, nil
 }
 
-func SearchAmazonTV(plexTVShow *types.PlexTVShow, filter string) (tvSearchResult types.SearchResults, err error) {
-	urlEncodedTitle := url.QueryEscape(fmt.Sprintf("%s complete series", plexTVShow.Title)) // complete series
-	amazonURL := amazonURL + urlEncodedTitle
-	if filter != "" {
-		amazonURL += filter
-	}
-	amazonURL += "&submit=Search&action=search"
-	req, err := http.NewRequestWithContext(context.Background(), "GET", amazonURL, bytes.NewBuffer([]byte{}))
-
-	tvSearchResult.PlexTVShow = *plexTVShow
-	tvSearchResult.SearchURL = amazonURL
+func makeRequest(inputURL, country string) (response string, err error) {
+	req, err := http.NewRequestWithContext(context.Background(), "GET", inputURL, bytes.NewBuffer([]byte{}))
 
 	req.Header.Set("User-Agent",
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-	country := "uk"
-	if strings.Contains(filter, "german") {
-		country = "de"
+
+	switch country {
+	case "german":
+		req.Header.Set("Cookie", "country=de;")
+	default:
+		req.Header.Set("Cookie", "country=uk;")
 	}
-	req.Header.Set("Cookie", fmt.Sprintf("country=%s;", country))
+
 	if err != nil {
 		fmt.Println("Error creating request:", err)
-		return tvSearchResult, err
+		return response, err
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("Error sending request:", err)
-		return tvSearchResult, err
+		return response, err
 	}
 
 	defer resp.Body.Close()
@@ -185,9 +134,30 @@ func SearchAmazonTV(plexTVShow *types.PlexTVShow, filter string) (tvSearchResult
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response body:", err)
+		return response, err
+	}
+	rawResponse := string(body)
+	return rawResponse, nil
+}
+
+func SearchAmazonTV(plexTVShow *types.PlexTVShow, filter string) (tvSearchResult types.SearchResults, err error) {
+	tvSearchResult.PlexTVShow = *plexTVShow
+	tvSearchResult.SearchURL = amazonURL
+
+	urlEncodedTitle := url.QueryEscape(fmt.Sprintf("%s complete series", plexTVShow.Title)) // complete series
+	amazonURL := amazonURL + urlEncodedTitle
+	if filter != "" {
+		amazonURL += filter
+	}
+	amazonURL += "&submit=Search&action=search"
+	//
+	//fix the filter for german here
+	//
+	//
+	rawData, err := makeRequest(amazonURL, "")
+	if err != nil {
 		return tvSearchResult, err
 	}
-	rawData := string(body)
 
 	_, titlesFound := findTitlesInResponse(rawData, false)
 	tvSearchResult.TVSearchResults = titlesFound

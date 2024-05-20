@@ -65,3 +65,29 @@ func TestSearchAmazonTV(t *testing.T) {
 	}
 	fmt.Println(result)
 }
+
+func TestScrapeTitlesParallel(t *testing.T) {
+	result := ScrapeTitlesParallel([]types.SearchResults{
+		{
+			PlexMovie: types.PlexMovie{
+				Title: "napoleon dynamite",
+				Year:  "2001",
+			},
+			MovieSearchResults: []types.MovieSearchResult{
+				{
+					FoundTitle: "Napoleon Dynamite",
+					URL:        "https://www.blu-ray.com/movies/Napoleon-Dynamite-Blu-ray/2535/",
+					BestMatch:  true,
+				},
+			},
+		},
+	})
+
+	if len(result) == 0 {
+		t.Errorf("Expected search results, but got none")
+	}
+	if result[0].MovieSearchResults[0].ReleaseDate.Year() == 1 {
+		t.Errorf("Expected a sensible release date year but got: %+v", result[0].MovieSearchResults[0].ReleaseDate)
+	}
+	fmt.Println(result)
+}

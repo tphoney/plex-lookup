@@ -51,7 +51,7 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	}
 	filters = newFilters
 	//nolint: gocritic
-	plexTV = plexTV[:10]
+	// plexTV = plexTV[:10]
 	//lint: gocritic
 
 	tvJobRunning = true

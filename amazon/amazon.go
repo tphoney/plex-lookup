@@ -26,6 +26,7 @@ var (
 )
 
 func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language string) (searchResults []types.SearchResults) {
+	numberMoviesProcessed = 0
 	ch := make(chan types.SearchResults, len(plexMovies))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 
@@ -44,10 +45,12 @@ func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language string)
 		numberMoviesProcessed++
 	}
 	numberMoviesProcessed = 0 // job is done
+	fmt.Println("amazon movies found:", len(searchResults))
 	return searchResults
 }
 
 func SearchAmazonTVInParallel(plexTVShows []types.PlexTVShow, language string) (searchResults []types.SearchResults) {
+	numberMoviesProcessed = 0
 	ch := make(chan types.SearchResults, len(plexTVShows))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 
@@ -66,6 +69,7 @@ func SearchAmazonTVInParallel(plexTVShows []types.PlexTVShow, language string) (
 		numberTVProcessed++
 	}
 	numberTVProcessed = 0 // job is done
+	fmt.Println("amazon TV shows found:", len(searchResults))
 	return searchResults
 }
 
@@ -79,52 +83,53 @@ func GetTVJobProgress() int {
 
 func ScrapeTitlesParallel(searchResults []types.SearchResults) (scrapedResults []types.SearchResults) {
 	numberMoviesProcessed = 0
-
+	ch := make(chan types.SearchResults, len(searchResults))
+	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 	for i := range searchResults {
-		// check if the search result is a movie
-		if len(searchResults[i].MovieSearchResults) > 0 {
-			ch := make(chan *types.MovieSearchResult, len(searchResults[i].MovieSearchResults))
-			semaphore := make(chan struct{}, types.ConcurrencyLimit)
-			for j := range searchResults[i].MovieSearchResults {
-				go func(j int) {
-					semaphore <- struct{}{}
-					defer func() { <-semaphore }()
-					scrapeTitle(&searchResults[i].MovieSearchResults[j], searchResults[i].PlexMovie.DateAdded, ch)
-				}(j)
-			}
-			movieResults := make([]types.MovieSearchResult, 0, len(searchResults[i].MovieSearchResults))
-			for range searchResults[i].MovieSearchResults {
-				result := <-ch
-				movieResults = append(movieResults, *result)
-			}
-			fmt.Println("Scraped", len(movieResults), "titles for", searchResults[i].PlexMovie.Title)
-			searchResults[i].MovieSearchResults = movieResults
-		}
-		scrapedResults = append(scrapedResults, searchResults[i])
+		go func(i int) {
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			scrapeTitles(&searchResults[i], ch)
+		}(i)
+	}
+
+	scrapedResults = make([]types.SearchResults, 0, len(searchResults))
+	for range searchResults {
+		result := <-ch
+		scrapedResults = append(scrapedResults, result)
 		numberMoviesProcessed++
 	}
+	numberMoviesProcessed = 0
+	fmt.Println("amazon Movie titles scraped:", len(scrapedResults))
 	return scrapedResults
 }
 
-func scrapeTitle(movie *types.MovieSearchResult, dateAdded time.Time, ch chan<- *types.MovieSearchResult) {
-	rawData, err := makeRequest(movie.URL, "")
-	if err != nil {
-		fmt.Println("scrapeTitle: Error making request:", err)
-		ch <- movie
-		return
+func scrapeTitles(searchResult *types.SearchResults, ch chan<- types.SearchResults) {
+	dateAdded := searchResult.PlexMovie.DateAdded
+	for i := range searchResult.MovieSearchResults {
+		// this is to limit the number of requests
+		if !searchResult.MovieSearchResults[i].BestMatch {
+			continue
+		}
+		rawData, err := makeRequest(searchResult.MovieSearchResults[i].URL, "")
+		if err != nil {
+			fmt.Println("scrapeTitle: Error making request:", err)
+			ch <- *searchResult
+			return
+		}
+		// Find the release date
+		searchResult.MovieSearchResults[i].ReleaseDate = time.Time{} // default to zero time
+		r := regexp.MustCompile(`<a class="grey noline" alt=".*">(.*?)</a></span>`)
+		match := r.FindStringSubmatch(rawData)
+		if match != nil {
+			stringDate := match[1]
+			searchResult.MovieSearchResults[i].ReleaseDate, _ = time.Parse("Jan 02, 2006", stringDate)
+		}
+		if searchResult.MovieSearchResults[i].ReleaseDate.After(dateAdded) {
+			searchResult.MovieSearchResults[i].NewRelease = true
+		}
 	}
-	// Find the release date
-	movie.ReleaseDate = time.Time{} // default to zero time
-	r := regexp.MustCompile(`<a class="grey noline" alt=".*">(.*?)</a></span>`)
-	match := r.FindStringSubmatch(rawData)
-	if match != nil {
-		stringDate := match[1]
-		movie.ReleaseDate, _ = time.Parse("Jan 02, 2006", stringDate)
-	}
-	if movie.ReleaseDate.After(dateAdded) {
-		movie.NewRelease = true
-	}
-	ch <- movie
+	ch <- *searchResult
 }
 
 func searchAmazonMovie(plexMovie types.PlexMovie, language string, movieSearchResult chan<- types.SearchResults) {
@@ -262,14 +267,14 @@ func makeRequest(inputURL, language string) (response string, err error) {
 	}
 
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("makeRequest: error creating request:", err)
 		return response, err
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Error sending request:", err)
+		fmt.Println("makeRequest: error sending request:", err)
 		return response, err
 	}
 
@@ -277,9 +282,16 @@ func makeRequest(inputURL, language string) (response string, err error) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading response body:", err)
+		fmt.Println("makeRequest: error reading response body:", err)
 		return response, err
 	}
+
+	// check for a 200 status code
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("amazon: status code not OK, probably rate limited:", resp.StatusCode)
+		return response, fmt.Errorf("amazon: status code not OK: %d", resp.StatusCode)
+	}
+
 	rawResponse := string(body)
 	return rawResponse, nil
 }

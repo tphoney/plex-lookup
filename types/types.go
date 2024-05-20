@@ -40,9 +40,14 @@ type Configuration struct {
 	SpotifyClientSecret string
 }
 
-type FilteringOptions struct {
+type MovieLookupFilters struct {
 	AudioLanguage string
 	NewerVersion  bool
+}
+
+type PlexLookupFilters struct {
+	MissingAudioLanguage string
+	MatchesResolutions   []string
 }
 
 // ==============================================================================================================

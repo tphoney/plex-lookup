@@ -86,6 +86,7 @@ func TestScrapeTitlesParallel(t *testing.T) {
 	if len(result) == 0 {
 		t.Errorf("Expected search results, but got none")
 	}
+	// check the debug output, we may be rate limited.
 	if result[0].MovieSearchResults[0].ReleaseDate.Year() == 1 {
 		t.Errorf("Expected a sensible release date year but got: %+v", result[0].MovieSearchResults[0].ReleaseDate)
 	}

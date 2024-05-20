@@ -23,7 +23,8 @@ var (
 	searchResults           []types.SearchResults
 	plexMovies              []types.PlexMovie
 	lookup                  string
-	filters                 types.FilteringOptions
+	plexFilters             types.PlexLookupFilters
+	lookupFilters           types.MovieLookupFilters
 )
 
 type MoviesConfig struct {
@@ -41,21 +42,38 @@ func MoviesHandler(w http.ResponseWriter, _ *http.Request) {
 
 func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	lookup = r.FormValue("lookup")
-	// lookup filters
-	newfilters := types.FilteringOptions{}
-	newfilters.AudioLanguage = r.FormValue("language")
-	newfilters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
-	// fetch from plex
-	if len(plexMovies) == 0 || filters != newfilters {
-		plexMovies = fetchPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken, filters.AudioLanguage)
+	// plex filters
+	sd := r.FormValue("sd")
+	r240 := r.FormValue("240")
+	r480 := r.FormValue("480")
+	r576 := r.FormValue("576")
+	r720 := r.FormValue("720")
+	r1080 := r.FormValue("1080")
+	r4k := r.FormValue("4k")
+	plexResolutions := []string{sd, r240, r480, r576, r720, r1080, r4k}
+	// remove empty resolutions
+	var filteredResolutions []string
+	for _, resolution := range plexResolutions {
+		if resolution != "" {
+			filteredResolutions = append(filteredResolutions, resolution)
+		}
 	}
-	filters = newfilters
+	plexFilters.MatchesResolutions = filteredResolutions
+	// lookup filters
+	lookupFilters.AudioLanguage = r.FormValue("language")
+	lookupFilters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
+	// fetch from plex
+	if len(plexMovies) == 0 {
+		plexMovies = plex.GetPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken, nil)
+	}
+	// filter plex movies based on preferences, eg. only movies with a certain resolution
+	filteredPlexMovies := plex.FilterPlexMovies(plexMovies, plexFilters)
 	//nolint: gocritic
-	// plexMovies = plexMovies[:100]
+	// filteredPlexMovies = filteredPlexMovies[:100]
 	//lint: gocritic
 	jobRunning = true
 	numberOfMoviesProcessed = 0
-	totalMovies = len(plexMovies) - 1
+	totalMovies = len(filteredPlexMovies) - 1
 
 	// write progress bar
 	fmt.Fprintf(w, `<div hx-get="/moviesprogress" hx-trigger="every 100ms" class="container" id="progress">
@@ -64,11 +82,11 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		startTime := time.Now()
 		if lookup == "cinemaParadiso" {
-			searchResults = cinemaparadiso.GetCinemaParadisoMoviesInParallel(plexMovies)
+			searchResults = cinemaparadiso.GetCinemaParadisoMoviesInParallel(filteredPlexMovies)
 		} else {
-			searchResults = amazon.SearchAmazonMoviesInParallel(plexMovies, filters.AudioLanguage)
+			searchResults = amazon.SearchAmazonMoviesInParallel(filteredPlexMovies, lookupFilters.AudioLanguage)
 			// if we are filtering by newer version, we need to search again
-			if filters.NewerVersion {
+			if lookupFilters.NewerVersion {
 				searchResults = amazon.ScrapeTitlesParallel(searchResults)
 			}
 		}
@@ -118,7 +136,7 @@ func renderTable(searchResults []types.SearchResults) (tableRows string) {
 			tableRows += "<td>"
 			for _, result := range searchResults[i].MovieSearchResults {
 				if result.BestMatch && (result.Format == types.DiskBluray || result.Format == types.Disk4K) {
-					tableRows += fmt.Sprintf(`<a href=%q target="_blank">%v </a>`, result.URL, result.UITitle)
+					tableRows += fmt.Sprintf(`<a href=%q target="_blank">%v</a> `, result.URL, result.UITitle)
 				}
 			}
 			tableRows += "</td>"
@@ -128,26 +146,6 @@ func renderTable(searchResults []types.SearchResults) (tableRows string) {
 		tableRows += "</tr>"
 	}
 	return tableRows // Return the generated HTML for table rows
-}
-
-func fetchPlexMovies(plexIP, plexMovieLibraryID, plexToken, language string) (allMovies []types.PlexMovie) {
-	filter := []plex.Filter{}
-	if language == "german" {
-		filter = []plex.Filter{
-			{
-				Name:     "audioLanguage",
-				Value:    "de",
-				Modifier: "\u0021=",
-			},
-			// {
-			// 	Name:     "audioLanguage",
-			// 	Value:    "de",
-			// 	Modifier: "=",
-			// },
-		}
-	}
-	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, filter)...)
-	return allMovies
 }
 
 func filterMovieSearchResults(searchResults []types.SearchResults) []types.SearchResults {

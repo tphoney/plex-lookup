@@ -631,6 +631,22 @@ type Filter struct {
 
 func GetPlexMovies(ipAddress, libraryID, plexToken string, filters []Filter) (movieList []types.PlexMovie) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
+	//nolint:gocritic
+	// EG
+	// filter = []plex.Filter{
+	// 	// does not have german audio
+	// 	{
+	// 		Name:     "audioLanguage",
+	// 		Value:    "de",
+	// 		Modifier: "\u0021=",
+	// 	},
+	// 	// has german audio
+	// 	{
+	// 		Name:     "audioLanguage",
+	// 		Value:    "de",
+	// 		Modifier: "=",
+	// 	},
+	// }
 
 	for i := range filters {
 		if i == 0 {
@@ -702,6 +718,17 @@ func getPlexMovieDetails(ipAddress, plexToken, ratingKey string) (audioLanguages
 		audioLanguages = append(audioLanguages, value)
 	}
 	return audioLanguages
+}
+
+func FilterPlexMovies(movies []types.PlexMovie, filters types.PlexLookupFilters) []types.PlexMovie {
+	// filter resolutions first
+	var filteredMovies []types.PlexMovie
+	for i := range movies {
+		if slices.Contains(filters.MatchesResolutions, movies[i].Resolution) {
+			filteredMovies = append(filteredMovies, movies[i])
+		}
+	}
+	return filteredMovies
 }
 
 // =================================================================================================

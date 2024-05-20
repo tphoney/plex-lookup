@@ -53,6 +53,9 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	if len(plexMusic) == 0 {
 		plexMusic = plex.GetPlexMusicArtists(c.Config.PlexIP, c.Config.PlexMusicLibraryID, c.Config.PlexToken)
 	}
+	//nolint: gocritic
+	// plexMusic = plexMusic[:10]
+	//lint: gocritic
 	var searchResult types.SearchResults
 	artistsJobRunning = true
 	numberOfArtistsProcessed = 0
@@ -64,10 +67,11 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	if lookupType == "missingalbums" {
 		switch lookup {
 		case "musicbrainz":
+			plexMusic = plexMusic[:50]
+			totalArtists = len(plexMusic) - 1
 			go func() {
 				startTime := time.Now()
-				totalArtists = 49
-				for i := 0; i < 50; i++ {
+				for i := range plexMusic {
 					fmt.Print(".")
 					searchResult, _ = musicbrainz.SearchMusicBrainzArtist(&plexMusic[i])
 					artistsSearchResults = append(artistsSearchResults, searchResult)

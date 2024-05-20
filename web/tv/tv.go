@@ -24,7 +24,7 @@ var (
 	plexTV              []types.PlexTVShow
 	tvSearchResults     []types.SearchResults
 	lookup              string
-	filters             types.FilteringOptions
+	filters             types.MovieLookupFilters
 )
 
 type TVConfig struct {
@@ -43,7 +43,7 @@ func TVHandler(w http.ResponseWriter, _ *http.Request) {
 func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	lookup = r.FormValue("lookup")
 	// lookup filters
-	newFilters := types.FilteringOptions{}
+	newFilters := types.MovieLookupFilters{}
 	newFilters.AudioLanguage = r.FormValue("language")
 	newFilters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
 	if len(plexTV) == 0 || filters != newFilters {

@@ -105,6 +105,162 @@ type MovieContainer struct {
 	} `xml:"Video"`
 }
 
+type MovieDetailContainer struct {
+	XMLName             xml.Name `xml:"MediaContainer"`
+	Text                string   `xml:",chardata"`
+	Size                string   `xml:"size,attr"`
+	AllowSync           string   `xml:"allowSync,attr"`
+	Identifier          string   `xml:"identifier,attr"`
+	LibrarySectionID    string   `xml:"librarySectionID,attr"`
+	LibrarySectionTitle string   `xml:"librarySectionTitle,attr"`
+	LibrarySectionUUID  string   `xml:"librarySectionUUID,attr"`
+	MediaTagPrefix      string   `xml:"mediaTagPrefix,attr"`
+	MediaTagVersion     string   `xml:"mediaTagVersion,attr"`
+	Video               struct {
+		Text                  string `xml:",chardata"`
+		RatingKey             string `xml:"ratingKey,attr"`
+		Key                   string `xml:"key,attr"`
+		AttrGUID              string `xml:"guid,attr"`
+		Studio                string `xml:"studio,attr"`
+		Type                  string `xml:"type,attr"`
+		Title                 string `xml:"title,attr"`
+		LibrarySectionTitle   string `xml:"librarySectionTitle,attr"`
+		LibrarySectionID      string `xml:"librarySectionID,attr"`
+		LibrarySectionKey     string `xml:"librarySectionKey,attr"`
+		ContentRating         string `xml:"contentRating,attr"`
+		Summary               string `xml:"summary,attr"`
+		AttrRating            string `xml:"rating,attr"`
+		AudienceRating        string `xml:"audienceRating,attr"`
+		ViewCount             string `xml:"viewCount,attr"`
+		LastViewedAt          string `xml:"lastViewedAt,attr"`
+		Year                  string `xml:"year,attr"`
+		Tagline               string `xml:"tagline,attr"`
+		Thumb                 string `xml:"thumb,attr"`
+		Art                   string `xml:"art,attr"`
+		Duration              string `xml:"duration,attr"`
+		OriginallyAvailableAt string `xml:"originallyAvailableAt,attr"`
+		AddedAt               string `xml:"addedAt,attr"`
+		UpdatedAt             string `xml:"updatedAt,attr"`
+		AudienceRatingImage   string `xml:"audienceRatingImage,attr"`
+		ChapterSource         string `xml:"chapterSource,attr"`
+		PrimaryExtraKey       string `xml:"primaryExtraKey,attr"`
+		RatingImage           string `xml:"ratingImage,attr"`
+		Media                 struct {
+			Text            string `xml:",chardata"`
+			ID              string `xml:"id,attr"`
+			Duration        string `xml:"duration,attr"`
+			Bitrate         string `xml:"bitrate,attr"`
+			Width           string `xml:"width,attr"`
+			Height          string `xml:"height,attr"`
+			AspectRatio     string `xml:"aspectRatio,attr"`
+			AudioChannels   string `xml:"audioChannels,attr"`
+			AudioCodec      string `xml:"audioCodec,attr"`
+			VideoCodec      string `xml:"videoCodec,attr"`
+			VideoResolution string `xml:"videoResolution,attr"`
+			Container       string `xml:"container,attr"`
+			VideoFrameRate  string `xml:"videoFrameRate,attr"`
+			VideoProfile    string `xml:"videoProfile,attr"`
+			Part            struct {
+				Text         string `xml:",chardata"`
+				ID           string `xml:"id,attr"`
+				Key          string `xml:"key,attr"`
+				Duration     string `xml:"duration,attr"`
+				File         string `xml:"file,attr"`
+				Size         string `xml:"size,attr"`
+				Container    string `xml:"container,attr"`
+				VideoProfile string `xml:"videoProfile,attr"`
+				Stream       []struct {
+					Text                 string `xml:",chardata"`
+					ID                   string `xml:"id,attr"`
+					StreamType           string `xml:"streamType,attr"`
+					Default              string `xml:"default,attr"`
+					Codec                string `xml:"codec,attr"`
+					Index                string `xml:"index,attr"`
+					Bitrate              string `xml:"bitrate,attr"`
+					Language             string `xml:"language,attr"`
+					LanguageTag          string `xml:"languageTag,attr"`
+					LanguageCode         string `xml:"languageCode,attr"`
+					BitDepth             string `xml:"bitDepth,attr"`
+					ChromaLocation       string `xml:"chromaLocation,attr"`
+					ChromaSubsampling    string `xml:"chromaSubsampling,attr"`
+					CodedHeight          string `xml:"codedHeight,attr"`
+					CodedWidth           string `xml:"codedWidth,attr"`
+					FrameRate            string `xml:"frameRate,attr"`
+					Height               string `xml:"height,attr"`
+					Level                string `xml:"level,attr"`
+					Profile              string `xml:"profile,attr"`
+					RefFrames            string `xml:"refFrames,attr"`
+					ScanType             string `xml:"scanType,attr"`
+					Width                string `xml:"width,attr"`
+					DisplayTitle         string `xml:"displayTitle,attr"`
+					ExtendedDisplayTitle string `xml:"extendedDisplayTitle,attr"`
+					Selected             string `xml:"selected,attr"`
+					Channels             string `xml:"channels,attr"`
+					AudioChannelLayout   string `xml:"audioChannelLayout,attr"`
+					HeaderCompression    string `xml:"headerCompression,attr"`
+					SamplingRate         string `xml:"samplingRate,attr"`
+					Title                string `xml:"title,attr"`
+				} `xml:"Stream"`
+			} `xml:"Part"`
+		} `xml:"Media"`
+		Genre []struct {
+			Text   string `xml:",chardata"`
+			ID     string `xml:"id,attr"`
+			Filter string `xml:"filter,attr"`
+			Tag    string `xml:"tag,attr"`
+		} `xml:"Genre"`
+		Country []struct {
+			Text   string `xml:",chardata"`
+			ID     string `xml:"id,attr"`
+			Filter string `xml:"filter,attr"`
+			Tag    string `xml:"tag,attr"`
+		} `xml:"Country"`
+		GUID []struct {
+			Text string `xml:",chardata"`
+			ID   string `xml:"id,attr"`
+		} `xml:"Guid"`
+		Rating []struct {
+			Text  string `xml:",chardata"`
+			Image string `xml:"image,attr"`
+			Value string `xml:"value,attr"`
+			Type  string `xml:"type,attr"`
+		} `xml:"Rating"`
+		Director struct {
+			Text   string `xml:",chardata"`
+			ID     string `xml:"id,attr"`
+			Filter string `xml:"filter,attr"`
+			Tag    string `xml:"tag,attr"`
+			TagKey string `xml:"tagKey,attr"`
+			Thumb  string `xml:"thumb,attr"`
+		} `xml:"Director"`
+		Writer []struct {
+			Text   string `xml:",chardata"`
+			ID     string `xml:"id,attr"`
+			Filter string `xml:"filter,attr"`
+			Tag    string `xml:"tag,attr"`
+			TagKey string `xml:"tagKey,attr"`
+			Thumb  string `xml:"thumb,attr"`
+		} `xml:"Writer"`
+		Role []struct {
+			Text   string `xml:",chardata"`
+			ID     string `xml:"id,attr"`
+			Filter string `xml:"filter,attr"`
+			Tag    string `xml:"tag,attr"`
+			TagKey string `xml:"tagKey,attr"`
+			Role   string `xml:"role,attr"`
+			Thumb  string `xml:"thumb,attr"`
+		} `xml:"Role"`
+		Producer struct {
+			Text   string `xml:",chardata"`
+			ID     string `xml:"id,attr"`
+			Filter string `xml:"filter,attr"`
+			Tag    string `xml:"tag,attr"`
+			TagKey string `xml:"tagKey,attr"`
+			Thumb  string `xml:"thumb,attr"`
+		} `xml:"Producer"`
+	} `xml:"Video"`
+}
+
 type TVContainer struct {
 	XMLName             xml.Name `xml:"MediaContainer"`
 	Text                string   `xml:",chardata"`
@@ -492,6 +648,10 @@ func GetPlexMovies(ipAddress, libraryID, plexToken string, filters []Filter) (mo
 	}
 
 	movieList = extractMovies(response)
+	// we need to make an API request for each movie to get audio languages
+	for i := range movieList {
+		movieList[i].AudioLanguages = getPlexMovieDetails(ipAddress, plexToken, movieList[i].RatingKey)
+	}
 	fmt.Printf("Plex movies: %d.\n", len(movieList))
 	return movieList
 }
@@ -513,6 +673,33 @@ func extractMovies(xmlString string) (movieList []types.PlexMovie) {
 			DateAdded:  parsePlexDate(container.Video[i].AddedAt)})
 	}
 	return movieList
+}
+
+func getPlexMovieDetails(ipAddress, plexToken, ratingKey string) (audioLanguages []string) {
+	url := fmt.Sprintf("http://%s:32400/library/metadata/%s", ipAddress, ratingKey)
+
+	response, err := makePlexAPIRequest(url, plexToken)
+	if err != nil {
+		fmt.Println("getPlexMovieDetails: Error making request:", err)
+		return audioLanguages
+	}
+
+	var container MovieDetailContainer
+	err = xml.Unmarshal([]byte(response), &container)
+	if err != nil {
+		fmt.Println("Error parsing XML:", err)
+		return
+	}
+
+	languages := make(map[string]string)
+	for i := range container.Video.Media.Part.Stream {
+		languages[container.Video.Media.Part.Stream[i].Language] = container.Video.Media.Part.Stream[i].Language
+	}
+	// convert map to slice
+	for _, value := range languages {
+		audioLanguages = append(audioLanguages, value)
+	}
+	return audioLanguages
 }
 
 // =================================================================================================

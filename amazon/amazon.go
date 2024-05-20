@@ -25,6 +25,7 @@ var (
 	numberTVProcessed     int = 0
 )
 
+// nolint: dupl, nolintlint
 func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language string) (searchResults []types.SearchResults) {
 	numberMoviesProcessed = 0
 	ch := make(chan types.SearchResults, len(plexMovies))
@@ -49,6 +50,7 @@ func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language string)
 	return searchResults
 }
 
+// nolint: dupl, nolintlint
 func SearchAmazonTVInParallel(plexTVShows []types.PlexTVShow, language string) (searchResults []types.SearchResults) {
 	numberMoviesProcessed = 0
 	ch := make(chan types.SearchResults, len(plexTVShows))

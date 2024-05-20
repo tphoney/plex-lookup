@@ -26,7 +26,7 @@
 <body>
     <h1 class="container">Movies</h1>
     <div hx-get="/settings/plexinfook" class="container" hx-trigger="load"></div>
-    <form hx-post="/moviesprocess" class="container" hx-target="#progress" hx-boost="true">
+    <form hx-post="/moviesprocess" class="container" hx-target="#progress" hx-boost="true" hx-indicator="#indicator">
         <fieldset>
             <legend><strong>Lookup:</strong></legend>
             <label for="amazon">
@@ -51,6 +51,7 @@
         </fieldset>
         <button type="submit">Submit</button>
     </form>
+    <div class="container"><strong id="indicator" class="htmx-indicator">Searching Plex ....</strong></div>
     <div id="progress" hx-swap="outerHTML"></div>
     <br>
     <div class="container"><a href="/">Back</a></div>

@@ -26,6 +26,7 @@ var (
 	numberTVProcessed     int = 0
 )
 
+// nolint: dupl, nolintlint
 func GetCinemaParadisoMoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.SearchResults) {
 	ch := make(chan types.SearchResults, len(plexMovies))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
@@ -48,6 +49,7 @@ func GetCinemaParadisoMoviesInParallel(plexMovies []types.PlexMovie) (searchResu
 	return searchResults
 }
 
+// nolint: dupl, nolintlint
 func GetCinemaParadisoTVInParallel(plexTVShows []types.PlexTVShow) (searchResults []types.SearchResults) {
 	ch := make(chan types.SearchResults, len(plexTVShows))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)

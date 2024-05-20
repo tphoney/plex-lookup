@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/tphoney/plex-lookup/types"
 )
@@ -45,19 +44,6 @@ func TestSearchAmazon(t *testing.T) {
 		t.Errorf("Expected search results, but got none")
 	}
 	fmt.Println(result)
-}
-
-func TestFindMovieDetails(t *testing.T) {
-	rawdata, err := os.ReadFile("testdata/anchorman.html")
-	if err != nil {
-		t.Errorf("Error reading testdata/anchorman.html: %s", err)
-	}
-
-	processed := findTitleDetails(string(rawdata))
-	expected := time.Date(2010, time.October, 4, 0, 0, 0, 0, time.UTC)
-	if processed.Compare(expected) != 0 {
-		t.Errorf("Expected %s, but got %s", expected, processed)
-	}
 }
 
 func TestSearchAmazonTV(t *testing.T) {

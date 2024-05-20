@@ -51,7 +51,7 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	}
 	filters = newfilters
 	//nolint: gocritic
-	plexMovies = plexMovies[:10]
+	// plexMovies = plexMovies[:10]
 	//lint: gocritic
 	jobRunning = true
 	numberOfMoviesProcessed = 0
@@ -68,9 +68,9 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		} else {
 			searchResults = amazon.SearchAmazonMoviesInParallel(plexMovies, filters.AudioLanguage)
 			// if we are filtering by newer version, we need to search again
-			// if filters.NewerVersion {
-			// 	searchResults = amazon.ScrapeTitles(&searchResults)
-			// }
+			if filters.NewerVersion {
+				searchResults = amazon.ScrapeTitlesParallel(searchResults)
+			}
 		}
 
 		jobRunning = false
@@ -102,24 +102,24 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func renderTable(movieCollection []types.SearchResults) (tableRows string) {
-	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="string"><strong>Plex Resolution</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
-	for i := range movieCollection {
+func renderTable(searchResults []types.SearchResults) (tableRows string) {
+	searchResults = filterMovieSearchResults(searchResults)
+	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="string"><strong>Plex Resolution</strong></th>
+	<th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th data-sort="string"><strong>New release</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
+	for i := range searchResults {
+		newRelease := "no"
+		if len(searchResults[i].MovieSearchResults) > 0 && searchResults[i].MovieSearchResults[0].NewRelease {
+			newRelease = "yes"
+		}
 		tableRows += fmt.Sprintf(
-			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%s</td><td>%d</td><td>%d</td>`,
-			movieCollection[i].SearchURL, movieCollection[i].PlexMovie.Title, movieCollection[i].PlexMovie.Year,
-			movieCollection[i].PlexMovie.Resolution, movieCollection[i].MatchesBluray, movieCollection[i].Matches4k)
-		if movieCollection[i].MatchesBluray+movieCollection[i].Matches4k > 0 {
+			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%s</td><td>%d</td><td>%d</td><td>%s</td>`,
+			searchResults[i].SearchURL, searchResults[i].PlexMovie.Title, searchResults[i].PlexMovie.Year,
+			searchResults[i].PlexMovie.Resolution, searchResults[i].MatchesBluray, searchResults[i].Matches4k, newRelease)
+		if searchResults[i].MatchesBluray+searchResults[i].Matches4k > 0 {
 			tableRows += "<td>"
-			for _, result := range movieCollection[i].MovieSearchResults {
+			for _, result := range searchResults[i].MovieSearchResults {
 				if result.BestMatch && (result.Format == types.DiskBluray || result.Format == types.Disk4K) {
-					tableRows += fmt.Sprintf(
-						`<a href=%q target="_blank">%v`,
-						result.URL, result.UITitle)
-					if result.NewRelease {
-						tableRows += "(new)"
-					}
-					tableRows += " </a>"
+					tableRows += fmt.Sprintf(`<a href=%q target="_blank">%v </a>`, result.URL, result.UITitle)
 				}
 			}
 			tableRows += "</td>"
@@ -149,4 +149,8 @@ func fetchPlexMovies(plexIP, plexMovieLibraryID, plexToken, language string) (al
 	}
 	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, filter)...)
 	return allMovies
+}
+
+func filterMovieSearchResults(searchResults []types.SearchResults) []types.SearchResults {
+	return searchResults
 }

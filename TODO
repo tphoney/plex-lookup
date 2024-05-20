@@ -2,14 +2,13 @@
 
 ## features
 
-- parallelise amazon search tv/movie
-
 ## bugs
 
 - allow amazon tv search for indivdual series
 - allow amazon tv search for newer series
 - music, a-ha/ash doesnt match as an artist why ?
 - move language filtering out of plex search,should only happens in web tv & movie
+- move newer show out of amazon and cinema-paradiso, move to web page
 
 ## done
 
@@ -35,3 +34,4 @@
 - parallelise cinema-paradiso movie search 6m20 to 2m25
 - parallelise cinema-paradiso tv search
 - for movies/tc dont refresh plex list every time, unless necessary
+- parallelise amazon search tv/movie

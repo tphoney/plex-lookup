@@ -53,7 +53,6 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	//nolint: gocritic
 	// plexMovies = plexMovies[:10]
 	//lint: gocritic
-	var searchResult types.SearchResults
 	jobRunning = true
 	numberOfMoviesProcessed = 0
 	totalMovies = len(plexMovies) - 1
@@ -67,24 +66,13 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		if lookup == "cinemaParadiso" {
 			searchResults = cinemaparadiso.GetCinemaParadisoMoviesInParallel(plexMovies)
 		} else {
-			for i, movie := range plexMovies {
-				fmt.Print(".")
-
-				if filters.AudioLanguage == "german" {
-					searchResult, _ = amazon.SearchAmazonMovie(movie, "&audio=german")
-				} else {
-					searchResult, _ = amazon.SearchAmazonMovie(movie, "")
-				}
-				// if we are filtering by newer version, we need to search again
-				if filters.NewerVersion {
-					scrapedResults := amazon.ScrapeTitles(&searchResult)
-					searchResult.MovieSearchResults = scrapedResults
-				}
-
-				searchResults = append(searchResults, searchResult)
-				numberOfMoviesProcessed = i
+			searchResults = amazon.SearchAmazonMoviesInParallel(plexMovies, filters.AudioLanguage)
+			// if we are filtering by newer version, we need to search again
+			if filters.NewerVersion {
+				searchResults = amazon.ScrapeTitlesParallel(searchResults)
 			}
 		}
+
 		jobRunning = false
 		fmt.Printf("\nProcessed %d movies in %v\n", totalMovies, time.Since(startTime))
 	}()
@@ -94,57 +82,44 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 	if lookup == "cinemaParadiso" {
 		// check job status
 		numberOfMoviesProcessed = cinemaparadiso.GetMovieJobProgress()
-		if jobRunning {
-			fmt.Fprintf(w, `<div hx-get="/moviesprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
-			<progress value="%d" max= "%d"/></div>`, numberOfMoviesProcessed, totalMovies)
-		} else {
-			// display a table
-			fmt.Fprintf(w,
-				`<table class="table-sortable">%s</tbody></table>
-				 <script>document.querySelector('.table-sortable').tsortable()</script>`,
-				renderTable(searchResults))
-			// reset variables
-			numberOfMoviesProcessed = 0
-			totalMovies = 0
-			searchResults = []types.SearchResults{}
-		}
 	} else {
-		if jobRunning {
-			fmt.Fprintf(w, `<div hx-get="/moviesprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
+		// check job status
+		numberOfMoviesProcessed = amazon.GetMovieJobProgress()
+	}
+	if jobRunning {
+		fmt.Fprintf(w, `<div hx-get="/moviesprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
 			<progress value="%d" max= "%d"/></div>`, numberOfMoviesProcessed, totalMovies)
-		}
-		if totalMovies == numberOfMoviesProcessed && totalMovies != 0 {
-			// display a table
-			fmt.Fprintf(w,
-				`<table class="table-sortable">%s</tbody></table>
+	} else {
+		// display a table
+		fmt.Fprintf(w,
+			`<table class="table-sortable">%s</tbody></table>
 				 <script>document.querySelector('.table-sortable').tsortable()</script>`,
-				renderTable(searchResults))
-			// reset variables
-			numberOfMoviesProcessed = 0
-			totalMovies = 0
-			searchResults = []types.SearchResults{}
-		}
+			renderTable(searchResults))
+		// reset variables
+		numberOfMoviesProcessed = 0
+		totalMovies = 0
+		searchResults = []types.SearchResults{}
 	}
 }
 
-func renderTable(movieCollection []types.SearchResults) (tableRows string) {
-	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="string"><strong>Plex Resolution</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
-	for i := range movieCollection {
+func renderTable(searchResults []types.SearchResults) (tableRows string) {
+	searchResults = filterMovieSearchResults(searchResults)
+	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="string"><strong>Plex Resolution</strong></th>
+	<th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th data-sort="string"><strong>New release</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
+	for i := range searchResults {
+		newRelease := "no"
+		if len(searchResults[i].MovieSearchResults) > 0 && searchResults[i].MovieSearchResults[0].NewRelease {
+			newRelease = "yes"
+		}
 		tableRows += fmt.Sprintf(
-			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%s</td><td>%d</td><td>%d</td>`,
-			movieCollection[i].SearchURL, movieCollection[i].PlexMovie.Title, movieCollection[i].PlexMovie.Year,
-			movieCollection[i].PlexMovie.Resolution, movieCollection[i].MatchesBluray, movieCollection[i].Matches4k)
-		if movieCollection[i].MatchesBluray+movieCollection[i].Matches4k > 0 {
+			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%s</td><td>%d</td><td>%d</td><td>%s</td>`,
+			searchResults[i].SearchURL, searchResults[i].PlexMovie.Title, searchResults[i].PlexMovie.Year,
+			searchResults[i].PlexMovie.Resolution, searchResults[i].MatchesBluray, searchResults[i].Matches4k, newRelease)
+		if searchResults[i].MatchesBluray+searchResults[i].Matches4k > 0 {
 			tableRows += "<td>"
-			for _, result := range movieCollection[i].MovieSearchResults {
+			for _, result := range searchResults[i].MovieSearchResults {
 				if result.BestMatch && (result.Format == types.DiskBluray || result.Format == types.Disk4K) {
-					tableRows += fmt.Sprintf(
-						`<a href=%q target="_blank">%v`,
-						result.URL, result.UITitle)
-					if result.NewRelease {
-						tableRows += "(new)"
-					}
-					tableRows += " </a>"
+					tableRows += fmt.Sprintf(`<a href=%q target="_blank">%v </a>`, result.URL, result.UITitle)
 				}
 			}
 			tableRows += "</td>"
@@ -174,4 +149,8 @@ func fetchPlexMovies(plexIP, plexMovieLibraryID, plexToken, language string) (al
 	}
 	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, filter)...)
 	return allMovies
+}
+
+func filterMovieSearchResults(searchResults []types.SearchResults) []types.SearchResults {
+	return searchResults
 }

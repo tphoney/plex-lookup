@@ -509,7 +509,7 @@ func GetPlexMovies(ipAddress, libraryID, plexToken string, filters []Filter) (mo
 	}
 
 	movieList = extractMovies(string(body))
-	fmt.Printf("Movies: %v\n", movieList)
+	fmt.Printf("Plex movies: %d.\n", len(movieList))
 	return movieList
 }
 
@@ -570,6 +570,7 @@ func GetPlexTV(ipAddress, libraryID, plexToken string) (tvShowList []types.PlexT
 			filteredTVShows = append(filteredTVShows, tvShowList[i])
 		}
 	}
+	fmt.Printf("Plex TV shows: %d.\n", len(filteredTVShows))
 	return filteredTVShows
 }
 
@@ -753,6 +754,7 @@ func GetPlexMusicArtists(ipAddress, libraryID, plexToken string) (artists []type
 		artists[i].Albums = GetPlexMusicAlbums(ipAddress, plexToken, libraryID, artists[i].RatingKey)
 	}
 
+	fmt.Printf("Plex music artists: %d.\n", len(artists))
 	return artists
 }
 

@@ -54,7 +54,6 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	// plexTV = plexTV[:10]
 	//lint: gocritic
 
-	var searchResult types.SearchResults
 	tvJobRunning = true
 	numberOfTVProcessed = 0
 	totalTV = len(plexTV) - 1
@@ -67,16 +66,7 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		if lookup == "cinemaParadiso" {
 			tvSearchResults = cinemaparadiso.GetCinemaParadisoTVInParallel(plexTV)
 		} else {
-			for i := range plexTV {
-				fmt.Print(".")
-				if filters.AudioLanguage == "german" {
-					searchResult, _ = amazon.SearchAmazonTV(&plexTV[i], fmt.Sprintf("&audio=%s", filters.AudioLanguage))
-				} else {
-					searchResult, _ = amazon.SearchAmazonTV(&plexTV[i], "")
-				}
-				tvSearchResults = append(tvSearchResults, searchResult)
-				numberOfTVProcessed = i
-			}
+			tvSearchResults = amazon.SearchAmazonTVInParallel(plexTV, filters.AudioLanguage)
 		}
 		tvJobRunning = false
 		fmt.Printf("\nProcessed %d TV Shows in %v\n", totalTV, time.Since(startTime))
@@ -86,34 +76,21 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 	if lookup == "cinemaParadiso" {
 		numberOfTVProcessed = cinemaparadiso.GetTVJobProgress()
-		if tvJobRunning {
-			fmt.Fprintf(w, `<div hx-get="/tvprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
-		<progress value="%d" max= "%d"/></div>`, numberOfTVProcessed, totalTV)
-		} else {
-			fmt.Fprintf(w,
-				`<table class="table-sortable">%s</tbody></table>
-		</script><script>document.querySelector('.table-sortable').tsortable()</script>`,
-				renderTVTable(tvSearchResults))
-			// reset variables
-			numberOfTVProcessed = 0
-			totalTV = 0
-			tvSearchResults = []types.SearchResults{}
-		}
 	} else {
-		if tvJobRunning {
-			fmt.Fprintf(w, `<div hx-get="/tvprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
+		numberOfTVProcessed = amazon.GetTVJobProgress()
+	}
+	if tvJobRunning {
+		fmt.Fprintf(w, `<div hx-get="/tvprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
 		<progress value="%d" max= "%d"/></div>`, numberOfTVProcessed, totalTV)
-		}
-		if totalTV == numberOfTVProcessed && totalTV != 0 {
-			fmt.Fprintf(w,
-				`<table class="table-sortable">%s</tbody></table>
+	} else {
+		fmt.Fprintf(w,
+			`<table class="table-sortable">%s</tbody></table>
 		</script><script>document.querySelector('.table-sortable').tsortable()</script>`,
-				renderTVTable(tvSearchResults))
-			// reset variables
-			numberOfTVProcessed = 0
-			totalTV = 0
-			tvSearchResults = []types.SearchResults{}
-		}
+			renderTVTable(tvSearchResults))
+		// reset variables
+		numberOfTVProcessed = 0
+		totalTV = 0
+		tvSearchResults = []types.SearchResults{}
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/tphoney/plex-lookup/types"
 )
@@ -40,24 +39,11 @@ func TestFindMoviesInResponse(t *testing.T) {
 }
 
 func TestSearchAmazon(t *testing.T) {
-	result, err := SearchAmazonMovie(types.PlexMovie{Title: "napoleon dynamite", Year: "2004"}, "")
-	if err != nil {
-		t.Errorf("Error searching Amazon: %s", err)
+	result := SearchAmazonMoviesInParallel([]types.PlexMovie{{Title: "napoleon dynamite", Year: "2004"}}, "")
+	if len(result) == 0 {
+		t.Errorf("Expected search results, but got none")
 	}
 	fmt.Println(result)
-}
-
-func TestFindMovieDetails(t *testing.T) {
-	rawdata, err := os.ReadFile("testdata/anchorman.html")
-	if err != nil {
-		t.Errorf("Error reading testdata/anchorman.html: %s", err)
-	}
-
-	processed := findTitleDetails(string(rawdata))
-	expected := time.Date(2010, time.October, 4, 0, 0, 0, 0, time.UTC)
-	if processed.Compare(expected) != 0 {
-		t.Errorf("Expected %s, but got %s", expected, processed)
-	}
 }
 
 func TestSearchAmazonTV(t *testing.T) {
@@ -72,11 +58,36 @@ func TestSearchAmazonTV(t *testing.T) {
 		// Title: "Adventure Time",
 		// Year:  "2010",
 	}
-	result, err := SearchAmazonTV(&show, "")
-	if err != nil {
-		t.Errorf("Error searching for TV show: %s", err)
+	result := SearchAmazonTVInParallel([]types.PlexTVShow{show}, "")
+
+	if len(result) == 0 {
+		t.Errorf("Expected search results, but got none")
 	}
-	if result.SearchURL == "" {
-		t.Errorf("Expected searchurl, but got none")
+	fmt.Println(result)
+}
+
+func TestScrapeTitlesParallel(t *testing.T) {
+	result := ScrapeTitlesParallel([]types.SearchResults{
+		{
+			PlexMovie: types.PlexMovie{
+				Title: "napoleon dynamite",
+				Year:  "2001",
+			},
+			MovieSearchResults: []types.MovieSearchResult{
+				{
+					FoundTitle: "Napoleon Dynamite",
+					URL:        "https://www.blu-ray.com/movies/Napoleon-Dynamite-Blu-ray/2535/",
+					BestMatch:  true,
+				},
+			},
+		},
+	})
+
+	if len(result) == 0 {
+		t.Errorf("Expected search results, but got none")
 	}
+	if result[0].MovieSearchResults[0].ReleaseDate.Year() == 1 {
+		t.Errorf("Expected a sensible release date year but got: %+v", result[0].MovieSearchResults[0].ReleaseDate)
+	}
+	fmt.Println(result)
 }

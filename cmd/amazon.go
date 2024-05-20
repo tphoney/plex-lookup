@@ -24,16 +24,12 @@ func performAmazonLookup() {
 	if libraryType == types.PlexMovieType {
 		plexMovies := initializePlexMovies()
 		// lets search movies in amazon
-		for _, movie := range plexMovies {
-			movieResult, err := amazon.SearchAmazonMovie(movie, "")
-			if err != nil {
-				fmt.Printf("Error searching for movie %s: %s\n", movieResult.PlexMovie.Title, err)
-				continue
-			}
-			// if hit, and contains any format that isnt dvd, print the movie
-			for _, individualResult := range movieResult.MovieSearchResults {
+		searchResults := amazon.SearchAmazonMoviesInParallel(plexMovies, "")
+		for i := range searchResults {
+			for _, individualResult := range searchResults[i].MovieSearchResults {
 				if individualResult.BestMatch && (individualResult.Format == types.DiskBluray || individualResult.Format == types.Disk4K) {
-					fmt.Printf("%s %v: %s\n", movieResult.PlexMovie.Title, movieResult.PlexMovie.Year, individualResult.URL)
+					fmt.Printf("%s - %s (%s): %s\n", searchResults[i].PlexMovie.Title, individualResult.Format,
+						searchResults[i].PlexMovie.Year, individualResult.URL)
 				}
 			}
 		}

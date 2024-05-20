@@ -16,183 +16,178 @@ import (
 )
 
 const (
-	amazonURL = "https://www.blu-ray.com/movies/search.php?keyword="
+	amazonURL      = "https://www.blu-ray.com/movies/search.php?keyword="
+	LanguageGerman = "german"
 )
 
-func ScrapeTitles(searchResults *types.SearchResults) (scrapedResults []types.MovieSearchResult) {
-	var results, lookups []types.MovieSearchResult
-	for _, searchResult := range searchResults.MovieSearchResults {
-		if !searchResult.BestMatch {
-			results = append(results, searchResult)
-		} else {
-			lookups = append(lookups, searchResult)
-		}
+var (
+	numberMoviesProcessed int = 0
+	numberTVProcessed     int = 0
+)
+
+func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language string) (searchResults []types.SearchResults) {
+	numberMoviesProcessed = 0
+	ch := make(chan types.SearchResults, len(plexMovies))
+	semaphore := make(chan struct{}, types.ConcurrencyLimit)
+
+	for i := range plexMovies {
+		go func(i int) {
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			searchAmazonMovie(plexMovies[i], language, ch)
+		}(i)
 	}
 
-	if len(lookups) > 0 {
-		ch := make(chan *types.MovieSearchResult, len(lookups))
-		// Limit number of concurrent requests
-		semaphore := make(chan struct{}, types.ConcurrencyLimit)
-		for i := range lookups {
-			go func() {
-				semaphore <- struct{}{}
-				defer func() { <-semaphore }()
-				scrapeTitle(&lookups[i], searchResults.PlexMovie.DateAdded, ch)
-			}()
-		}
-
-		for i := 0; i < len(lookups); i++ {
-			lookup := <-ch
-			results = append(results, *lookup)
-		}
+	searchResults = make([]types.SearchResults, 0, len(plexMovies))
+	for range plexMovies {
+		result := <-ch
+		searchResults = append(searchResults, result)
+		numberMoviesProcessed++
 	}
-	return results
+	numberMoviesProcessed = 0 // job is done
+	fmt.Println("amazon movies found:", len(searchResults))
+	return searchResults
 }
 
-func scrapeTitle(movie *types.MovieSearchResult, dateAdded time.Time, ch chan<- *types.MovieSearchResult) {
-	req, err := http.NewRequestWithContext(context.Background(), "GET", movie.URL, bytes.NewBuffer([]byte{}))
-	movie.ReleaseDate = time.Time{}
-	if err != nil {
-		fmt.Println("Error creating request:", err)
-		ch <- movie
-		return
+func SearchAmazonTVInParallel(plexTVShows []types.PlexTVShow, language string) (searchResults []types.SearchResults) {
+	numberMoviesProcessed = 0
+	ch := make(chan types.SearchResults, len(plexTVShows))
+	semaphore := make(chan struct{}, types.ConcurrencyLimit)
+
+	for i := range plexTVShows {
+		go func(i int) {
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			searchAmazonTV(&plexTVShows[i], language, ch)
+		}(i)
 	}
 
-	req.Header.Set("User-Agent",
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		ch <- movie
-		return
+	searchResults = make([]types.SearchResults, 0, len(plexTVShows))
+	for range plexTVShows {
+		result := <-ch
+		searchResults = append(searchResults, result)
+		numberTVProcessed++
 	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		ch <- movie
-		return
-	}
-	rawData := string(body)
-	movie.ReleaseDate = findTitleDetails(rawData)
-	if movie.ReleaseDate.After(dateAdded) {
-		movie.NewRelease = true
-	}
-	ch <- movie
+	numberTVProcessed = 0 // job is done
+	fmt.Println("amazon TV shows found:", len(searchResults))
+	return searchResults
 }
 
-func findTitleDetails(response string) (releaseDate time.Time) {
-	r := regexp.MustCompile(`<a class="grey noline" alt=".*">(.*?)</a></span>`)
+func GetMovieJobProgress() int {
+	return numberMoviesProcessed
+}
 
-	match := r.FindStringSubmatch(response)
-	if match != nil {
-		stringDate := match[1]
-		var err error
-		releaseDate, err = time.Parse("Jan 02, 2006", stringDate)
+func GetTVJobProgress() int {
+	return numberTVProcessed
+}
+
+func ScrapeTitlesParallel(searchResults []types.SearchResults) (scrapedResults []types.SearchResults) {
+	numberMoviesProcessed = 0
+	ch := make(chan types.SearchResults, len(searchResults))
+	semaphore := make(chan struct{}, types.ConcurrencyLimit)
+	for i := range searchResults {
+		go func(i int) {
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			scrapeTitles(&searchResults[i], ch)
+		}(i)
+	}
+
+	scrapedResults = make([]types.SearchResults, 0, len(searchResults))
+	for range searchResults {
+		result := <-ch
+		scrapedResults = append(scrapedResults, result)
+		numberMoviesProcessed++
+	}
+	numberMoviesProcessed = 0
+	fmt.Println("amazon Movie titles scraped:", len(scrapedResults))
+	return scrapedResults
+}
+
+func scrapeTitles(searchResult *types.SearchResults, ch chan<- types.SearchResults) {
+	dateAdded := searchResult.PlexMovie.DateAdded
+	for i := range searchResult.MovieSearchResults {
+		// this is to limit the number of requests
+		if !searchResult.MovieSearchResults[i].BestMatch {
+			continue
+		}
+		rawData, err := makeRequest(searchResult.MovieSearchResults[i].URL, "")
 		if err != nil {
-			releaseDate = time.Time{}
+			fmt.Println("scrapeTitle: Error making request:", err)
+			ch <- *searchResult
+			return
 		}
-	} else {
-		releaseDate = time.Time{}
+		// Find the release date
+		searchResult.MovieSearchResults[i].ReleaseDate = time.Time{} // default to zero time
+		r := regexp.MustCompile(`<a class="grey noline" alt=".*">(.*?)</a></span>`)
+		match := r.FindStringSubmatch(rawData)
+		if match != nil {
+			stringDate := match[1]
+			searchResult.MovieSearchResults[i].ReleaseDate, _ = time.Parse("Jan 02, 2006", stringDate)
+		}
+		if searchResult.MovieSearchResults[i].ReleaseDate.After(dateAdded) {
+			searchResult.MovieSearchResults[i].NewRelease = true
+		}
 	}
-
-	return releaseDate
+	ch <- *searchResult
 }
 
-func SearchAmazonMovie(plexMovie types.PlexMovie, filter string) (movieSearchResult types.SearchResults, err error) {
+func searchAmazonMovie(plexMovie types.PlexMovie, language string, movieSearchResult chan<- types.SearchResults) {
+	result := types.SearchResults{}
+	result.PlexMovie = plexMovie
+	result.SearchURL = ""
+
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
 	amazonURL := amazonURL + urlEncodedTitle
-	if filter != "" {
-		amazonURL += filter
+	// this searches for the movie in a language
+	switch language {
+	case LanguageGerman:
+		amazonURL += "&audio=" + language
+	default:
+		// do nothing
 	}
 	amazonURL += "&submit=Search&action=search"
-	req, err := http.NewRequestWithContext(context.Background(), "GET", amazonURL, bytes.NewBuffer([]byte{}))
 
-	movieSearchResult.PlexMovie = plexMovie
-	movieSearchResult.SearchURL = amazonURL
-
-	req.Header.Set("User-Agent",
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-	country := "uk"
-	if strings.Contains(filter, "german") {
-		country = "de"
-	}
-	req.Header.Set("Cookie", fmt.Sprintf("country=%s;", country))
+	rawData, err := makeRequest(amazonURL, language)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
-		return movieSearchResult, err
+		fmt.Println("searchAmazonMovie: Error making request:", err)
+		movieSearchResult <- result
+		return
 	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return movieSearchResult, err
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return movieSearchResult, err
-	}
-	rawData := string(body)
 
 	moviesFound, _ := findTitlesInResponse(rawData, true)
-	movieSearchResult.MovieSearchResults = moviesFound
-	movieSearchResult = utils.MarkBestMatch(&movieSearchResult)
-	return movieSearchResult, nil
+	result.MovieSearchResults = moviesFound
+	result = utils.MarkBestMatch(&result)
+	movieSearchResult <- result
 }
 
-func SearchAmazonTV(plexTVShow *types.PlexTVShow, filter string) (tvSearchResult types.SearchResults, err error) {
+func searchAmazonTV(plexTVShow *types.PlexTVShow, language string, tvSearchResult chan<- types.SearchResults) {
+	result := types.SearchResults{}
+	result.PlexTVShow = *plexTVShow
+	result.SearchURL = amazonURL
+
 	urlEncodedTitle := url.QueryEscape(fmt.Sprintf("%s complete series", plexTVShow.Title)) // complete series
 	amazonURL := amazonURL + urlEncodedTitle
-	if filter != "" {
-		amazonURL += filter
+	// this searches for the movie in a language
+	switch language {
+	case LanguageGerman:
+		amazonURL += "&audio=" + language
+	default:
+		// do nothing
 	}
 	amazonURL += "&submit=Search&action=search"
-	req, err := http.NewRequestWithContext(context.Background(), "GET", amazonURL, bytes.NewBuffer([]byte{}))
 
-	tvSearchResult.PlexTVShow = *plexTVShow
-	tvSearchResult.SearchURL = amazonURL
-
-	req.Header.Set("User-Agent",
-		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-	country := "uk"
-	if strings.Contains(filter, "german") {
-		country = "de"
-	}
-	req.Header.Set("Cookie", fmt.Sprintf("country=%s;", country))
+	rawData, err := makeRequest(amazonURL, language)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
-		return tvSearchResult, err
+		fmt.Println("searchAmazonTV: Error making request:", err)
+		tvSearchResult <- result
+		return
 	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return tvSearchResult, err
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return tvSearchResult, err
-	}
-	rawData := string(body)
 
 	_, titlesFound := findTitlesInResponse(rawData, false)
-	tvSearchResult.TVSearchResults = titlesFound
-	tvSearchResult = utils.MarkBestMatch(&tvSearchResult)
-	return tvSearchResult, nil
+	result.TVSearchResults = titlesFound
+	result = utils.MarkBestMatch(&result)
+	tvSearchResult <- result
 }
 
 func findTitlesInResponse(response string, movie bool) (movieResults []types.MovieSearchResult, tvResults []types.TVSearchResult) {
@@ -255,4 +250,48 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 	}
 
 	return movieResults, tvResults
+}
+
+func makeRequest(inputURL, language string) (response string, err error) {
+	req, err := http.NewRequestWithContext(context.Background(), "GET", inputURL, bytes.NewBuffer([]byte{}))
+
+	req.Header.Set("User-Agent",
+		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+
+	// this forces results from a specific amazon region
+	switch language {
+	case LanguageGerman:
+		req.Header.Set("Cookie", "country=de;")
+	default:
+		req.Header.Set("Cookie", "country=uk;")
+	}
+
+	if err != nil {
+		fmt.Println("makeRequest: error creating request:", err)
+		return response, err
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("makeRequest: error sending request:", err)
+		return response, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("makeRequest: error reading response body:", err)
+		return response, err
+	}
+
+	// check for a 200 status code
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("amazon: status code not OK, probably rate limited:", resp.StatusCode)
+		return response, fmt.Errorf("amazon: status code not OK: %d", resp.StatusCode)
+	}
+
+	rawResponse := string(body)
+	return rawResponse, nil
 }

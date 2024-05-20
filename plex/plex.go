@@ -693,7 +693,9 @@ func getPlexMovieDetails(ipAddress, plexToken, ratingKey string) (audioLanguages
 
 	languages := make(map[string]string)
 	for i := range container.Video.Media.Part.Stream {
-		languages[container.Video.Media.Part.Stream[i].Language] = container.Video.Media.Part.Stream[i].Language
+		if container.Video.Media.Part.Stream[i].StreamType == "2" {
+			languages[container.Video.Media.Part.Stream[i].Language] = container.Video.Media.Part.Stream[i].Language
+		}
 	}
 	// convert map to slice
 	for _, value := range languages {

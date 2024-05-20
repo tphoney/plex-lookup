@@ -51,7 +51,7 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	}
 	filters = newfilters
 	//nolint: gocritic
-	// plexMovies = plexMovies[:10]
+	// plexMovies = plexMovies[:100]
 	//lint: gocritic
 	jobRunning = true
 	numberOfMoviesProcessed = 0
@@ -104,16 +104,15 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 
 func renderTable(searchResults []types.SearchResults) (tableRows string) {
 	searchResults = filterMovieSearchResults(searchResults)
-	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="string"><strong>Plex Resolution</strong></th>
-	<th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th data-sort="string"><strong>New release</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
+	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="string"><strong>Plex Audio</strong></th><th data-sort="string"><strong>Plex Resolution</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th data-sort="string"><strong>New release</strong></th><th><strong>Available Discs</strong></th></tr></thead><tbody>` //nolint: lll
 	for i := range searchResults {
 		newRelease := "no"
 		if len(searchResults[i].MovieSearchResults) > 0 && searchResults[i].MovieSearchResults[0].NewRelease {
 			newRelease = "yes"
 		}
 		tableRows += fmt.Sprintf(
-			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%s</td><td>%d</td><td>%d</td><td>%s</td>`,
-			searchResults[i].SearchURL, searchResults[i].PlexMovie.Title, searchResults[i].PlexMovie.Year,
+			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%s</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td>`,
+			searchResults[i].SearchURL, searchResults[i].PlexMovie.Title, searchResults[i].PlexMovie.Year, searchResults[i].PlexMovie.AudioLanguages,
 			searchResults[i].PlexMovie.Resolution, searchResults[i].MatchesBluray, searchResults[i].Matches4k, newRelease)
 		if searchResults[i].MatchesBluray+searchResults[i].Matches4k > 0 {
 			tableRows += "<td>"

@@ -485,30 +485,13 @@ func GetPlexMovies(ipAddress, libraryID, plexToken string, filters []Filter) (mo
 		url += fmt.Sprintf("%s%s%s", filters[i].Name, filters[i].Modifier, filters[i].Value)
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("GetPlexMovies: Error making request:", err)
 		return movieList
 	}
 
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return movieList
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return movieList
-	}
-
-	movieList = extractMovies(string(body))
+	movieList = extractMovies(response)
 	fmt.Printf("Plex movies: %d.\n", len(movieList))
 	return movieList
 }
@@ -525,6 +508,7 @@ func extractMovies(xmlString string) (movieList []types.PlexMovie) {
 		movieList = append(movieList, types.PlexMovie{
 			Title:      container.Video[i].Title,
 			Year:       container.Video[i].Year,
+			RatingKey:  container.Video[i].RatingKey,
 			Resolution: container.Video[i].Media.VideoResolution,
 			DateAdded:  parsePlexDate(container.Video[i].AddedAt)})
 	}
@@ -535,30 +519,13 @@ func extractMovies(xmlString string) (movieList []types.PlexMovie) {
 func GetPlexTV(ipAddress, libraryID, plexToken string) (tvShowList []types.PlexTVShow) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("GetPlexTV: Error making request:", err)
 		return tvShowList
 	}
 
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return tvShowList
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return tvShowList
-	}
-
-	tvShowList = extractTVShows(string(body))
+	tvShowList = extractTVShows(response)
 	// now we need to get the episodes for each TV show
 	for i := range tvShowList {
 		tvShowList[i].Seasons = GetPlexTVSeasons(ipAddress, plexToken, tvShowList[i].RatingKey)
@@ -577,30 +544,13 @@ func GetPlexTV(ipAddress, libraryID, plexToken string) (tvShowList []types.PlexT
 func GetPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []types.PlexTVSeason) {
 	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, ratingKey)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("GetPlexTVSeasons: Error making request:", err)
 		return seasonList
 	}
 
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return seasonList
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return seasonList
-	}
-
-	seasonList = extractTVSeasons(string(body))
+	seasonList = extractTVSeasons(response)
 	// os.WriteFile("seasons.xml", body, 0644)
 	// now we need to get the episodes for each TV show
 	for i := range seasonList {
@@ -632,30 +582,13 @@ func GetPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []type
 func GetPlexTVEpisodes(ipAddress, plexToken, ratingKey string) (episodeList []types.PlexTVEpisode) {
 	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, ratingKey)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("GetPlexTVEpisodes: Error making request:", err)
 		return episodeList
 	}
 
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return episodeList
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return episodeList
-	}
-
-	episodeList = extractTVEpisodes(string(body))
+	episodeList = extractTVEpisodes(response)
 	return episodeList
 }
 
@@ -720,30 +653,13 @@ func extractTVEpisodes(xmlString string) (episodeList []types.PlexTVEpisode) {
 func GetPlexMusicArtists(ipAddress, libraryID, plexToken string) (artists []types.PlexMusicArtist) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("GetPlexMusicArtists: Error making request:", err)
 		return artists
 	}
 
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return artists
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return artists
-	}
-
-	artists, err = extractMusicArtists(string(body))
+	artists, err = extractMusicArtists(response)
 
 	if err != nil {
 		fmt.Println("Error extracting plex artists:", err)
@@ -761,30 +677,12 @@ func GetPlexMusicArtists(ipAddress, libraryID, plexToken string) (artists []type
 func GetPlexMusicAlbums(ipAddress, plexToken, libraryID, ratingKey string) (albums []types.PlexMusicAlbum) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all?artist.id=%s&type=9", ipAddress, libraryID, ratingKey)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("GetPlexMusicAlbums: Error making request:", err)
 		return albums
 	}
-
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return albums
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return albums
-	}
-
-	albums, _ = extractMusicAlbums(string(body))
+	albums, _ = extractMusicAlbums(response)
 
 	return albums
 }
@@ -827,30 +725,13 @@ func extractMusicAlbums(xmlString string) (albums []types.PlexMusicAlbum, err er
 func GetPlexLibraries(ipAddress, plexToken string) (libraryList []types.PlexLibrary, err error) {
 	url := fmt.Sprintf("http://%s:32400/library/sections", ipAddress)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("GetPlexLibraries: Error making request:", err)
 		return libraryList, err
 	}
 
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return libraryList, err
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return libraryList, err
-	}
-
-	libraryList, err = extractLibraries(string(body))
+	libraryList, err = extractLibraries(response)
 	return libraryList, err
 }
 
@@ -870,6 +751,33 @@ func extractLibraries(xmlString string) (libraryList []types.PlexLibrary, err er
 }
 
 // =================================================================================================
+
+func makePlexAPIRequest(inputURL, plexToken string) (response string, err error) {
+	req, err := http.NewRequestWithContext(context.Background(), "GET", inputURL, http.NoBody)
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return "", err
+	}
+
+	req.Header.Set("X-Plex-Token", plexToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return "", err
+	}
+	return string(body), nil
+}
+
 func findLowestResolution(resolutions []string) (lowestResolution string) {
 	if slices.Contains(resolutions, types.PlexResolutionSD) {
 		return types.PlexResolutionSD

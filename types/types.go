@@ -49,6 +49,7 @@ type FilteringOptions struct {
 type PlexMovie struct {
 	Title      string
 	Year       string
+	RatingKey  string
 	Resolution string
 	DateAdded  time.Time
 }

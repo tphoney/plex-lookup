@@ -9,7 +9,6 @@
 ## bugs
 
 - music, a-ha/ash doesnt match as an artist why ?
-- move language filtering out of plex search, should only happen in web tv & movie web pages
 - when scraping movies, do we stop at the first best match ?
 
 ## done
@@ -38,3 +37,4 @@
 - for movies/tc dont refresh plex list every time, unless necessary
 - parallelise amazon search tv/movie
 - move newer show out of amazon and cinema-paradiso, move to web page
+- move language filtering out of plex search, should only happen in web tv & movie web pages

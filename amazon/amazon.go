@@ -34,7 +34,7 @@ func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language string)
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			searchAmazonMovie(plexMovies[i], language, ch)
+			searchAmazonMovie(&plexMovies[i], language, ch)
 		}(i)
 	}
 
@@ -132,9 +132,9 @@ func scrapeTitles(searchResult *types.SearchResults, ch chan<- types.SearchResul
 	ch <- *searchResult
 }
 
-func searchAmazonMovie(plexMovie types.PlexMovie, language string, movieSearchResult chan<- types.SearchResults) {
+func searchAmazonMovie(plexMovie *types.PlexMovie, language string, movieSearchResult chan<- types.SearchResults) {
 	result := types.SearchResults{}
-	result.PlexMovie = plexMovie
+	result.PlexMovie = *plexMovie
 	result.SearchURL = ""
 
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)

@@ -125,7 +125,7 @@ func TestSearchCinemaParadisoMovies(t *testing.T) {
 		Year:  "1998",
 	}
 	ch := make(chan types.SearchResults, 1)
-	searchCinemaParadisoMovie(movie, ch)
+	searchCinemaParadisoMovie(&movie, ch)
 	result := <-ch
 
 	if len(result.MovieSearchResults) == 0 {

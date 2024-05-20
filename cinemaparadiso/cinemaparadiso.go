@@ -34,7 +34,7 @@ func GetCinemaParadisoMoviesInParallel(plexMovies []types.PlexMovie) (searchResu
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			searchCinemaParadisoMovie(plexMovies[i], ch)
+			searchCinemaParadisoMovie(&plexMovies[i], ch)
 		}(i)
 	}
 
@@ -78,9 +78,9 @@ func GetTVJobProgress() int {
 	return numberTVProcessed
 }
 
-func searchCinemaParadisoMovie(plexMovie types.PlexMovie, movieSearchResult chan<- types.SearchResults) {
+func searchCinemaParadisoMovie(plexMovie *types.PlexMovie, movieSearchResult chan<- types.SearchResults) {
 	result := types.SearchResults{}
-	result.PlexMovie = plexMovie
+	result.PlexMovie = *plexMovie
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
 	rawData, err := makeSearchRequest(urlEncodedTitle)

@@ -26,6 +26,7 @@ var (
 	numberTVProcessed     int = 0
 )
 
+// nolint: dupl, nolintlint
 func GetCinemaParadisoMoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.SearchResults) {
 	ch := make(chan types.SearchResults, len(plexMovies))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
@@ -34,7 +35,7 @@ func GetCinemaParadisoMoviesInParallel(plexMovies []types.PlexMovie) (searchResu
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			searchCinemaParadisoMovie(plexMovies[i], ch)
+			searchCinemaParadisoMovie(&plexMovies[i], ch)
 		}(i)
 	}
 
@@ -48,6 +49,7 @@ func GetCinemaParadisoMoviesInParallel(plexMovies []types.PlexMovie) (searchResu
 	return searchResults
 }
 
+// nolint: dupl, nolintlint
 func GetCinemaParadisoTVInParallel(plexTVShows []types.PlexTVShow) (searchResults []types.SearchResults) {
 	ch := make(chan types.SearchResults, len(plexTVShows))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
@@ -78,9 +80,9 @@ func GetTVJobProgress() int {
 	return numberTVProcessed
 }
 
-func searchCinemaParadisoMovie(plexMovie types.PlexMovie, movieSearchResult chan<- types.SearchResults) {
+func searchCinemaParadisoMovie(plexMovie *types.PlexMovie, movieSearchResult chan<- types.SearchResults) {
 	result := types.SearchResults{}
-	result.PlexMovie = plexMovie
+	result.PlexMovie = *plexMovie
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
 	rawData, err := makeSearchRequest(urlEncodedTitle)

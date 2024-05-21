@@ -105,6 +105,162 @@ type MovieContainer struct {
 	} `xml:"Video"`
 }
 
+type MovieDetailContainer struct {
+	XMLName             xml.Name `xml:"MediaContainer"`
+	Text                string   `xml:",chardata"`
+	Size                string   `xml:"size,attr"`
+	AllowSync           string   `xml:"allowSync,attr"`
+	Identifier          string   `xml:"identifier,attr"`
+	LibrarySectionID    string   `xml:"librarySectionID,attr"`
+	LibrarySectionTitle string   `xml:"librarySectionTitle,attr"`
+	LibrarySectionUUID  string   `xml:"librarySectionUUID,attr"`
+	MediaTagPrefix      string   `xml:"mediaTagPrefix,attr"`
+	MediaTagVersion     string   `xml:"mediaTagVersion,attr"`
+	Video               struct {
+		Text                  string `xml:",chardata"`
+		RatingKey             string `xml:"ratingKey,attr"`
+		Key                   string `xml:"key,attr"`
+		AttrGUID              string `xml:"guid,attr"`
+		Studio                string `xml:"studio,attr"`
+		Type                  string `xml:"type,attr"`
+		Title                 string `xml:"title,attr"`
+		LibrarySectionTitle   string `xml:"librarySectionTitle,attr"`
+		LibrarySectionID      string `xml:"librarySectionID,attr"`
+		LibrarySectionKey     string `xml:"librarySectionKey,attr"`
+		ContentRating         string `xml:"contentRating,attr"`
+		Summary               string `xml:"summary,attr"`
+		AttrRating            string `xml:"rating,attr"`
+		AudienceRating        string `xml:"audienceRating,attr"`
+		ViewCount             string `xml:"viewCount,attr"`
+		LastViewedAt          string `xml:"lastViewedAt,attr"`
+		Year                  string `xml:"year,attr"`
+		Tagline               string `xml:"tagline,attr"`
+		Thumb                 string `xml:"thumb,attr"`
+		Art                   string `xml:"art,attr"`
+		Duration              string `xml:"duration,attr"`
+		OriginallyAvailableAt string `xml:"originallyAvailableAt,attr"`
+		AddedAt               string `xml:"addedAt,attr"`
+		UpdatedAt             string `xml:"updatedAt,attr"`
+		AudienceRatingImage   string `xml:"audienceRatingImage,attr"`
+		ChapterSource         string `xml:"chapterSource,attr"`
+		PrimaryExtraKey       string `xml:"primaryExtraKey,attr"`
+		RatingImage           string `xml:"ratingImage,attr"`
+		Media                 struct {
+			Text            string `xml:",chardata"`
+			ID              string `xml:"id,attr"`
+			Duration        string `xml:"duration,attr"`
+			Bitrate         string `xml:"bitrate,attr"`
+			Width           string `xml:"width,attr"`
+			Height          string `xml:"height,attr"`
+			AspectRatio     string `xml:"aspectRatio,attr"`
+			AudioChannels   string `xml:"audioChannels,attr"`
+			AudioCodec      string `xml:"audioCodec,attr"`
+			VideoCodec      string `xml:"videoCodec,attr"`
+			VideoResolution string `xml:"videoResolution,attr"`
+			Container       string `xml:"container,attr"`
+			VideoFrameRate  string `xml:"videoFrameRate,attr"`
+			VideoProfile    string `xml:"videoProfile,attr"`
+			Part            struct {
+				Text         string `xml:",chardata"`
+				ID           string `xml:"id,attr"`
+				Key          string `xml:"key,attr"`
+				Duration     string `xml:"duration,attr"`
+				File         string `xml:"file,attr"`
+				Size         string `xml:"size,attr"`
+				Container    string `xml:"container,attr"`
+				VideoProfile string `xml:"videoProfile,attr"`
+				Stream       []struct {
+					Text                 string `xml:",chardata"`
+					ID                   string `xml:"id,attr"`
+					StreamType           string `xml:"streamType,attr"`
+					Default              string `xml:"default,attr"`
+					Codec                string `xml:"codec,attr"`
+					Index                string `xml:"index,attr"`
+					Bitrate              string `xml:"bitrate,attr"`
+					Language             string `xml:"language,attr"`
+					LanguageTag          string `xml:"languageTag,attr"`
+					LanguageCode         string `xml:"languageCode,attr"`
+					BitDepth             string `xml:"bitDepth,attr"`
+					ChromaLocation       string `xml:"chromaLocation,attr"`
+					ChromaSubsampling    string `xml:"chromaSubsampling,attr"`
+					CodedHeight          string `xml:"codedHeight,attr"`
+					CodedWidth           string `xml:"codedWidth,attr"`
+					FrameRate            string `xml:"frameRate,attr"`
+					Height               string `xml:"height,attr"`
+					Level                string `xml:"level,attr"`
+					Profile              string `xml:"profile,attr"`
+					RefFrames            string `xml:"refFrames,attr"`
+					ScanType             string `xml:"scanType,attr"`
+					Width                string `xml:"width,attr"`
+					DisplayTitle         string `xml:"displayTitle,attr"`
+					ExtendedDisplayTitle string `xml:"extendedDisplayTitle,attr"`
+					Selected             string `xml:"selected,attr"`
+					Channels             string `xml:"channels,attr"`
+					AudioChannelLayout   string `xml:"audioChannelLayout,attr"`
+					HeaderCompression    string `xml:"headerCompression,attr"`
+					SamplingRate         string `xml:"samplingRate,attr"`
+					Title                string `xml:"title,attr"`
+				} `xml:"Stream"`
+			} `xml:"Part"`
+		} `xml:"Media"`
+		Genre []struct {
+			Text   string `xml:",chardata"`
+			ID     string `xml:"id,attr"`
+			Filter string `xml:"filter,attr"`
+			Tag    string `xml:"tag,attr"`
+		} `xml:"Genre"`
+		Country []struct {
+			Text   string `xml:",chardata"`
+			ID     string `xml:"id,attr"`
+			Filter string `xml:"filter,attr"`
+			Tag    string `xml:"tag,attr"`
+		} `xml:"Country"`
+		GUID []struct {
+			Text string `xml:",chardata"`
+			ID   string `xml:"id,attr"`
+		} `xml:"Guid"`
+		Rating []struct {
+			Text  string `xml:",chardata"`
+			Image string `xml:"image,attr"`
+			Value string `xml:"value,attr"`
+			Type  string `xml:"type,attr"`
+		} `xml:"Rating"`
+		Director struct {
+			Text   string `xml:",chardata"`
+			ID     string `xml:"id,attr"`
+			Filter string `xml:"filter,attr"`
+			Tag    string `xml:"tag,attr"`
+			TagKey string `xml:"tagKey,attr"`
+			Thumb  string `xml:"thumb,attr"`
+		} `xml:"Director"`
+		Writer []struct {
+			Text   string `xml:",chardata"`
+			ID     string `xml:"id,attr"`
+			Filter string `xml:"filter,attr"`
+			Tag    string `xml:"tag,attr"`
+			TagKey string `xml:"tagKey,attr"`
+			Thumb  string `xml:"thumb,attr"`
+		} `xml:"Writer"`
+		Role []struct {
+			Text   string `xml:",chardata"`
+			ID     string `xml:"id,attr"`
+			Filter string `xml:"filter,attr"`
+			Tag    string `xml:"tag,attr"`
+			TagKey string `xml:"tagKey,attr"`
+			Role   string `xml:"role,attr"`
+			Thumb  string `xml:"thumb,attr"`
+		} `xml:"Role"`
+		Producer struct {
+			Text   string `xml:",chardata"`
+			ID     string `xml:"id,attr"`
+			Filter string `xml:"filter,attr"`
+			Tag    string `xml:"tag,attr"`
+			TagKey string `xml:"tagKey,attr"`
+			Thumb  string `xml:"thumb,attr"`
+		} `xml:"Producer"`
+	} `xml:"Video"`
+}
+
 type TVContainer struct {
 	XMLName             xml.Name `xml:"MediaContainer"`
 	Text                string   `xml:",chardata"`
@@ -475,6 +631,22 @@ type Filter struct {
 
 func GetPlexMovies(ipAddress, libraryID, plexToken string, filters []Filter) (movieList []types.PlexMovie) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
+	//nolint:gocritic
+	// EG
+	// filter = []plex.Filter{
+	// 	// does not have german audio
+	// 	{
+	// 		Name:     "audioLanguage",
+	// 		Value:    "de",
+	// 		Modifier: "\u0021=",
+	// 	},
+	// 	// has german audio
+	// 	{
+	// 		Name:     "audioLanguage",
+	// 		Value:    "de",
+	// 		Modifier: "=",
+	// 	},
+	// }
 
 	for i := range filters {
 		if i == 0 {
@@ -485,30 +657,17 @@ func GetPlexMovies(ipAddress, libraryID, plexToken string, filters []Filter) (mo
 		url += fmt.Sprintf("%s%s%s", filters[i].Name, filters[i].Modifier, filters[i].Value)
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("GetPlexMovies: Error making request:", err)
 		return movieList
 	}
 
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return movieList
+	movieList = extractMovies(response)
+	// we need to make an API request for each movie to get audio languages
+	for i := range movieList {
+		movieList[i].AudioLanguages = getPlexMovieDetails(ipAddress, plexToken, movieList[i].RatingKey)
 	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return movieList
-	}
-
-	movieList = extractMovies(string(body))
 	fmt.Printf("Plex movies: %d.\n", len(movieList))
 	return movieList
 }
@@ -525,40 +684,64 @@ func extractMovies(xmlString string) (movieList []types.PlexMovie) {
 		movieList = append(movieList, types.PlexMovie{
 			Title:      container.Video[i].Title,
 			Year:       container.Video[i].Year,
+			RatingKey:  container.Video[i].RatingKey,
 			Resolution: container.Video[i].Media.VideoResolution,
 			DateAdded:  parsePlexDate(container.Video[i].AddedAt)})
 	}
 	return movieList
 }
 
+func getPlexMovieDetails(ipAddress, plexToken, ratingKey string) (audioLanguages []string) {
+	url := fmt.Sprintf("http://%s:32400/library/metadata/%s", ipAddress, ratingKey)
+
+	response, err := makePlexAPIRequest(url, plexToken)
+	if err != nil {
+		fmt.Println("getPlexMovieDetails: Error making request:", err)
+		return audioLanguages
+	}
+
+	var container MovieDetailContainer
+	err = xml.Unmarshal([]byte(response), &container)
+	if err != nil {
+		fmt.Println("Error parsing XML:", err)
+		return
+	}
+
+	languages := make(map[string]string)
+	for i := range container.Video.Media.Part.Stream {
+		if container.Video.Media.Part.Stream[i].StreamType == "2" {
+			languages[container.Video.Media.Part.Stream[i].Language] = container.Video.Media.Part.Stream[i].Language
+		}
+	}
+	// convert map to slice
+	for _, value := range languages {
+		audioLanguages = append(audioLanguages, value)
+	}
+	return audioLanguages
+}
+
+func FilterPlexMovies(movies []types.PlexMovie, filters types.PlexLookupFilters) []types.PlexMovie {
+	// filter resolutions first
+	var filteredMovies []types.PlexMovie
+	for i := range movies {
+		if slices.Contains(filters.MatchesResolutions, movies[i].Resolution) {
+			filteredMovies = append(filteredMovies, movies[i])
+		}
+	}
+	return filteredMovies
+}
+
 // =================================================================================================
 func GetPlexTV(ipAddress, libraryID, plexToken string) (tvShowList []types.PlexTVShow) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("GetPlexTV: Error making request:", err)
 		return tvShowList
 	}
 
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return tvShowList
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return tvShowList
-	}
-
-	tvShowList = extractTVShows(string(body))
+	tvShowList = extractTVShows(response)
 	// now we need to get the episodes for each TV show
 	for i := range tvShowList {
 		tvShowList[i].Seasons = GetPlexTVSeasons(ipAddress, plexToken, tvShowList[i].RatingKey)
@@ -577,30 +760,13 @@ func GetPlexTV(ipAddress, libraryID, plexToken string) (tvShowList []types.PlexT
 func GetPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []types.PlexTVSeason) {
 	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, ratingKey)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("GetPlexTVSeasons: Error making request:", err)
 		return seasonList
 	}
 
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return seasonList
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return seasonList
-	}
-
-	seasonList = extractTVSeasons(string(body))
+	seasonList = extractTVSeasons(response)
 	// os.WriteFile("seasons.xml", body, 0644)
 	// now we need to get the episodes for each TV show
 	for i := range seasonList {
@@ -632,30 +798,13 @@ func GetPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []type
 func GetPlexTVEpisodes(ipAddress, plexToken, ratingKey string) (episodeList []types.PlexTVEpisode) {
 	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, ratingKey)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("GetPlexTVEpisodes: Error making request:", err)
 		return episodeList
 	}
 
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return episodeList
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return episodeList
-	}
-
-	episodeList = extractTVEpisodes(string(body))
+	episodeList = extractTVEpisodes(response)
 	return episodeList
 }
 
@@ -720,30 +869,13 @@ func extractTVEpisodes(xmlString string) (episodeList []types.PlexTVEpisode) {
 func GetPlexMusicArtists(ipAddress, libraryID, plexToken string) (artists []types.PlexMusicArtist) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("GetPlexMusicArtists: Error making request:", err)
 		return artists
 	}
 
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return artists
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return artists
-	}
-
-	artists, err = extractMusicArtists(string(body))
+	artists, err = extractMusicArtists(response)
 
 	if err != nil {
 		fmt.Println("Error extracting plex artists:", err)
@@ -761,30 +893,12 @@ func GetPlexMusicArtists(ipAddress, libraryID, plexToken string) (artists []type
 func GetPlexMusicAlbums(ipAddress, plexToken, libraryID, ratingKey string) (albums []types.PlexMusicAlbum) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all?artist.id=%s&type=9", ipAddress, libraryID, ratingKey)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("GetPlexMusicAlbums: Error making request:", err)
 		return albums
 	}
-
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return albums
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return albums
-	}
-
-	albums, _ = extractMusicAlbums(string(body))
+	albums, _ = extractMusicAlbums(response)
 
 	return albums
 }
@@ -827,30 +941,13 @@ func extractMusicAlbums(xmlString string) (albums []types.PlexMusicAlbum, err er
 func GetPlexLibraries(ipAddress, plexToken string) (libraryList []types.PlexLibrary, err error) {
 	url := fmt.Sprintf("http://%s:32400/library/sections", ipAddress)
 
-	req, err := http.NewRequestWithContext(context.Background(), "GET", url, http.NoBody)
+	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("GetPlexLibraries: Error making request:", err)
 		return libraryList, err
 	}
 
-	req.Header.Set("X-Plex-Token", plexToken)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return libraryList, err
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return libraryList, err
-	}
-
-	libraryList, err = extractLibraries(string(body))
+	libraryList, err = extractLibraries(response)
 	return libraryList, err
 }
 
@@ -870,6 +967,33 @@ func extractLibraries(xmlString string) (libraryList []types.PlexLibrary, err er
 }
 
 // =================================================================================================
+
+func makePlexAPIRequest(inputURL, plexToken string) (response string, err error) {
+	req, err := http.NewRequestWithContext(context.Background(), "GET", inputURL, http.NoBody)
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return "", err
+	}
+
+	req.Header.Set("X-Plex-Token", plexToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return "", err
+	}
+	return string(body), nil
+}
+
 func findLowestResolution(resolutions []string) (lowestResolution string) {
 	if slices.Contains(resolutions, types.PlexResolutionSD) {
 		return types.PlexResolutionSD

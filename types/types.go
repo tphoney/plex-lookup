@@ -40,17 +40,24 @@ type Configuration struct {
 	SpotifyClientSecret string
 }
 
-type FilteringOptions struct {
+type MovieLookupFilters struct {
 	AudioLanguage string
 	NewerVersion  bool
 }
 
+type PlexLookupFilters struct {
+	MissingAudioLanguage string
+	MatchesResolutions   []string
+}
+
 // ==============================================================================================================
 type PlexMovie struct {
-	Title      string
-	Year       string
-	Resolution string
-	DateAdded  time.Time
+	Title          string
+	Year           string
+	RatingKey      string
+	Resolution     string
+	AudioLanguages []string
+	DateAdded      time.Time
 }
 
 type MovieSearchResult struct {

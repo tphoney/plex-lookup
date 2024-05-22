@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tphoney/plex-lookup/musicbrainz"
@@ -48,13 +49,25 @@ func MusicHandler(w http.ResponseWriter, _ *http.Request) {
 // nolint: lll, nolintlint
 func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	lookup = r.FormValue("lookup")
+	if lookup == "musicbrainz" {
+		if c.Config.MusicBrainzURL == "" {
+			fmt.Fprintf(w, `<div class="container"><b>MusicBrainz URL is not set</b>. Please set in <a href="/settings">settings.</a></div>`)
+			return
+		}
+	}
+	if lookup == "spotify" {
+		if c.Config.SpotifyClientID == "" || c.Config.SpotifyClientSecret == "" {
+			fmt.Fprintf(w, `<div class="container"><b>Spotify Client ID or Secret is not set</b>. Please set in <a href="/settings">settings.</a></div>`)
+			return
+		}
+	}
 	lookupType = r.FormValue("lookuptype")
 	// only get the artists from plex once
 	if len(plexMusic) == 0 {
 		plexMusic = plex.GetPlexMusicArtists(c.Config.PlexIP, c.Config.PlexMusicLibraryID, c.Config.PlexToken)
 	}
 	//nolint: gocritic
-	// plexMusic = plexMusic[:10]
+	// plexMusic = plexMusic[:30]
 	//lint: gocritic
 	var searchResult types.SearchResults
 	artistsJobRunning = true
@@ -67,13 +80,16 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	if lookupType == "missingalbums" {
 		switch lookup {
 		case "musicbrainz":
-			plexMusic = plexMusic[:50]
-			totalArtists = len(plexMusic) - 1
+			// limit the number of artists to 50 for nonlocal musicbrainz instances
+			if strings.Contains(c.Config.MusicBrainzURL, "musicbrainz.org") {
+				plexMusic = plexMusic[:50]
+				totalArtists = len(plexMusic) - 1
+			}
 			go func() {
 				startTime := time.Now()
 				for i := range plexMusic {
 					fmt.Print(".")
-					searchResult, _ = musicbrainz.SearchMusicBrainzArtist(&plexMusic[i])
+					searchResult, _ = musicbrainz.SearchMusicBrainzArtist(&plexMusic[i], c.Config.MusicBrainzURL)
 					artistsSearchResults = append(artistsSearchResults, searchResult)
 					numberOfArtistsProcessed = i
 				}

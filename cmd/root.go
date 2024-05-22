@@ -8,6 +8,10 @@ import (
 	"github.com/tphoney/plex-lookup/types"
 )
 
+const (
+	amazonRegion = "uk"
+)
+
 var (
 	// Used for flags.
 	plexIP             string

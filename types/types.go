@@ -36,6 +36,8 @@ type Configuration struct {
 	PlexMovieLibraryID  string
 	PlexTVLibraryID     string
 	PlexMusicLibraryID  string
+	AmazonRegion        string
+	MusicBrainzURL      string
 	SpotifyClientID     string
 	SpotifyClientSecret string
 }

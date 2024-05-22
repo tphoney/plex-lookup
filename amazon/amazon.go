@@ -26,7 +26,7 @@ var (
 )
 
 // nolint: dupl, nolintlint
-func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language string) (searchResults []types.SearchResults) {
+func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language, region string) (searchResults []types.SearchResults) {
 	numberMoviesProcessed = 0
 	ch := make(chan types.SearchResults, len(plexMovies))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
@@ -35,7 +35,7 @@ func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language string)
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			searchAmazonMovie(&plexMovies[i], language, ch)
+			searchAmazonMovie(&plexMovies[i], language, region, ch)
 		}(i)
 	}
 
@@ -51,7 +51,7 @@ func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language string)
 }
 
 // nolint: dupl, nolintlint
-func SearchAmazonTVInParallel(plexTVShows []types.PlexTVShow, language string) (searchResults []types.SearchResults) {
+func SearchAmazonTVInParallel(plexTVShows []types.PlexTVShow, language, region string) (searchResults []types.SearchResults) {
 	numberMoviesProcessed = 0
 	ch := make(chan types.SearchResults, len(plexTVShows))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
@@ -60,7 +60,7 @@ func SearchAmazonTVInParallel(plexTVShows []types.PlexTVShow, language string) (
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			searchAmazonTV(&plexTVShows[i], language, ch)
+			searchAmazonTV(&plexTVShows[i], language, region, ch)
 		}(i)
 	}
 
@@ -83,7 +83,7 @@ func GetTVJobProgress() int {
 	return numberTVProcessed
 }
 
-func ScrapeTitlesParallel(searchResults []types.SearchResults) (scrapedResults []types.SearchResults) {
+func ScrapeTitlesParallel(searchResults []types.SearchResults, region string) (scrapedResults []types.SearchResults) {
 	numberMoviesProcessed = 0
 	ch := make(chan types.SearchResults, len(searchResults))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
@@ -91,7 +91,7 @@ func ScrapeTitlesParallel(searchResults []types.SearchResults) (scrapedResults [
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			scrapeTitles(&searchResults[i], ch)
+			scrapeTitles(&searchResults[i], region, ch)
 		}(i)
 	}
 
@@ -106,14 +106,14 @@ func ScrapeTitlesParallel(searchResults []types.SearchResults) (scrapedResults [
 	return scrapedResults
 }
 
-func scrapeTitles(searchResult *types.SearchResults, ch chan<- types.SearchResults) {
+func scrapeTitles(searchResult *types.SearchResults, region string, ch chan<- types.SearchResults) {
 	dateAdded := searchResult.PlexMovie.DateAdded
 	for i := range searchResult.MovieSearchResults {
 		// this is to limit the number of requests
 		if !searchResult.MovieSearchResults[i].BestMatch {
 			continue
 		}
-		rawData, err := makeRequest(searchResult.MovieSearchResults[i].URL, "")
+		rawData, err := makeRequest(searchResult.MovieSearchResults[i].URL, region)
 		if err != nil {
 			fmt.Println("scrapeTitle: Error making request:", err)
 			ch <- *searchResult
@@ -134,7 +134,7 @@ func scrapeTitles(searchResult *types.SearchResults, ch chan<- types.SearchResul
 	ch <- *searchResult
 }
 
-func searchAmazonMovie(plexMovie *types.PlexMovie, language string, movieSearchResult chan<- types.SearchResults) {
+func searchAmazonMovie(plexMovie *types.PlexMovie, language, region string, movieSearchResult chan<- types.SearchResults) {
 	result := types.SearchResults{}
 	result.PlexMovie = *plexMovie
 	result.SearchURL = ""
@@ -150,7 +150,7 @@ func searchAmazonMovie(plexMovie *types.PlexMovie, language string, movieSearchR
 	}
 	amazonURL += "&submit=Search&action=search"
 
-	rawData, err := makeRequest(amazonURL, language)
+	rawData, err := makeRequest(amazonURL, region)
 	if err != nil {
 		fmt.Println("searchAmazonMovie: Error making request:", err)
 		movieSearchResult <- result
@@ -163,7 +163,7 @@ func searchAmazonMovie(plexMovie *types.PlexMovie, language string, movieSearchR
 	movieSearchResult <- result
 }
 
-func searchAmazonTV(plexTVShow *types.PlexTVShow, language string, tvSearchResult chan<- types.SearchResults) {
+func searchAmazonTV(plexTVShow *types.PlexTVShow, language, region string, tvSearchResult chan<- types.SearchResults) {
 	result := types.SearchResults{}
 	result.PlexTVShow = *plexTVShow
 	result.SearchURL = amazonURL
@@ -179,7 +179,7 @@ func searchAmazonTV(plexTVShow *types.PlexTVShow, language string, tvSearchResul
 	}
 	amazonURL += "&submit=Search&action=search"
 
-	rawData, err := makeRequest(amazonURL, language)
+	rawData, err := makeRequest(amazonURL, region)
 	if err != nil {
 		fmt.Println("searchAmazonTV: Error making request:", err)
 		tvSearchResult <- result
@@ -254,19 +254,13 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 	return movieResults, tvResults
 }
 
-func makeRequest(inputURL, language string) (response string, err error) {
+func makeRequest(inputURL, region string) (response string, err error) {
 	req, err := http.NewRequestWithContext(context.Background(), "GET", inputURL, bytes.NewBuffer([]byte{}))
 
 	req.Header.Set("User-Agent",
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
 
-	// this forces results from a specific amazon region
-	switch language {
-	case LanguageGerman:
-		req.Header.Set("Cookie", "country=de;")
-	default:
-		req.Header.Set("Cookie", "country=uk;")
-	}
+	req.Header.Set("Cookie", fmt.Sprintf("country=%s;", region))
 
 	if err != nil {
 		fmt.Println("makeRequest: error creating request:", err)

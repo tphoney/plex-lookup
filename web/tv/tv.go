@@ -66,7 +66,7 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		if lookup == "cinemaParadiso" {
 			tvSearchResults = cinemaparadiso.GetCinemaParadisoTVInParallel(plexTV)
 		} else {
-			tvSearchResults = amazon.SearchAmazonTVInParallel(plexTV, filters.AudioLanguage)
+			tvSearchResults = amazon.SearchAmazonTVInParallel(plexTV, filters.AudioLanguage, c.Config.AmazonRegion)
 		}
 		tvJobRunning = false
 		fmt.Printf("\nProcessed %d TV Shows in %v\n", totalTV, time.Since(startTime))

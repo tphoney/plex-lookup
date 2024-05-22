@@ -6,6 +6,10 @@ import (
 	"github.com/tphoney/plex-lookup/types"
 )
 
+const (
+	musicBrainzURL = "https://musicbrainz.org/ws/2"
+)
+
 func TestSearchMusicBrainzArtist(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -47,7 +51,7 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotArtist, err := SearchMusicBrainzArtist(tt.args)
+			gotArtist, err := SearchMusicBrainzArtist(tt.args, musicBrainzURL)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("SearchMusicBrainzArtist() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -66,7 +70,7 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 // debug test for individual artists
 func TestSearchMusicBrainzArtistDebug(t *testing.T) {
 	artist := &types.PlexMusicArtist{Name: "Aaliyah"}
-	artistSearchResult, err := SearchMusicBrainzArtist(artist)
+	artistSearchResult, err := SearchMusicBrainzArtist(artist, musicBrainzURL)
 	if err != nil {
 		t.Errorf("SearchMusicBrainzArtist() error = %v", err)
 	}
@@ -92,7 +96,7 @@ func TestSearchMusicBrainzAlbums(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotAlbums, err := SearchMusicBrainzAlbums(tt.args.artistID)
+			gotAlbums, err := SearchMusicBrainzAlbums(tt.args.artistID, musicBrainzURL)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("SearchMusicBrainzAlbums() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -25,6 +25,14 @@ func startServer() {
 	config.PlexTVLibraryID = os.Getenv("PLEX_TV_LIBRARY_ID")
 	config.PlexMusicLibraryID = os.Getenv("PLEX_MUSIC_LIBRARY_ID")
 	config.PlexToken = os.Getenv("PLEX_TOKEN")
+	config.AmazonRegion = os.Getenv("AMAZON_REGION")
+	if config.AmazonRegion == "" {
+		config.AmazonRegion = "uk"
+	}
+	config.MusicBrainzURL = os.Getenv("MUSICBRAINZ_URL")
+	if config.MusicBrainzURL == "" {
+		config.MusicBrainzURL = "https://musicbrainz.org/ws/2"
+	}
 	config.SpotifyClientID = os.Getenv("SPOTIFY_CLIENT_ID")
 	config.SpotifyClientSecret = os.Getenv("SPOTIFY_CLIENT_SECRET")
 

@@ -8,6 +8,10 @@ import (
 	"github.com/tphoney/plex-lookup/types"
 )
 
+const (
+	amazonRegion = "uk"
+)
+
 var (
 	plexIP    = os.Getenv("PLEX_IP")
 	plexToken = os.Getenv("PLEX_TOKEN")
@@ -39,7 +43,7 @@ func TestFindMoviesInResponse(t *testing.T) {
 }
 
 func TestSearchAmazon(t *testing.T) {
-	result := SearchAmazonMoviesInParallel([]types.PlexMovie{{Title: "napoleon dynamite", Year: "2004"}}, "")
+	result := SearchAmazonMoviesInParallel([]types.PlexMovie{{Title: "napoleon dynamite", Year: "2004"}}, "", amazonRegion)
 	if len(result) == 0 {
 		t.Errorf("Expected search results, but got none")
 	}
@@ -58,7 +62,7 @@ func TestSearchAmazonTV(t *testing.T) {
 		// Title: "Adventure Time",
 		// Year:  "2010",
 	}
-	result := SearchAmazonTVInParallel([]types.PlexTVShow{show}, "")
+	result := SearchAmazonTVInParallel([]types.PlexTVShow{show}, "", amazonRegion)
 
 	if len(result) == 0 {
 		t.Errorf("Expected search results, but got none")
@@ -81,7 +85,7 @@ func TestScrapeTitlesParallel(t *testing.T) {
 				},
 			},
 		},
-	})
+	}, amazonRegion)
 
 	if len(result) == 0 {
 		t.Errorf("Expected search results, but got none")

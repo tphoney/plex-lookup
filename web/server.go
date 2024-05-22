@@ -78,6 +78,8 @@ func settingsSaveHandler(w http.ResponseWriter, r *http.Request) {
 	config.PlexMovieLibraryID = r.FormValue("plexMovieLibraryID")
 	config.PlexTVLibraryID = r.FormValue("plexTVLibraryID")
 	config.PlexMusicLibraryID = r.FormValue("plexMusicLibraryID")
+	config.AmazonRegion = r.FormValue("amazonRegion")
+	config.MusicBrainzURL = r.FormValue("musicBrainzURL")
 	config.SpotifyClientID = r.FormValue("spotifyClientID")
 	config.SpotifyClientSecret = r.FormValue("spotifyClientSecret")
 	fmt.Fprint(w, `<h2>Saved!</h2><a href="/">Back</a>`)

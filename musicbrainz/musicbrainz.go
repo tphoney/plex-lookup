@@ -14,15 +14,13 @@ import (
 // example artist https://musicbrainz.org/artist/83d91898-7763-47d7-b03b-b92132375c47
 
 const (
-	// MusicBrainzURL is the URL for the MusicBrainz API
-	musicBrainzURL = "https://musicbrainz.org/ws/2"
-	agent          = "plex-lookup"
-	agentVersion   = "0.0.1"
-	lookupLimit    = 100
-	lookupTimeout  = 2
+	agent         = "plex-lookup"
+	agentVersion  = "0.0.1"
+	lookupLimit   = 100
+	lookupTimeout = 2
 )
 
-func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist) (artist types.SearchResults, err error) {
+func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist, musicBrainzURL string) (artist types.SearchResults, err error) {
 	artist.PlexMusicArtist = *plexArtist
 	client, err := gomusicbrainz.NewWS2Client(
 		musicBrainzURL, agent, agentVersion, "")
@@ -58,9 +56,9 @@ func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist) (artist types.Se
 	if err != nil {
 		// check for a 503 error
 		if err.Error() == "EOF" {
-			fmt.Println("SearchMusicBrainzArtist rate limit exceeded")
+			fmt.Printf("!")
 			time.Sleep(lookupTimeout * time.Second)
-			return SearchMusicBrainzArtist(plexArtist)
+			return SearchMusicBrainzArtist(plexArtist, musicBrainzURL)
 		}
 	}
 
@@ -75,7 +73,7 @@ func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist) (artist types.Se
 		url := fmt.Sprintf("https://musicbrainz.org/artist/%v", found.ID)
 		found.URL = url
 		// get the albums
-		found.Albums, _ = SearchMusicBrainzAlbums(found.ID)
+		found.Albums, _ = SearchMusicBrainzAlbums(found.ID, musicBrainzURL)
 		artist.MusicSearchResults = append(artist.MusicSearchResults, found)
 		break
 	}
@@ -85,7 +83,7 @@ func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist) (artist types.Se
 	return artist, err
 }
 
-func SearchMusicBrainzAlbums(artistID string) (albums []types.MusicAlbumSearchResult, err error) {
+func SearchMusicBrainzAlbums(artistID, musicBrainzURL string) (albums []types.MusicAlbumSearchResult, err error) {
 	client, err := gomusicbrainz.NewWS2Client(
 		musicBrainzURL, agent, agentVersion, "")
 
@@ -98,9 +96,9 @@ func SearchMusicBrainzAlbums(artistID string) (albums []types.MusicAlbumSearchRe
 	resp, err := client.SearchReleaseGroup(queryURL, lookupLimit, -1)
 	if err != nil {
 		if err.Error() == "EOF" {
-			fmt.Println("SearchMusicBrainzAlbums rate limit exceeded")
+			fmt.Printf("!")
 			time.Sleep(lookupTimeout * time.Second)
-			return SearchMusicBrainzAlbums(artistID)
+			return SearchMusicBrainzAlbums(artistID, musicBrainzURL)
 		}
 	}
 	for i := range resp.ReleaseGroups {

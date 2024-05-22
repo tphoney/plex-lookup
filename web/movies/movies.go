@@ -84,10 +84,10 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		if lookup == "cinemaParadiso" {
 			searchResults = cinemaparadiso.GetCinemaParadisoMoviesInParallel(filteredPlexMovies)
 		} else {
-			searchResults = amazon.SearchAmazonMoviesInParallel(filteredPlexMovies, lookupFilters.AudioLanguage)
+			searchResults = amazon.SearchAmazonMoviesInParallel(filteredPlexMovies, lookupFilters.AudioLanguage, c.Config.AmazonRegion)
 			// if we are filtering by newer version, we need to search again
 			if lookupFilters.NewerVersion {
-				searchResults = amazon.ScrapeTitlesParallel(searchResults)
+				searchResults = amazon.ScrapeTitlesParallel(searchResults, c.Config.AmazonRegion)
 			}
 		}
 

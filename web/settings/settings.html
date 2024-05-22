@@ -32,6 +32,16 @@
         <input type="text" placeholder="Plex Music Library Section ID" name="plexMusicLibraryID"
             id="plexMusicLibraryID">
     </div>
+    <h2 class="container">Amazon</h2>
+    <p class="container">We can specify a region for the Amazon search on blu-ray.com, the default is UK.</p>
+    <div class="container">
+        <input type="text" placeholder="Amazon Region" name="amazonRegion" id="amazonRegion" value="uk">
+    </div>
+    <h2 class="container">MusicBrainz</h2>
+    <p class="container">We can specify the url for the server to query, by default we use `https://musicbrainz.org/ws/2`</p>
+    <div class="container">
+        <input type="text" placeholder="MusicBrainz URL" name="musicBrainzURL" id="musicBrainzURL" value="https://musicbrainz.org/ws/2">
+    </div>
     <h2 class="container">Spotify</h2>
     <p class="container">Enter your Spotify client ID and secret to get started. You will need to follow the Spotify
         documentation to get these. <a href="https://developer.spotify.com/documentation/web-api/concepts/apps"
@@ -45,9 +55,10 @@
     </div>
     <div class="container">
         <button hx-post="/settings/save"
-            hx-include="#plexMovieLibraryID, #plexTVLibraryID, #plexMusicLibraryID, #plexIP, #plexToken, #spotifyClientID, #spotifyClientSecret"
+            hx-include="#plexMovieLibraryID, #plexTVLibraryID, #plexMusicLibraryID, #plexIP, #plexToken, #amazonRegion, #musicBrainzURL, #spotifyClientID, #spotifyClientSecret"
             hx-swap="outerHTML">Save</button>
     </div>
+    <div class="container"><a href="/">Back</a></div>
 </body>
 
 </html>

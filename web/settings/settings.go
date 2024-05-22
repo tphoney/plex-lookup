@@ -47,7 +47,6 @@ func ProcessPlexLibrariesHTML(w http.ResponseWriter, r *http.Request) {
 func (c SettingsConfig) PlexInformationOKHTML(w http.ResponseWriter, r *http.Request) {
 	currentURL := r.Header.Get("hx-current-url")
 	// get the last part of the url
-
 	requestingPage := path.Base(currentURL)
 	if c.Config.PlexIP == "" || c.Config.PlexToken == "" {
 		fmt.Fprint(w, `<h1><a href="/settings"> Enter your plex token and plex ip</a></h1>`)

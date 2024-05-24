@@ -665,11 +665,23 @@ func GetPlexMovies(ipAddress, libraryID, plexToken string, filters []Filter) (mo
 
 	movieList = extractMovies(response)
 	// we need to make an API request for each movie to get audio languages
+	ch := make(chan types.PlexMovie, len(movieList))
+	semaphore := make(chan struct{}, types.ConcurrencyLimit)
+
 	for i := range movieList {
-		movieList[i].AudioLanguages = getPlexMovieDetails(ipAddress, plexToken, movieList[i].RatingKey)
+		semaphore <- struct{}{}
+		go func(i int) {
+			defer func() { <-semaphore }()
+			getPlexMovieDetails(ipAddress, plexToken, &movieList[i], ch)
+		}(i)
 	}
-	fmt.Printf("Plex movies: %d.\n", len(movieList))
-	return movieList
+	detailedMovies := make([]types.PlexMovie, len(movieList))
+	// wait for all of the go routines to finish
+	for i := range movieList {
+		detailedMovies[i] = <-ch
+	}
+	fmt.Printf("Plex movies: %d.\n", len(detailedMovies))
+	return detailedMovies
 }
 
 func extractMovies(xmlString string) (movieList []types.PlexMovie) {
@@ -691,19 +703,21 @@ func extractMovies(xmlString string) (movieList []types.PlexMovie) {
 	return movieList
 }
 
-func getPlexMovieDetails(ipAddress, plexToken, ratingKey string) (audioLanguages []string) {
-	url := fmt.Sprintf("http://%s:32400/library/metadata/%s", ipAddress, ratingKey)
+func getPlexMovieDetails(ipAddress, plexToken string, movie *types.PlexMovie, ch chan<- types.PlexMovie) {
+	url := fmt.Sprintf("http://%s:32400/library/metadata/%s", ipAddress, movie.RatingKey)
 
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
 		fmt.Println("getPlexMovieDetails: Error making request:", err)
-		return audioLanguages
+		ch <- *movie
+		return
 	}
 
 	var container MovieDetailContainer
 	err = xml.Unmarshal([]byte(response), &container)
 	if err != nil {
 		fmt.Println("Error parsing XML:", err)
+		ch <- *movie
 		return
 	}
 
@@ -715,9 +729,9 @@ func getPlexMovieDetails(ipAddress, plexToken, ratingKey string) (audioLanguages
 	}
 	// convert map to slice
 	for _, value := range languages {
-		audioLanguages = append(audioLanguages, value)
+		movie.AudioLanguages = append(movie.AudioLanguages, value)
 	}
-	return audioLanguages
+	ch <- *movie
 }
 
 func FilterPlexMovies(movies []types.PlexMovie, filters types.PlexLookupFilters) []types.PlexMovie {
@@ -744,7 +758,7 @@ func GetPlexTV(ipAddress, libraryID, plexToken string) (tvShowList []types.PlexT
 	tvShowList = extractTVShows(response)
 	// now we need to get the episodes for each TV show
 	for i := range tvShowList {
-		tvShowList[i].Seasons = GetPlexTVSeasons(ipAddress, plexToken, tvShowList[i].RatingKey)
+		tvShowList[i].Seasons = getPlexTVSeasons(ipAddress, plexToken, tvShowList[i].RatingKey)
 	}
 	// remove TV shows with no seasons
 	var filteredTVShows []types.PlexTVShow
@@ -757,7 +771,7 @@ func GetPlexTV(ipAddress, libraryID, plexToken string) (tvShowList []types.PlexT
 	return filteredTVShows
 }
 
-func GetPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []types.PlexTVSeason) {
+func getPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []types.PlexTVSeason) {
 	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, ratingKey)
 
 	response, err := makePlexAPIRequest(url, plexToken)
@@ -769,43 +783,55 @@ func GetPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []type
 	seasonList = extractTVSeasons(response)
 	// os.WriteFile("seasons.xml", body, 0644)
 	// now we need to get the episodes for each TV show
+	ch := make(chan types.PlexTVSeason, len(seasonList))
+	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 	for i := range seasonList {
-		episodes := GetPlexTVEpisodes(ipAddress, plexToken, seasonList[i].RatingKey)
-		if len(episodes) > 0 {
-			seasonList[i].Episodes = episodes
-		}
+		semaphore <- struct{}{}
+		go func(i int) {
+			defer func() { <-semaphore }()
+			getPlexTVEpisodes(ipAddress, plexToken, &seasonList[i], ch)
+		}(i)
+	}
+
+	detailedSeasons := make([]types.PlexTVSeason, len(seasonList))
+	for i := range seasonList {
+		detailedSeasons[i] = <-ch
 	}
 	// remove seasons with no episodes
 	var filteredSeasons []types.PlexTVSeason
-	for i := range seasonList {
-		if len(seasonList[i].Episodes) < 1 {
+	for i := range detailedSeasons {
+		if len(detailedSeasons[i].Episodes) < 1 {
 			continue
 		}
 		// lets add all of the resolutions for the episodes
 		var listOfResolutions []string
-		for j := range seasonList[i].Episodes {
-			listOfResolutions = append(listOfResolutions, seasonList[i].Episodes[j].Resolution)
+		for j := range detailedSeasons[i].Episodes {
+			listOfResolutions = append(listOfResolutions, detailedSeasons[i].Episodes[j].Resolution)
 		}
 		// now we have all of the resolutions for the episodes
-		seasonList[i].LowestResolution = findLowestResolution(listOfResolutions)
+		detailedSeasons[i].LowestResolution = findLowestResolution(listOfResolutions)
 		// get the last episode added date
-		seasonList[i].LastEpisodeAdded = seasonList[i].Episodes[len(seasonList[i].Episodes)-1].DateAdded
-		filteredSeasons = append(filteredSeasons, seasonList[i])
+		detailedSeasons[i].LastEpisodeAdded = detailedSeasons[i].Episodes[len(detailedSeasons[i].Episodes)-1].DateAdded
+		filteredSeasons = append(filteredSeasons, detailedSeasons[i])
 	}
 	return filteredSeasons
 }
 
-func GetPlexTVEpisodes(ipAddress, plexToken, ratingKey string) (episodeList []types.PlexTVEpisode) {
-	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, ratingKey)
+func getPlexTVEpisodes(ipAddress, plexToken string, season *types.PlexTVSeason, ch chan<- types.PlexTVSeason) {
+	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, season.RatingKey)
 
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
 		fmt.Println("GetPlexTVEpisodes: Error making request:", err)
-		return episodeList
+		ch <- *season
+		return
 	}
 
-	episodeList = extractTVEpisodes(response)
-	return episodeList
+	showList := extractTVEpisodes(response)
+	if len(showList) > 0 {
+		season.Episodes = showList
+	}
+	ch <- *season
 }
 
 func extractTVShows(xmlString string) (showList []types.PlexTVShow) {

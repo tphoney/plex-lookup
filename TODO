@@ -10,8 +10,6 @@
 
 - music, a-ha/ash doesnt match as an artist why ?
 - when scraping movies, do we stop at the first best match ?
-- speed up plex fetch of movie details
-- speed up plex fetch of tv shows
 
 ## done
 
@@ -42,3 +40,5 @@
 - move language filtering out of plex search, should only happen in web tv & movie web pages
 - allow setting of amazon region in settings
 - allow setting of musicbrainz url in settings
+- speed up plex fetch of movie details
+- speed up plex fetch of tv shows

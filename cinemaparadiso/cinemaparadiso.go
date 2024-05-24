@@ -28,6 +28,7 @@ var (
 
 // nolint: dupl, nolintlint
 func GetCinemaParadisoMoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.SearchResults) {
+	numberMoviesProcessed = 0
 	ch := make(chan types.SearchResults, len(plexMovies))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 
@@ -47,6 +48,28 @@ func GetCinemaParadisoMoviesInParallel(plexMovies []types.PlexMovie) (searchResu
 	}
 	numberMoviesProcessed = 0 // job is done
 	return searchResults
+}
+
+func ScrapeMovieTitlesParallel(searchResults []types.SearchResults) []types.SearchResults {
+	numberMoviesProcessed = 0
+	ch := make(chan types.SearchResults, len(searchResults))
+	semaphore := make(chan struct{}, types.ConcurrencyLimit)
+
+	for i := range searchResults {
+		go func(i int) {
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			scrapeMovieTitle(&searchResults[i], ch)
+		}(i)
+	}
+	detailedSearchResults := make([]types.SearchResults, 0, len(searchResults))
+	for range searchResults {
+		result := <-ch
+		detailedSearchResults = append(detailedSearchResults, result)
+		numberMoviesProcessed++
+	}
+	numberMoviesProcessed = 0 // job is done
+	return detailedSearchResults
 }
 
 // nolint: dupl, nolintlint
@@ -85,7 +108,7 @@ func searchCinemaParadisoMovie(plexMovie *types.PlexMovie, movieSearchResult cha
 	result.PlexMovie = *plexMovie
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
-	rawData, err := makeSearchRequest(urlEncodedTitle)
+	rawData, err := makeRequest(result.SearchURL, http.MethodPost, fmt.Sprintf("form-search-field=%s", urlEncodedTitle))
 	if err != nil {
 		fmt.Println("Error making web request:", err)
 		movieSearchResult <- result
@@ -98,12 +121,53 @@ func searchCinemaParadisoMovie(plexMovie *types.PlexMovie, movieSearchResult cha
 	movieSearchResult <- result
 }
 
+func scrapeMovieTitle(result *types.SearchResults, movieSearchResult chan<- types.SearchResults) {
+	// now we can get the series information for each best match
+	for i := range result.MovieSearchResults {
+		if !result.MovieSearchResults[i].BestMatch {
+			continue
+		}
+		rawData, err := makeRequest(result.MovieSearchResults[i].URL, http.MethodGet, "")
+		if err != nil {
+			fmt.Println("Error making web request:", err)
+			movieSearchResult <- *result
+			return
+		}
+		// search for the release date <dt>Release Date:</dt><dd>29/07/2013</dd>
+		r := regexp.MustCompile(`<section id="format-(.*?)".*?Release Date:<\/dt><dd>(.*?)<\/dd>`)
+		// this will match multiple times for different formats eg DVD, Blu-ray, 4K
+		match := r.FindAllStringSubmatch(rawData, -1)
+		discReleases := make(map[string]time.Time)
+		for i := range match {
+			switch match[i][1] {
+			case "1":
+				discReleases[types.DiskDVD], _ = time.Parse("02/01/2006", match[i][2])
+			case "3":
+				discReleases[types.DiskBluray], _ = time.Parse("02/01/2006", match[i][2])
+			case "14":
+				discReleases[types.Disk4K], _ = time.Parse("02/01/2006", match[i][2])
+			}
+		}
+		_, ok := discReleases[result.MovieSearchResults[i].Format]
+		if ok {
+			result.MovieSearchResults[i].ReleaseDate = discReleases[result.MovieSearchResults[i].Format]
+		} else {
+			result.MovieSearchResults[i].ReleaseDate = time.Time{}
+		}
+		// check if the release date is after the date the movie was added to plexs
+		if result.MovieSearchResults[i].ReleaseDate.After(result.PlexMovie.DateAdded) {
+			result.MovieSearchResults[i].NewRelease = true
+		}
+	}
+	movieSearchResult <- *result
+}
+
 func searchCinemaParadisoTV(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.SearchResults) {
 	result := types.SearchResults{}
 	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)
 	result.PlexTVShow = *plexTVShow
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
-	rawData, err := makeSearchRequest(urlEncodedTitle)
+	rawData, err := makeRequest(result.SearchURL, http.MethodPost, fmt.Sprintf("form-search-field=%s", urlEncodedTitle))
 	if err != nil {
 		fmt.Println("searchCinemaParadisoTV: Error making web request:", err)
 		tvSearchResult <- result
@@ -124,60 +188,13 @@ func searchCinemaParadisoTV(plexTVShow *types.PlexTVShow, tvSearchResult chan<- 
 
 func findTVSeriesInfo(seriesURL string) (tvSeries []types.TVSeasonResult, err error) {
 	// make a request to the url
-	req, err := http.NewRequestWithContext(context.Background(), "GET", seriesURL, bytes.NewBuffer([]byte{}))
+	rawData, err := makeRequest(seriesURL, http.MethodGet, "")
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		fmt.Println("findTVSeriesInfo: Error making web request:", err)
 		return tvSeries, err
 	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return tvSeries, err
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return tvSeries, err
-	}
-	rawData := string(body)
-	// write the raw data to a file
-	// os.WriteFile("series.html", body, 0644)
 	tvSeries = findTVSeriesInResponse(rawData)
 	return tvSeries, nil
-}
-
-func makeSearchRequest(urlEncodedTitle string) (rawResponse string, err error) {
-	rawQuery := []byte(fmt.Sprintf("form-search-field=%s", urlEncodedTitle))
-	req, err := http.NewRequestWithContext(context.Background(), "POST", cinemaparadisoSearchURL, bytes.NewBuffer(rawQuery))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded") // Assuming form data
-
-	if err != nil {
-		fmt.Println("Error creating request:", err)
-		return rawResponse, err
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("Error sending request:", err)
-		return rawResponse, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return rawResponse, err
-	}
-	rawData := string(body)
-	// write the raw data to a file
-	// os.WriteFile("search.html", body, 0644)
-	return rawData, nil
 }
 
 func findTVSeriesInResponse(response string) (tvSeries []types.TVSeasonResult) {
@@ -209,28 +226,12 @@ func findTVSeriesInResponse(response string) (tvSeries []types.TVSeasonResult) {
 }
 
 func makeSeriesRequest(tv types.TVSeasonResult) (types.TVSeasonResult, error) {
-	content := []byte(fmt.Sprintf("FilmID=%s", tv.URL))
-	req, err := http.NewRequestWithContext(context.Background(), "POST", cinemaparadisoSeriesURL, bytes.NewBuffer(content))
+	rawData, err := makeRequest(cinemaparadisoSeriesURL, http.MethodPost, fmt.Sprintf("FilmID=%s", tv.URL))
 	if err != nil {
-		return tv, fmt.Errorf("makeSeriesRequest: error creating request: %w", err)
+		return tv, fmt.Errorf("makeSeriesRequest: error making request: %w", err)
 	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return tv, fmt.Errorf("makeSeriesRequest: error sending request: %w", err)
-	}
-
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return tv, fmt.Errorf("makeSeriesRequest: error reading response body: %w", err)
-	}
-	rawData := string(body)
 	// write the raw data to a file
 	r := regexp.MustCompile(`{.."Media..":.."(.*?)",.."ReleaseDate..":.."(.*?)"}`)
-
 	// Find all matches
 	matches := r.FindAllStringSubmatch(rawData, -1)
 	for _, match := range matches {
@@ -301,6 +302,42 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 	}
 
 	return movieResults, tvResults
+}
+
+func makeRequest(urlEncodedTitle, method, content string) (rawResponse string, err error) {
+	var req *http.Request
+	switch method {
+	case http.MethodPost:
+		req, err = http.NewRequestWithContext(context.Background(), http.MethodPost, urlEncodedTitle, bytes.NewBuffer([]byte(content)))
+		if strings.Contains(content, "form-search-field") {
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded") // Assuming form data
+		}
+	case http.MethodGet:
+		req, err = http.NewRequestWithContext(context.Background(), http.MethodGet, urlEncodedTitle, http.NoBody)
+	}
+
+	if err != nil {
+		fmt.Println("Error creating request:", err)
+		return rawResponse, err
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return rawResponse, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return rawResponse, err
+	}
+	rawData := string(body)
+	// write the raw data to a file
+	// os.WriteFile("search.html", body, 0644)
+	return rawData, nil
 }
 
 func extractDiscFormats(movieEntry string) []string {

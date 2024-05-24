@@ -69,7 +69,7 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	// filter plex movies based on preferences, eg. only movies with a certain resolution
 	filteredPlexMovies := plex.FilterPlexMovies(plexMovies, plexFilters)
 	//nolint: gocritic
-	// filteredPlexMovies = filteredPlexMovies[:100]
+	// filteredPlexMovies = filteredPlexMovies[:50]
 	//lint: gocritic
 	jobRunning = true
 	numberOfMoviesProcessed = 0
@@ -83,6 +83,9 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
 		if lookup == "cinemaParadiso" {
 			searchResults = cinemaparadiso.GetCinemaParadisoMoviesInParallel(filteredPlexMovies)
+			if lookupFilters.NewerVersion {
+				searchResults = cinemaparadiso.ScrapeMovieTitlesParallel(searchResults)
+			}
 		} else {
 			searchResults = amazon.SearchAmazonMoviesInParallel(filteredPlexMovies, lookupFilters.AudioLanguage, c.Config.AmazonRegion)
 			// if we are filtering by newer version, we need to search again

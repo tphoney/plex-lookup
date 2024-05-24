@@ -136,3 +136,31 @@ func TestSearchCinemaParadisoMovies(t *testing.T) {
 		t.Errorf("Expected searchurl, but got none")
 	}
 }
+func TestScrapeMovieTitlesParallel(t *testing.T) {
+	searchResults := []types.SearchResults{
+		{
+			PlexMovie: types.PlexMovie{
+				Title: "Elf",
+				Year:  "2021",
+			},
+			MovieSearchResults: []types.MovieSearchResult{
+				{
+					URL:       "https://www.cinemaparadiso.co.uk/rentals/elf-10167.html",
+					Format:    "Blu-ray",
+					Year:      "2003",
+					BestMatch: true,
+				},
+			},
+		},
+	}
+
+	detailedSearchResults := ScrapeMovieTitlesParallel(searchResults)
+
+	if len(detailedSearchResults) != len(searchResults) {
+		t.Errorf("Expected %d detailed search results, but got %d", len(searchResults), len(detailedSearchResults))
+	}
+	// we should have a release date
+	if detailedSearchResults[0].MovieSearchResults[0].ReleaseDate.IsZero() {
+		t.Errorf("Expected release date, but got none")
+	}
+}

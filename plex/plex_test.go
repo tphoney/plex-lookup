@@ -87,7 +87,7 @@ func TestDebugGetPlexTVSeasons(t *testing.T) {
 	if plexIP == "" || plexTVLibraryID == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
-	result := GetPlexTVSeasons(plexIP, plexToken, "5383")
+	result := getPlexTVSeasons(plexIP, plexToken, "5383")
 
 	if len(result) == 0 {
 		t.Errorf("Expected at least one TV show, but got %d", len(result))

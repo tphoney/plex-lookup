@@ -1,6 +1,7 @@
 package spotify
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -12,15 +13,41 @@ var (
 	spotifyClientSecret = os.Getenv("SPOTIFY_CLIENT_SECRET")
 )
 
+func TestGetArtistsInParallel(t *testing.T) {
+	if spotifyClientID == "" || spotifyClientSecret == "" {
+		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
+	}
+	token, err := SpotifyOAuthToken(context.Background(), spotifyClientID, spotifyClientSecret)
+	if err != nil {
+		t.Errorf("GetSpotifyToken() returned an error: %s", err)
+	}
+
+	plexArtists := []types.PlexMusicArtist{
+		{Name: "The Beatles"},
+		{Name: "The Rolling Stones"},
+		{Name: "The Who"},
+		{Name: "The Kinks"},
+	}
+
+	got := GetArtistsInParallel(plexArtists, token)
+
+	if len(got) != len(plexArtists) {
+		t.Errorf("GetSpotifyArtistsInParallel() returned %d results, expected %d", len(got), len(plexArtists))
+	}
+}
+
 func TestSearchSpotifyArtist(t *testing.T) {
 	if spotifyClientID == "" || spotifyClientSecret == "" {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
+	token, err := SpotifyOAuthToken(context.Background(), spotifyClientID, spotifyClientSecret)
+	if err != nil {
+		t.Errorf("GetSpotifyToken() returned an error: %s", err)
+	}
 
 	plexArtist := &types.PlexMusicArtist{Name: "The Beatles"}
-
 	ch := make(chan *types.SearchResults, 1)
-	SearchSpotifyArtist(plexArtist, spotifyClientID, spotifyClientSecret, ch)
+	searchSpotifyArtist(plexArtist, token, ch)
 
 	got := <-ch
 	if len(got.MusicSearchResults) != 1 {
@@ -49,10 +76,15 @@ func TestSearchSpotifyArtistDebug(t *testing.T) {
 	if spotifyClientID == "" || spotifyClientSecret == "" {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
+	token, err := SpotifyOAuthToken(context.Background(), spotifyClientID, spotifyClientSecret)
+	if err != nil {
+		t.Errorf("GetSpotifyToken() returned an error: %s", err)
+	}
+
 	plexArtist := &types.PlexMusicArtist{Name: "Angel Olsen"}
 
 	ch := make(chan *types.SearchResults, 1)
-	SearchSpotifyArtist(plexArtist, spotifyClientID, spotifyClientSecret, ch)
+	searchSpotifyArtist(plexArtist, token, ch)
 
 	got := <-ch
 	t.Logf("SearchSpotifyArtist() = %+v", got)
@@ -61,6 +93,10 @@ func TestSearchSpotifyArtistDebug(t *testing.T) {
 func TestSearchSpotifyAlbums(t *testing.T) {
 	if spotifyClientID == "" || spotifyClientSecret == "" {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
+	}
+	token, err := SpotifyOAuthToken(context.Background(), spotifyClientID, spotifyClientSecret)
+	if err != nil {
+		t.Errorf("GetSpotifyToken() returned an error: %s", err)
 	}
 	type args struct {
 		m *types.SearchResults
@@ -81,7 +117,7 @@ func TestSearchSpotifyAlbums(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ch := make(chan *types.SearchResults, 1)
-			SearchSpotifyAlbum(tt.args.m, spotifyClientID, spotifyClientSecret, ch)
+			searchSpotifyAlbum(tt.args.m, token, ch)
 			got := <-ch
 
 			if len(got.MusicSearchResults[0].Albums) != tt.albumCount {
@@ -95,6 +131,11 @@ func TestSearchSpotifyAlbumsDebug(t *testing.T) {
 	if spotifyClientID == "" || spotifyClientSecret == "" {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
+	token, err := SpotifyOAuthToken(context.Background(), spotifyClientID, spotifyClientSecret)
+	if err != nil {
+		t.Errorf("GetSpotifyToken() returned an error: %s", err)
+	}
+
 	want := types.SearchResults{
 		MusicSearchResults: []types.MusicArtistSearchResult{
 			{
@@ -105,7 +146,7 @@ func TestSearchSpotifyAlbumsDebug(t *testing.T) {
 		},
 	}
 	ch := make(chan *types.SearchResults, 1)
-	SearchSpotifyAlbum(&want, spotifyClientID, spotifyClientSecret, ch)
+	searchSpotifyAlbum(&want, token, ch)
 	got := <-ch
 
 	t.Logf("SearchSpotifyAlbum() = %v", got.MusicSearchResults)
@@ -115,6 +156,11 @@ func TestSpotifyLookupSimilarArtists(t *testing.T) {
 	if spotifyClientID == "" || spotifyClientSecret == "" {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
+	token, err := SpotifyOAuthToken(context.Background(), spotifyClientID, spotifyClientSecret)
+	if err != nil {
+		t.Errorf("GetSpotifyToken() returned an error: %s", err)
+	}
+
 	tests := []struct {
 		name         string
 		searchResult types.SearchResults
@@ -132,7 +178,7 @@ func TestSpotifyLookupSimilarArtists(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ch := make(chan SimilarArtistsResponse, 1)
 			searchResult := tt.searchResult // Create a local variable to avoid implicit memory aliasing
-			SearchSpotifySimilarArtist(&searchResult, spotifyClientID, spotifyClientSecret, ch)
+			searchSpotifySimilarArtist(&searchResult, token, ch)
 			got := <-ch
 			if len(got.Artists) != tt.wantLength {
 				t.Errorf("SpotifyLookupSimilarArtists() = %v, want %v", len(got.Artists), tt.wantLength)

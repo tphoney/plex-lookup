@@ -47,7 +47,9 @@ func TestSearchAmazon(t *testing.T) {
 	if len(result) == 0 {
 		t.Errorf("Expected search results, but got none")
 	}
-	fmt.Println(result)
+	if len(result) == 0 {
+		t.Errorf("Expected search results, but got none")
+	}
 }
 
 func TestSearchAmazonTV(t *testing.T) {

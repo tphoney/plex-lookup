@@ -69,7 +69,7 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	// filter plex movies based on preferences, eg. only movies with a certain resolution
 	filteredPlexMovies := plex.FilterPlexMovies(plexMovies, plexFilters)
 	//nolint: gocritic
-	// filteredPlexMovies = filteredPlexMovies[:20]
+	// filteredPlexMovies = filteredPlexMovies[:30]
 	//lint: gocritic
 	jobRunning = true
 	numberOfMoviesProcessed = 0

@@ -5,6 +5,7 @@
 - new release for amazon tv series
 - allow amazon tv search for indivdual series
 - new release for cinema-paradiso tv / movie
+- improve cinema-paradiso movie scrape, many search results are the same page. wasted processing
 
 ## bugs
 

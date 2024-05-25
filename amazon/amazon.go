@@ -137,7 +137,6 @@ func scrapeTitles(searchResult *types.SearchResults, region string, ch chan<- ty
 func searchAmazonMovie(plexMovie *types.PlexMovie, language, region string, movieSearchResult chan<- types.SearchResults) {
 	result := types.SearchResults{}
 	result.PlexMovie = *plexMovie
-	result.SearchURL = ""
 
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
 	amazonURL := amazonURL + urlEncodedTitle
@@ -150,6 +149,7 @@ func searchAmazonMovie(plexMovie *types.PlexMovie, language, region string, movi
 	}
 	amazonURL += "&submit=Search&action=search"
 
+	result.SearchURL = amazonURL
 	rawData, err := makeRequest(amazonURL, region)
 	if err != nil {
 		fmt.Println("searchAmazonMovie: Error making request:", err)

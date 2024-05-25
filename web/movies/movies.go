@@ -69,7 +69,7 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	// filter plex movies based on preferences, eg. only movies with a certain resolution
 	filteredPlexMovies := plex.FilterPlexMovies(plexMovies, plexFilters)
 	//nolint: gocritic
-	// filteredPlexMovies = filteredPlexMovies[:50]
+	// filteredPlexMovies = filteredPlexMovies[:20]
 	//lint: gocritic
 	jobRunning = true
 	numberOfMoviesProcessed = 0
@@ -128,8 +128,11 @@ func renderTable(searchResults []types.SearchResults) (tableRows string) {
 	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="string"><strong>Plex Audio</strong></th><th data-sort="string"><strong>Plex Resolution</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th data-sort="string"><strong>New release</strong></th><th><strong>Available Discs</strong></th></tr></thead><tbody>` //nolint: lll
 	for i := range searchResults {
 		newRelease := "no"
-		if len(searchResults[i].MovieSearchResults) > 0 && searchResults[i].MovieSearchResults[0].NewRelease {
-			newRelease = "yes"
+		for j := range searchResults[i].MovieSearchResults {
+			if searchResults[i].MovieSearchResults[j].NewRelease {
+				newRelease = "yes"
+				break
+			}
 		}
 		tableRows += fmt.Sprintf(
 			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%s</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td>`,
@@ -139,7 +142,7 @@ func renderTable(searchResults []types.SearchResults) (tableRows string) {
 			tableRows += "<td>"
 			for _, result := range searchResults[i].MovieSearchResults {
 				if result.BestMatch && (result.Format == types.DiskBluray || result.Format == types.Disk4K) {
-					tableRows += fmt.Sprintf(`<a href=%q target="_blank">%v</a> `, result.URL, result.UITitle)
+					tableRows += fmt.Sprintf(`<a href=%q target="_blank">%s - %s</a><br>`, result.URL, result.FoundTitle, result.Format)
 				}
 			}
 			tableRows += "</td>"

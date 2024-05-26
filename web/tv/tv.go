@@ -67,6 +67,7 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 			tvSearchResults = cinemaparadiso.TVInParallel(plexTV)
 		} else {
 			tvSearchResults = amazon.TVInParallel(plexTV, filters.AudioLanguage, c.Config.AmazonRegion)
+			tvSearchResults = amazon.ScrapeTitlesParallel(tvSearchResults, c.Config.AmazonRegion, true)
 		}
 		tvJobRunning = false
 		fmt.Printf("\nProcessed %d TV Shows in %v\n", totalTV, time.Since(startTime))

@@ -87,7 +87,7 @@ func TestScrapeTitlesParallel(t *testing.T) {
 				},
 			},
 		},
-	}, amazonRegion)
+	}, amazonRegion, false)
 
 	if len(result) == 0 {
 		t.Errorf("Expected search results, but got none")

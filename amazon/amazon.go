@@ -83,15 +83,24 @@ func GetTVJobProgress() int {
 	return numberTVProcessed
 }
 
-func ScrapeTitlesParallel(searchResults []types.SearchResults, region string) (scrapedResults []types.SearchResults) {
-	numberMoviesProcessed = 0
+func ScrapeTitlesParallel(searchResults []types.SearchResults, region string, isTV bool) (scrapedResults []types.SearchResults) {
+	// are we tv or movie
+	if isTV {
+		numberTVProcessed = 0
+	} else {
+		numberMoviesProcessed = 0
+	}
 	ch := make(chan types.SearchResults, len(searchResults))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 	for i := range searchResults {
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			scrapeTitles(&searchResults[i], region, ch)
+			if isTV {
+				scrapeTVTitles(&searchResults[i], region, ch)
+			} else {
+				scrapeMovieTitles(&searchResults[i], region, ch)
+			}
 		}(i)
 	}
 
@@ -99,14 +108,23 @@ func ScrapeTitlesParallel(searchResults []types.SearchResults, region string) (s
 	for range searchResults {
 		result := <-ch
 		scrapedResults = append(scrapedResults, result)
-		numberMoviesProcessed++
+		if isTV {
+			numberTVProcessed++
+		} else {
+			numberMoviesProcessed++
+		}
 	}
-	numberMoviesProcessed = 0
-	fmt.Println("amazon Movie titles scraped:", len(scrapedResults))
+	if isTV {
+		numberTVProcessed = 0
+	} else {
+		numberMoviesProcessed = 0
+	}
+	fmt.Println("amazon titles scraped:", len(scrapedResults))
 	return scrapedResults
 }
 
-func scrapeTitles(searchResult *types.SearchResults, region string, ch chan<- types.SearchResults) {
+// nolint: dupl, nolintlint
+func scrapeMovieTitles(searchResult *types.SearchResults, region string, ch chan<- types.SearchResults) {
 	dateAdded := searchResult.PlexMovie.DateAdded
 	for i := range searchResult.MovieSearchResults {
 		// this is to limit the number of requests
@@ -129,6 +147,35 @@ func scrapeTitles(searchResult *types.SearchResults, region string, ch chan<- ty
 		}
 		if searchResult.MovieSearchResults[i].ReleaseDate.After(dateAdded) {
 			searchResult.MovieSearchResults[i].NewRelease = true
+		}
+	}
+	ch <- *searchResult
+}
+
+// nolint: dupl, nolintlint
+func scrapeTVTitles(searchResult *types.SearchResults, region string, ch chan<- types.SearchResults) {
+	dateAdded := searchResult.PlexTVShow.DateAdded
+	for i := range searchResult.TVSearchResults {
+		// this is to limit the number of requests
+		if !searchResult.TVSearchResults[i].BestMatch {
+			continue
+		}
+		rawData, err := makeRequest(searchResult.TVSearchResults[i].URL, region)
+		if err != nil {
+			fmt.Println("scrapeTitle: Error making request:", err)
+			ch <- *searchResult
+			return
+		}
+		// Find the release date
+		searchResult.TVSearchResults[i].ReleaseDate = time.Time{} // default to zero time
+		r := regexp.MustCompile(`<a class="grey noline" alt=".*">(.*?)</a></span>`)
+		match := r.FindStringSubmatch(rawData)
+		if match != nil {
+			stringDate := match[1]
+			searchResult.TVSearchResults[i].ReleaseDate, _ = time.Parse("Jan 02, 2006", stringDate)
+		}
+		if searchResult.TVSearchResults[i].ReleaseDate.After(dateAdded) {
+			searchResult.TVSearchResults[i].NewRelease = true
 		}
 	}
 	ch <- *searchResult

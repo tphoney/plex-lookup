@@ -57,19 +57,20 @@ func TestSearchAmazonTV(t *testing.T) {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
 	show := types.PlexTVShow{
-		Title: "Friends",
-		Year:  "1994",
+		// Title: "Friends",
+		// Year:  "1994",
 		// Title: "Charmed",
 		// Year:  "1998",
 		// Title: "Adventure Time",
 		// Year:  "2010",
+		Title: "Star Trek: Enterprise",
+		Year:  "2001",
 	}
 	result := TVInParallel([]types.PlexTVShow{show}, "", amazonRegion)
 
 	if len(result) == 0 {
 		t.Errorf("Expected search results, but got none")
 	}
-	fmt.Println(result)
 }
 
 func TestScrapeTitlesParallel(t *testing.T) {

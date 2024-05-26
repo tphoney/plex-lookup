@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,6 +24,52 @@ const (
 var (
 	numberMoviesProcessed int = 0
 	numberTVProcessed     int = 0
+	//nolint: mnd
+	seasonNumberToInt = map[string]int{
+		"one":       1,
+		"two":       2,
+		"three":     3,
+		"four":      4,
+		"five":      5,
+		"six":       6,
+		"seven":     7,
+		"eight":     8,
+		"nine":      9,
+		"ten":       10,
+		"eleven":    11,
+		"twelve":    12,
+		"thirteen":  13,
+		"fourteen":  14,
+		"fifteen":   15,
+		"sixteen":   16,
+		"seventeen": 17,
+		"eighteen":  18,
+		"nineteen":  19,
+		"twenty":    20,
+	}
+	//nolint: mnd
+	ordinalNumberToSeason = map[string]int{
+		"first season":       1,
+		"second season":      2,
+		"third season":       3,
+		"fourth season":      4,
+		"fifth season":       5,
+		"sixth season":       6,
+		"seventh season":     7,
+		"eighth season":      8,
+		"ninth season":       9,
+		"tenth season":       10,
+		"eleventh season":    11,
+		"twelfth season":     12,
+		"thirteenth season":  13,
+		"fourteenth season":  14,
+		"fifteenth season":   15,
+		"sixteenth season":   16,
+		"seventeenth season": 17,
+		"eighteenth season":  18,
+		"nineteenth season":  19,
+		"twentieth season":   20,
+	}
 )
 
 // nolint: dupl, nolintlint
@@ -215,7 +262,7 @@ func searchTV(plexTVShow *types.PlexTVShow, language, region string, tvSearchRes
 	result.PlexTVShow = *plexTVShow
 	result.SearchURL = amazonURL
 
-	urlEncodedTitle := url.QueryEscape(fmt.Sprintf("%s complete series", plexTVShow.Title)) // complete series
+	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)
 	amazonURL := amazonURL + urlEncodedTitle
 	// this searches for the movie in a language
 	switch language {
@@ -282,13 +329,17 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 					movieResults = append(movieResults, types.MovieSearchResult{
 						URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle, UITitle: format})
 				} else {
-					boxSet := false
-					if strings.Contains(foundTitle, ": The Complete Series") {
-						foundTitle = strings.TrimSuffix(foundTitle, ": The Complete Series")
-						boxSet = true
+					decipheredTitle, number, boxSet := decipherTVName(foundTitle)
+					// split year
+					tvResult := types.TVSearchResult{
+						URL: returnURL, Format: []string{format}, Year: year, FoundTitle: decipheredTitle, UITitle: decipheredTitle, BoxSet: boxSet}
+
+					if boxSet {
+						tvResults = append(tvResults, tvResult)
+					} else if number != -1 {
+						tvResult.Seasons = append(tvResult.Seasons, types.TVSeasonResult{URL: returnURL, Format: format, Number: number})
+						tvResults = append(tvResults, tvResult)
 					}
-					tvResults = append(tvResults, types.TVSearchResult{
-						URL: returnURL, Format: []string{format}, Year: year, FoundTitle: foundTitle, UITitle: foundTitle, BoxSet: boxSet})
 				}
 			}
 			// remove the movie entry from the response
@@ -337,4 +388,47 @@ func makeRequest(inputURL, region string) (response string, err error) {
 
 	rawResponse := string(body)
 	return rawResponse, nil
+}
+
+func decipherTVName(name string) (title string, number int, boxset bool) {
+	parts := strings.Split(name, ":")
+	title = parts[0]
+	if len(parts) == 1 {
+		//nolint: gocritic
+		// fmt.Printf("warn: decipherTVName, no colon%q\n", name)
+		return title, -1, false
+	}
+	// everything after the first colon
+	seasonBlock := strings.Join(parts[1:], "")
+	seasonBlock = strings.ToLower(seasonBlock)
+	if strings.Contains(seasonBlock, "complete series") || strings.Contains(seasonBlock, "complete seasons") {
+		return title, number, true
+	}
+	// does the second part have a number as an integer or as a word.
+	r := regexp.MustCompile(`seasons?\ (\d+)`)
+	match := r.FindStringSubmatch(seasonBlock)
+	if len(match) > 1 {
+		// var err error
+		number, _ = strconv.Atoi(match[1])
+		//nolint: gocritic
+		// if err != nil {
+		//  fmt.Printf("warn: decipherTVName, integer not converted%q\n", name)
+		// }
+		return title, number, false
+	}
+
+	for k, v := range seasonNumberToInt {
+		if strings.Contains(seasonBlock, ("season "+k)) || strings.Contains(seasonBlock, ("seasons "+k)) {
+			return title, v, false
+		}
+	}
+
+	for k, v := range ordinalNumberToSeason {
+		if strings.Contains(seasonBlock, k) {
+			return title, v, false
+		}
+	}
+	//nolint: gocritic
+	// fmt.Printf("warn: decipherTVName, got to the end%q\n", name)
+	return title, -1, false
 }

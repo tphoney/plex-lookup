@@ -2,7 +2,6 @@
 
 ## features
 
-- allow amazon tv search for indivdual series
 - allow the use of playlists for finding music / TV / movies
 
 ## bugs
@@ -43,3 +42,4 @@
 - when scraping movies, do we stop at the first best match ?
 - new release for cinema-paradiso tv
 - new release for amazon tv series
+- allow amazon tv search for indivdual series

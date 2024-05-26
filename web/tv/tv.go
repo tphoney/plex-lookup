@@ -51,7 +51,7 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	}
 	filters = newFilters
 	//nolint: gocritic
-	// plexTV = plexTV[:30]
+	// plexTV = plexTV[:10]
 	//lint: gocritic
 
 	tvJobRunning = true
@@ -64,7 +64,7 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		startTime := time.Now()
 		if lookup == "cinemaParadiso" {
-			tvSearchResults = cinemaparadiso.GetCinemaParadisoTVInParallel(plexTV)
+			tvSearchResults = cinemaparadiso.TVInParallel(plexTV)
 		} else {
 			tvSearchResults = amazon.SearchAmazonTVInParallel(plexTV, filters.AudioLanguage, c.Config.AmazonRegion)
 		}
@@ -117,10 +117,9 @@ func renderTVTable(searchResults []types.SearchResults) (tableRows string) {
 							searchResults[i].TVSearchResults[j].URL, searchResults[i].TVSearchResults[j].Format[0])
 					} else {
 						for _, season := range searchResults[i].TVSearchResults[j].Seasons {
-							disks := fmt.Sprintf("%v", season.Format)
 							tableRows += fmt.Sprintf(
 								`<a href=%q target="_blank">Season %d: %v`,
-								searchResults[i].TVSearchResults[j].URL, season.Number, disks)
+								searchResults[i].TVSearchResults[j].URL, season.Number, season.Format)
 							tableRows += "</a><br>"
 						}
 					}
@@ -198,18 +197,16 @@ func cleanTVSeasons(original, toRemove []types.TVSeasonResult) []types.TVSeasonR
 	return cleaned
 }
 
-func discBeatsPlexResolution(lowestPlexResolution string, format []string) bool {
-	for i := range format {
-		switch format[i] {
-		case types.Disk4K:
-			return true // 4K beats everything
-		case types.DiskBluray:
-			if slices.Contains([]string{types.PlexResolution1080, types.PlexResolution720, // HD
-				types.PlexResolution576, types.PlexResolution480, types.PlexResolution240, types.PlexResolutionSD}, // SD
-				lowestPlexResolution) {
-				return true
-			}
-		} // DVD is not considered
-	}
+func discBeatsPlexResolution(lowestPlexResolution, format string) bool {
+	switch format {
+	case types.Disk4K:
+		return true // 4K beats everything
+	case types.DiskBluray:
+		if slices.Contains([]string{types.PlexResolution1080, types.PlexResolution720, // HD
+			types.PlexResolution576, types.PlexResolution480, types.PlexResolution240, types.PlexResolutionSD}, // SD
+			lowestPlexResolution) {
+			return true
+		}
+	} // DVD is not considered
 	return false
 }

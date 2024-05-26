@@ -114,7 +114,7 @@ type TVSearchResult struct {
 type TVSeasonResult struct {
 	Number      int
 	URL         string
-	Format      []string
+	Format      string
 	ReleaseDate time.Time
 }
 

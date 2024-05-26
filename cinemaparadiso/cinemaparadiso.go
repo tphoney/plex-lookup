@@ -27,7 +27,7 @@ var (
 )
 
 // nolint: dupl, nolintlint
-func GetCinemaParadisoMoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.SearchResults) {
+func MoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.SearchResults) {
 	numberMoviesProcessed = 0
 	ch := make(chan types.SearchResults, len(plexMovies))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
@@ -50,7 +50,7 @@ func GetCinemaParadisoMoviesInParallel(plexMovies []types.PlexMovie) (searchResu
 	return searchResults
 }
 
-func ScrapeMovieTitlesParallel(searchResults []types.SearchResults) []types.SearchResults {
+func ScrapeMoviesParallel(searchResults []types.SearchResults) []types.SearchResults {
 	numberMoviesProcessed = 0
 	ch := make(chan types.SearchResults, len(searchResults))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
@@ -73,7 +73,7 @@ func ScrapeMovieTitlesParallel(searchResults []types.SearchResults) []types.Sear
 }
 
 // nolint: dupl, nolintlint
-func GetCinemaParadisoTVInParallel(plexTVShows []types.PlexTVShow) (searchResults []types.SearchResults) {
+func TVInParallel(plexTVShows []types.PlexTVShow) (searchResults []types.SearchResults) {
 	ch := make(chan types.SearchResults, len(plexTVShows))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 
@@ -81,7 +81,7 @@ func GetCinemaParadisoTVInParallel(plexTVShows []types.PlexTVShow) (searchResult
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			searchCinemaParadisoTV(&plexTVShows[i], ch)
+			searchTVShow(&plexTVShows[i], ch)
 		}(i)
 	}
 
@@ -110,7 +110,7 @@ func searchCinemaParadisoMovie(plexMovie *types.PlexMovie, movieSearchResult cha
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
 	rawData, err := makeRequest(result.SearchURL, http.MethodPost, fmt.Sprintf("form-search-field=%s", urlEncodedTitle))
 	if err != nil {
-		fmt.Println("Error making web request:", err)
+		fmt.Println("searchCinemaParadisoMovie:", err)
 		movieSearchResult <- result
 		return
 	}
@@ -122,14 +122,14 @@ func searchCinemaParadisoMovie(plexMovie *types.PlexMovie, movieSearchResult cha
 }
 
 func scrapeMovieTitle(result *types.SearchResults, movieSearchResult chan<- types.SearchResults) {
-	// now we can get the series information for each best match
+	// now we can get the season information for each best match
 	for i := range result.MovieSearchResults {
 		if !result.MovieSearchResults[i].BestMatch {
 			continue
 		}
 		rawData, err := makeRequest(result.MovieSearchResults[i].URL, http.MethodGet, "")
 		if err != nil {
-			fmt.Println("Error making web request:", err)
+			fmt.Println("scrapeMovieTitle:", err)
 			movieSearchResult <- *result
 			return
 		}
@@ -162,14 +162,14 @@ func scrapeMovieTitle(result *types.SearchResults, movieSearchResult chan<- type
 	movieSearchResult <- *result
 }
 
-func searchCinemaParadisoTV(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.SearchResults) {
+func searchTVShow(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.SearchResults) {
 	result := types.SearchResults{}
 	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)
 	result.PlexTVShow = *plexTVShow
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
 	rawData, err := makeRequest(result.SearchURL, http.MethodPost, fmt.Sprintf("form-search-field=%s", urlEncodedTitle))
 	if err != nil {
-		fmt.Println("searchCinemaParadisoTV: Error making web request:", err)
+		fmt.Println("searchTVShow: Error making web request:", err)
 		tvSearchResult <- result
 		return
 	}
@@ -177,65 +177,70 @@ func searchCinemaParadisoTV(plexTVShow *types.PlexTVShow, tvSearchResult chan<- 
 	_, tvFound := findTitlesInResponse(rawData, false)
 	result.TVSearchResults = tvFound
 	result = utils.MarkBestMatch(&result)
-	// now we can get the series information for each best match
+	// now we can get the season information for each best match
 	for i := range result.TVSearchResults {
 		if result.TVSearchResults[i].BestMatch {
-			result.TVSearchResults[i].Seasons, _ = findTVSeriesInfo(result.TVSearchResults[i].URL)
+			result.TVSearchResults[i].Seasons, _ = findTVSeasonInfo(result.TVSearchResults[i].URL)
 		}
 	}
 	tvSearchResult <- result
 }
 
-func findTVSeriesInfo(seriesURL string) (tvSeries []types.TVSeasonResult, err error) {
+func findTVSeasonInfo(seriesURL string) (tvSeasons []types.TVSeasonResult, err error) {
 	// make a request to the url
 	rawData, err := makeRequest(seriesURL, http.MethodGet, "")
 	if err != nil {
-		fmt.Println("findTVSeriesInfo: Error making web request:", err)
-		return tvSeries, err
+		fmt.Println("findTVSeasonInfo: Error making web request:", err)
+		return tvSeasons, err
 	}
-	tvSeries = findTVSeriesInResponse(rawData)
-	return tvSeries, nil
+	tvSeasons = findTVSeasonsInResponse(rawData)
+	return tvSeasons, nil
 }
 
-func findTVSeriesInResponse(response string) (tvSeries []types.TVSeasonResult) {
+func findTVSeasonsInResponse(response string) (tvSeasons []types.TVSeasonResult) {
 	// look for the series in the response
 	r := regexp.MustCompile(`<li data-filmId="(\d*)">`)
 	match := r.FindAllStringSubmatch(response, -1)
 	for i, m := range match {
-		tvSeries = append(tvSeries, types.TVSeasonResult{Number: i, URL: m[1]})
+		tvSeasons = append(tvSeasons, types.TVSeasonResult{Number: i, URL: m[1]})
 	}
 	// remove the first entry as it is general information
-	results := make([]types.TVSeasonResult, 0, len(tvSeries))
-	if len(tvSeries) > 0 {
-		tvSeries = tvSeries[1:]
+	scrapedTVSeasonResults := make([]types.TVSeasonResult, 0, len(tvSeasons))
+	if len(tvSeasons) > 0 {
+		tvSeasons = tvSeasons[1:]
 
-		for i := range tvSeries {
-			seriesResult, err := makeSeriesRequest(tvSeries[i])
+		for i := range tvSeasons {
+			detailedSeasonResults, err := makeSeasonRequest(tvSeasons[i])
 			if err != nil {
-				fmt.Println("Error making series request:", err)
+				fmt.Println("findTVSeasonsInResponse: Error making season request:", err)
 				continue
 			}
-			results = append(results, seriesResult)
+			scrapedTVSeasonResults = append(scrapedTVSeasonResults, detailedSeasonResults...)
 		}
 	}
 	// sort the results by number
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].Number < results[j].Number
+	sort.Slice(scrapedTVSeasonResults, func(i, j int) bool {
+		return scrapedTVSeasonResults[i].Number < scrapedTVSeasonResults[j].Number
 	})
-	return results
+	return scrapedTVSeasonResults
 }
 
-func makeSeriesRequest(tv types.TVSeasonResult) (types.TVSeasonResult, error) {
+func makeSeasonRequest(tv types.TVSeasonResult) (result []types.TVSeasonResult, err error) {
 	rawData, err := makeRequest(cinemaparadisoSeriesURL, http.MethodPost, fmt.Sprintf("FilmID=%s", tv.URL))
 	if err != nil {
-		return tv, fmt.Errorf("makeSeriesRequest: error making request: %w", err)
+		return result, fmt.Errorf("makeSeasonRequest: error making request: %w", err)
 	}
+	// os.WriteFile("series.html", []byte(rawData), 0644)
 	// write the raw data to a file
 	r := regexp.MustCompile(`{.."Media..":.."(.*?)",.."ReleaseDate..":.."(.*?)"}`)
 	// Find all matches
 	matches := r.FindAllStringSubmatch(rawData, -1)
+	// there will be multiple formats for each season eg https://www.cinemaparadiso.co.uk/rentals/airwolf-171955.html#dvd
 	for _, match := range matches {
-		tv.Format = append(tv.Format, strings.ReplaceAll(match[1], "\\", ""))
+		newSeason := types.TVSeasonResult{}
+		newSeason.Number = tv.Number
+		newSeason.Format = strings.ReplaceAll(match[1], "\\", "")
+		newSeason.URL = fmt.Sprintf("https://www.cinemaparadiso.co.uk/rentals/%s.html#%s", tv.URL, newSeason.Format)
 		// strip slashes from the date
 		date := strings.ReplaceAll(match[2], "\\", "")
 		var releaseDate time.Time
@@ -243,9 +248,10 @@ func makeSeriesRequest(tv types.TVSeasonResult) (types.TVSeasonResult, error) {
 		if err != nil {
 			releaseDate = time.Time{}
 		}
-		tv.ReleaseDate = releaseDate
+		newSeason.ReleaseDate = releaseDate
+		result = append(result, newSeason)
 	}
-	return tv, nil
+	return result, nil
 }
 
 func findTitlesInResponse(response string, movie bool) (movieResults []types.MovieSearchResult, tvResults []types.TVSearchResult) {

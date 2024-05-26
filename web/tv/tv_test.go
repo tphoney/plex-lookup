@@ -41,7 +41,7 @@ func TestCleanTVSeries(t *testing.T) {
 func Test_discBeatsPlexResolution(t *testing.T) {
 	type args struct {
 		lowestResolution string
-		format           []string
+		format           string
 	}
 	tests := []struct {
 		name string
@@ -52,7 +52,7 @@ func Test_discBeatsPlexResolution(t *testing.T) {
 			name: "4K disc beats everything",
 			args: args{
 				lowestResolution: types.PlexResolution4K,
-				format:           []string{types.Disk4K},
+				format:           types.Disk4K,
 			},
 			want: true,
 		},
@@ -60,7 +60,7 @@ func Test_discBeatsPlexResolution(t *testing.T) {
 			name: "Blu-ray disc beats 1080p",
 			args: args{
 				lowestResolution: types.PlexResolution1080,
-				format:           []string{types.DiskBluray},
+				format:           types.DiskBluray,
 			},
 			want: true,
 		},
@@ -68,7 +68,7 @@ func Test_discBeatsPlexResolution(t *testing.T) {
 			name: "Blu-ray disc is beaten by 4K",
 			args: args{
 				lowestResolution: types.PlexResolution4K,
-				format:           []string{types.DiskBluray},
+				format:           types.DiskBluray,
 			},
 			want: false,
 		},

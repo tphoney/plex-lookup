@@ -24,7 +24,7 @@ func performCinemaParadisoLookup() {
 	if libraryType == types.PlexMovieType {
 		plexMovies := initializePlexMovies()
 		// lets search movies in cinemaparadiso
-		searchResults := cinemaparadiso.GetCinemaParadisoMoviesInParallel(plexMovies)
+		searchResults := cinemaparadiso.MoviesInParallel(plexMovies)
 		// if hit, and contains any format that isnt dvd, print the movie
 		for i := range searchResults {
 			for _, individualResult := range searchResults[i].MovieSearchResults {

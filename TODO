@@ -4,11 +4,10 @@
 
 - new release for amazon tv series
 - allow amazon tv search for indivdual series
-- new release for cinema-paradiso tv
+- allow the use of playlists for finding music / TV / movies
 
 ## bugs
 
-- music, a-ha/ash doesnt match as an artist why ?
 - improve cinema-paradiso movie scrape, many search results are the same page. wasted processing
 
 ## done
@@ -43,3 +42,4 @@
 - speed up plex fetch of movie details
 - speed up plex fetch of tv shows
 - when scraping movies, do we stop at the first best match ?
+- new release for cinema-paradiso tv

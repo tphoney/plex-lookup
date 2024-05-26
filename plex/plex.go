@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -814,6 +815,10 @@ func getPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []type
 		detailedSeasons[i].LastEpisodeAdded = detailedSeasons[i].Episodes[len(detailedSeasons[i].Episodes)-1].DateAdded
 		filteredSeasons = append(filteredSeasons, detailedSeasons[i])
 	}
+	// sort the seasons by season number
+	sort.Slice(filteredSeasons, func(i, j int) bool {
+		return filteredSeasons[i].Number < filteredSeasons[j].Number
+	})
 	return filteredSeasons
 }
 

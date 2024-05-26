@@ -87,7 +87,7 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 				searchResults = cinemaparadiso.ScrapeMoviesParallel(searchResults)
 			}
 		} else {
-			searchResults = amazon.SearchAmazonMoviesInParallel(filteredPlexMovies, lookupFilters.AudioLanguage, c.Config.AmazonRegion)
+			searchResults = amazon.MoviesInParallel(filteredPlexMovies, lookupFilters.AudioLanguage, c.Config.AmazonRegion)
 			// if we are filtering by newer version, we need to search again
 			if lookupFilters.NewerVersion {
 				searchResults = amazon.ScrapeTitlesParallel(searchResults, c.Config.AmazonRegion)

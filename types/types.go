@@ -104,19 +104,20 @@ type PlexTVEpisode struct {
 }
 
 type TVSearchResult struct {
-	FoundTitle  string
-	UITitle     string
-	BestMatch   bool
-	URL         string
-	Format      []string
-	Year        string
-	ReleaseDate time.Time
-	NewRelease  bool
-	Seasons     []TVSeasonResult
+	FoundTitle     string
+	UITitle        string
+	BestMatch      bool
+	URL            string
+	Format         []string
+	FirstAiredYear string
+	ReleaseDate    time.Time
+	NewRelease     bool
+	Seasons        []TVSeasonResult
 }
 
 type TVSeasonResult struct {
 	Number      int
+	BoxSetName  string
 	URL         string
 	Format      string
 	BoxSet      bool

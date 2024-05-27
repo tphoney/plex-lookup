@@ -99,3 +99,67 @@ func TestScrapeTitlesParallel(t *testing.T) {
 	}
 	fmt.Println(result)
 }
+
+func Test_decipherTVName(t *testing.T) {
+	tests := []struct {
+		testName        string
+		wantTitle       string
+		wantNumber      int
+		wantBoxSet      bool
+		wantBoxSetTitle string
+	}{
+		{
+			testName:        "The Big Bang Theory: The Complete Series",
+			wantTitle:       "The Big Bang Theory",
+			wantNumber:      0,
+			wantBoxSet:      true,
+			wantBoxSetTitle: "The Complete Series",
+		},
+		{
+			testName:        "The Big Bang Theory: The Complete Fourth Season Blu-ray",
+			wantTitle:       "The Big Bang Theory",
+			wantNumber:      4,
+			wantBoxSet:      false,
+			wantBoxSetTitle: "",
+		},
+		{
+			testName:        "MACGYVER: THE COMPLETE COLLECTION",
+			wantTitle:       "MACGYVER",
+			wantNumber:      0,
+			wantBoxSet:      true,
+			wantBoxSetTitle: "THE COMPLETE COLLECTION",
+		},
+		{
+			testName:        "The Big Bang Theory: Seasons 1-6",
+			wantTitle:       "The Big Bang Theory",
+			wantNumber:      0,
+			wantBoxSet:      true,
+			wantBoxSetTitle: "Seasons 1-6",
+		},
+		{
+			testName:        "Star Wars: The Clone Wars: The Complete Season One",
+			wantTitle:       "Star Wars: The Clone Wars",
+			wantNumber:      1,
+			wantBoxSet:      false,
+			wantBoxSetTitle: "The Complete Season One",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.testName, func(t *testing.T) {
+			gotTitle, gotNumber, gotBoxSet, gotBoxSetTitle := decipherTVName(tt.testName)
+			if gotTitle != tt.wantTitle {
+				t.Errorf("decipherTVName() gotTitle = %v, want %v", gotTitle, tt.wantTitle)
+			}
+			if gotNumber != tt.wantNumber {
+				t.Errorf("decipherTVName() gotNumber = %v, want %v", gotNumber, tt.wantNumber)
+			}
+			if gotBoxSet != tt.wantBoxSet {
+				t.Errorf("decipherTVName() gotBoxSet = %v, want %v", gotBoxSet, tt.wantBoxSet)
+			}
+			if gotBoxSetTitle != tt.wantBoxSetTitle {
+				t.Errorf("decipherTVName() gotBoxSetTitle = %v, want %v", gotBoxSetTitle, tt.wantBoxSetTitle)
+			}
+		})
+	}
+}

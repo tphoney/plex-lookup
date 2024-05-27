@@ -210,7 +210,7 @@ func findTVSeasonsInResponse(response string) (tvSeasons []types.TVSeasonResult)
 		tvSeasons = tvSeasons[1:]
 
 		for i := range tvSeasons {
-			detailedSeasonResults, err := makeSeasonRequest(tvSeasons[i])
+			detailedSeasonResults, err := makeSeasonRequest(&tvSeasons[i])
 			if err != nil {
 				fmt.Println("findTVSeasonsInResponse: Error making season request:", err)
 				continue
@@ -225,7 +225,7 @@ func findTVSeasonsInResponse(response string) (tvSeasons []types.TVSeasonResult)
 	return scrapedTVSeasonResults
 }
 
-func makeSeasonRequest(tv types.TVSeasonResult) (result []types.TVSeasonResult, err error) {
+func makeSeasonRequest(tv *types.TVSeasonResult) (result []types.TVSeasonResult, err error) {
 	rawData, err := makeRequest(cinemaparadisoSeriesURL, http.MethodPost, fmt.Sprintf("FilmID=%s", tv.URL))
 	if err != nil {
 		return result, fmt.Errorf("makeSeasonRequest: error making request: %w", err)

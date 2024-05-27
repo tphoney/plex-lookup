@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -228,6 +229,7 @@ func scrapeTVTitles(searchResult *types.SearchResults, region string, ch chan<- 
 	ch <- *searchResult
 }
 
+// nolint: dupl, nolintlint
 func searchMovie(plexMovie *types.PlexMovie, language, region string, movieSearchResult chan<- types.SearchResults) {
 	result := types.SearchResults{}
 	result.PlexMovie = *plexMovie
@@ -257,10 +259,10 @@ func searchMovie(plexMovie *types.PlexMovie, language, region string, movieSearc
 	movieSearchResult <- result
 }
 
+// nolint: dupl, nolintlint
 func searchTV(plexTVShow *types.PlexTVShow, language, region string, tvSearchResult chan<- types.SearchResults) {
 	result := types.SearchResults{}
 	result.PlexTVShow = *plexTVShow
-	result.SearchURL = amazonURL
 
 	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)
 	amazonURL := amazonURL + urlEncodedTitle
@@ -272,7 +274,7 @@ func searchTV(plexTVShow *types.PlexTVShow, language, region string, tvSearchRes
 		// do nothing
 	}
 	amazonURL += "&submit=Search&action=search"
-
+	result.SearchURL = amazonURL
 	rawData, err := makeRequest(amazonURL, region)
 	if err != nil {
 		fmt.Println("searchTV: Error making request:", err)
@@ -281,6 +283,13 @@ func searchTV(plexTVShow *types.PlexTVShow, language, region string, tvSearchRes
 	}
 
 	_, titlesFound := findTitlesInResponse(rawData, false)
+	// sort the seasons
+	sort.Slice(titlesFound, func(i, j int) bool {
+		if len(titlesFound[i].Seasons) == 0 || len(titlesFound[j].Seasons) == 0 {
+			return false
+		}
+		return titlesFound[i].Seasons[0].Number < titlesFound[j].Seasons[0].Number
+	})
 	result.TVSearchResults = titlesFound
 	result = utils.MarkBestMatchTV(&result)
 	tvSearchResult <- result
@@ -328,13 +337,14 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 					movieResults = append(movieResults, types.MovieSearchResult{
 						URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle, UITitle: format})
 				} else {
-					decipheredTitle, number, boxSet := decipherTVName(foundTitle)
+					decipheredTitle, number, boxSet, boxSetTitle := decipherTVName(foundTitle)
 					// split year
 					splitYear := strings.Split(year, "-")
 					year = strings.Trim(splitYear[0], " ")
 					tvResult := types.TVSearchResult{
 						URL: returnURL, Format: []string{format}, FirstAiredYear: year, FoundTitle: decipheredTitle, UITitle: decipheredTitle}
-					tvResult.Seasons = append(tvResult.Seasons, types.TVSeasonResult{URL: returnURL, Format: format, Number: number, BoxSet: boxSet})
+					tvResult.Seasons = append(tvResult.Seasons, types.TVSeasonResult{
+						URL: returnURL, Format: format, Number: number, BoxSet: boxSet, BoxSetName: boxSetTitle})
 					tvResults = append(tvResults, tvResult)
 				}
 			}
@@ -344,7 +354,6 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 			break
 		}
 	}
-
 	return movieResults, tvResults
 }
 
@@ -386,45 +395,51 @@ func makeRequest(inputURL, region string) (response string, err error) {
 	return rawResponse, nil
 }
 
-func decipherTVName(name string) (title string, number int, boxset bool) {
+func decipherTVName(name string) (title string, number int, boxSet bool, boxSetTitle string) {
 	parts := strings.Split(name, ":")
-	title = parts[0]
 	if len(parts) == 1 {
-		//nolint: gocritic
-		// fmt.Printf("warn: decipherTVName, no colon%q\n", name)
-		return title, -1, false
+		title = parts[0]
+		return title, -1, false, ""
 	}
 	// everything after the first colon
-	seasonBlock := strings.Join(parts[1:], "")
-	seasonBlock = strings.ToLower(seasonBlock)
-	if strings.Contains(seasonBlock, "complete series") || strings.Contains(seasonBlock, "complete seasons") {
-		return title, number, true
+	discTitle := strings.Join(parts[len(parts)-1:], "")
+	title = strings.TrimSuffix(name, (":" + discTitle))
+	boxSetTitle = strings.Trim(discTitle, " ")
+	seasonBlock := strings.ToLower(discTitle)
+	// complete boxsets
+	if strings.Contains(seasonBlock, "complete series") || strings.Contains(seasonBlock, "complete seasons") ||
+		strings.Contains(seasonBlock, "complete collection") {
+		return title, number, true, boxSetTitle
 	}
-	// does the second part have a number as an integer or as a word.
-	r := regexp.MustCompile(`seasons?\ (\d+)`)
+	// final season
+	if strings.Contains(seasonBlock, "final season") {
+		return title, 999, false, "" //nolint:mnd
+	}
+	r := regexp.MustCompile(`seasons?\ (\d+).(\d+)`)
 	match := r.FindStringSubmatch(seasonBlock)
 	if len(match) > 1 {
-		// var err error
+		return title, number, true, boxSetTitle
+	}
+	// does the second part have a number as an integer or as a word.
+	r = regexp.MustCompile(`seasons?\ (\d+)`)
+	match = r.FindStringSubmatch(seasonBlock)
+	if len(match) > 1 {
 		number, _ = strconv.Atoi(match[1])
-		//nolint: gocritic
-		// if err != nil {
-		//  fmt.Printf("warn: decipherTVName, integer not converted%q\n", name)
-		// }
-		return title, number, false
+		return title, number, false, boxSetTitle
 	}
 
 	for k, v := range seasonNumberToInt {
 		if strings.Contains(seasonBlock, ("season "+k)) || strings.Contains(seasonBlock, ("seasons "+k)) {
-			return title, v, false
+			return title, v, false, boxSetTitle
 		}
 	}
 
 	for k, v := range ordinalNumberToSeason {
 		if strings.Contains(seasonBlock, k) {
-			return title, v, false
+			return title, v, false, ""
 		}
 	}
 	//nolint: gocritic
 	// fmt.Printf("warn: decipherTVName, got to the end%q\n", name)
-	return title, -1, false
+	return title, -1, false, ""
 }

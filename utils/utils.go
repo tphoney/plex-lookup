@@ -33,7 +33,7 @@ func MarkBestMatchTV(search *types.SearchResults) types.SearchResults {
 	lastEpisodeBoundry := search.PlexTVShow.LastEpisodeAired.Year() + 1
 	for i := range search.TVSearchResults {
 		resultYear := YearToDate(search.TVSearchResults[i].FirstAiredYear)
-		if search.TVSearchResults[i].FoundTitle == search.PlexTVShow.Title &&
+		if strings.EqualFold(search.TVSearchResults[i].FoundTitle, search.PlexTVShow.Title) &&
 			resultYear.Year() >= firstEpisodeBoundry && resultYear.Year() <= lastEpisodeBoundry {
 			search.TVSearchResults[i].BestMatch = true
 			if slices.Contains(search.TVSearchResults[i].Format, types.DiskBluray) {

@@ -117,6 +117,7 @@ type TVSearchResult struct {
 
 type TVSeasonResult struct {
 	Number      int
+	BoxSetName  string
 	URL         string
 	Format      string
 	BoxSet      bool

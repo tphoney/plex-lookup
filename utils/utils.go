@@ -10,7 +10,7 @@ import (
 	"github.com/tphoney/plex-lookup/types"
 )
 
-func MarkBestMatch(search *types.SearchResults) types.SearchResults {
+func MarkBestMatchMovie(search *types.SearchResults) types.SearchResults {
 	expectedYear := YearToDate(search.PlexMovie.Year)
 	for i := range search.MovieSearchResults {
 		// normally a match if the year is within 1 year of each other
@@ -25,10 +25,16 @@ func MarkBestMatch(search *types.SearchResults) types.SearchResults {
 			}
 		}
 	}
-	expectedYear = YearToDate(search.PlexTVShow.Year)
+	return *search
+}
+
+func MarkBestMatchTV(search *types.SearchResults) types.SearchResults {
+	firstEpisodeBoundry := search.PlexTVShow.FirstEpisodeAired.Year() - 1
+	lastEpisodeBoundry := search.PlexTVShow.LastEpisodeAired.Year() + 1
 	for i := range search.TVSearchResults {
-		resultYear := YearToDate(search.TVSearchResults[i].Year)
-		if search.TVSearchResults[i].FoundTitle == search.PlexTVShow.Title && WitinOneYear(resultYear.Year(), expectedYear.Year()) {
+		resultYear := YearToDate(search.TVSearchResults[i].FirstAiredYear)
+		if search.TVSearchResults[i].FoundTitle == search.PlexTVShow.Title &&
+			resultYear.Year() >= firstEpisodeBoundry && resultYear.Year() <= lastEpisodeBoundry {
 			search.TVSearchResults[i].BestMatch = true
 			if slices.Contains(search.TVSearchResults[i].Format, types.DiskBluray) {
 				search.MatchesBluray++

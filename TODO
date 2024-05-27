@@ -2,13 +2,12 @@
 
 ## features
 
-- allow the use of playlists for finding music / TV / movies
+- allow the use of playlists for finding music / TV / movies `https://www.plexopedia.com/plex-media-server/api/playlists/view/`
 
 ## bugs
 
 - improve cinema-paradiso movie scrape, many search results are the same page. wasted processing
 - flatten amazon tv search results
-- improve best match for tv series
 
 ## done
 
@@ -45,3 +44,4 @@
 - new release for cinema-paradiso tv
 - new release for amazon tv series
 - allow amazon tv search for indivdual series
+- improve best match for tv series

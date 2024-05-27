@@ -253,7 +253,7 @@ func searchMovie(plexMovie *types.PlexMovie, language, region string, movieSearc
 
 	moviesFound, _ := findTitlesInResponse(rawData, true)
 	result.MovieSearchResults = moviesFound
-	result = utils.MarkBestMatch(&result)
+	result = utils.MarkBestMatchMovie(&result)
 	movieSearchResult <- result
 }
 
@@ -282,7 +282,7 @@ func searchTV(plexTVShow *types.PlexTVShow, language, region string, tvSearchRes
 
 	_, titlesFound := findTitlesInResponse(rawData, false)
 	result.TVSearchResults = titlesFound
-	result = utils.MarkBestMatch(&result)
+	result = utils.MarkBestMatchTV(&result)
 	tvSearchResult <- result
 }
 
@@ -331,9 +331,9 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 					decipheredTitle, number, boxSet := decipherTVName(foundTitle)
 					// split year
 					splitYear := strings.Split(year, "-")
-					year = splitYear[0]
+					year = strings.Trim(splitYear[0], " ")
 					tvResult := types.TVSearchResult{
-						URL: returnURL, Format: []string{format}, Year: year, FoundTitle: decipheredTitle, UITitle: decipheredTitle}
+						URL: returnURL, Format: []string{format}, FirstAiredYear: year, FoundTitle: decipheredTitle, UITitle: decipheredTitle}
 					tvResult.Seasons = append(tvResult.Seasons, types.TVSeasonResult{URL: returnURL, Format: format, Number: number, BoxSet: boxSet})
 					tvResults = append(tvResults, tvResult)
 				}

@@ -75,27 +75,32 @@ type MovieSearchResult struct {
 
 // ==============================================================================================================
 type PlexTVShow struct {
-	Title     string
-	Year      string
-	RatingKey string
-	DateAdded time.Time
-	Seasons   []PlexTVSeason
+	Title             string
+	Year              string
+	RatingKey         string
+	DateAdded         time.Time
+	FirstEpisodeAired time.Time
+	LastEpisodeAired  time.Time
+	Seasons           []PlexTVSeason
 }
 
 type PlexTVSeason struct {
-	Title            string
-	Number           int
-	RatingKey        string
-	LowestResolution string
-	LastEpisodeAdded time.Time
-	Episodes         []PlexTVEpisode
+	Title             string
+	Number            int
+	RatingKey         string
+	LowestResolution  string
+	LastEpisodeAdded  time.Time
+	FirstEpisodeAired time.Time
+	LastEpisodeAired  time.Time
+	Episodes          []PlexTVEpisode
 }
 
 type PlexTVEpisode struct {
-	Title      string
-	Index      string
-	Resolution string
-	DateAdded  time.Time
+	Title           string
+	Index           string
+	Resolution      string
+	DateAdded       time.Time
+	OriginallyAired time.Time
 }
 
 type TVSearchResult struct {
@@ -107,14 +112,14 @@ type TVSearchResult struct {
 	Year        string
 	ReleaseDate time.Time
 	NewRelease  bool
-	BoxSet      bool
 	Seasons     []TVSeasonResult
 }
 
 type TVSeasonResult struct {
 	Number      int
 	URL         string
-	Format      []string
+	Format      string
+	BoxSet      bool
 	ReleaseDate time.Time
 }
 

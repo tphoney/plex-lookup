@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,10 +24,56 @@ const (
 var (
 	numberMoviesProcessed int = 0
 	numberTVProcessed     int = 0
+	//nolint: mnd
+	seasonNumberToInt = map[string]int{
+		"one":       1,
+		"two":       2,
+		"three":     3,
+		"four":      4,
+		"five":      5,
+		"six":       6,
+		"seven":     7,
+		"eight":     8,
+		"nine":      9,
+		"ten":       10,
+		"eleven":    11,
+		"twelve":    12,
+		"thirteen":  13,
+		"fourteen":  14,
+		"fifteen":   15,
+		"sixteen":   16,
+		"seventeen": 17,
+		"eighteen":  18,
+		"nineteen":  19,
+		"twenty":    20,
+	}
+	//nolint: mnd
+	ordinalNumberToSeason = map[string]int{
+		"first season":       1,
+		"second season":      2,
+		"third season":       3,
+		"fourth season":      4,
+		"fifth season":       5,
+		"sixth season":       6,
+		"seventh season":     7,
+		"eighth season":      8,
+		"ninth season":       9,
+		"tenth season":       10,
+		"eleventh season":    11,
+		"twelfth season":     12,
+		"thirteenth season":  13,
+		"fourteenth season":  14,
+		"fifteenth season":   15,
+		"sixteenth season":   16,
+		"seventeenth season": 17,
+		"eighteenth season":  18,
+		"nineteenth season":  19,
+		"twentieth season":   20,
+	}
 )
 
 // nolint: dupl, nolintlint
-func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language, region string) (searchResults []types.SearchResults) {
+func MoviesInParallel(plexMovies []types.PlexMovie, language, region string) (searchResults []types.SearchResults) {
 	numberMoviesProcessed = 0
 	ch := make(chan types.SearchResults, len(plexMovies))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
@@ -35,7 +82,7 @@ func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language, region
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			searchAmazonMovie(&plexMovies[i], language, region, ch)
+			searchMovie(&plexMovies[i], language, region, ch)
 		}(i)
 	}
 
@@ -51,7 +98,7 @@ func SearchAmazonMoviesInParallel(plexMovies []types.PlexMovie, language, region
 }
 
 // nolint: dupl, nolintlint
-func SearchAmazonTVInParallel(plexTVShows []types.PlexTVShow, language, region string) (searchResults []types.SearchResults) {
+func TVInParallel(plexTVShows []types.PlexTVShow, language, region string) (searchResults []types.SearchResults) {
 	numberMoviesProcessed = 0
 	ch := make(chan types.SearchResults, len(plexTVShows))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
@@ -60,7 +107,7 @@ func SearchAmazonTVInParallel(plexTVShows []types.PlexTVShow, language, region s
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			searchAmazonTV(&plexTVShows[i], language, region, ch)
+			searchTV(&plexTVShows[i], language, region, ch)
 		}(i)
 	}
 
@@ -83,15 +130,24 @@ func GetTVJobProgress() int {
 	return numberTVProcessed
 }
 
-func ScrapeTitlesParallel(searchResults []types.SearchResults, region string) (scrapedResults []types.SearchResults) {
-	numberMoviesProcessed = 0
+func ScrapeTitlesParallel(searchResults []types.SearchResults, region string, isTV bool) (scrapedResults []types.SearchResults) {
+	// are we tv or movie
+	if isTV {
+		numberTVProcessed = 0
+	} else {
+		numberMoviesProcessed = 0
+	}
 	ch := make(chan types.SearchResults, len(searchResults))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 	for i := range searchResults {
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			scrapeTitles(&searchResults[i], region, ch)
+			if isTV {
+				scrapeTVTitles(&searchResults[i], region, ch)
+			} else {
+				scrapeMovieTitles(&searchResults[i], region, ch)
+			}
 		}(i)
 	}
 
@@ -99,14 +155,23 @@ func ScrapeTitlesParallel(searchResults []types.SearchResults, region string) (s
 	for range searchResults {
 		result := <-ch
 		scrapedResults = append(scrapedResults, result)
-		numberMoviesProcessed++
+		if isTV {
+			numberTVProcessed++
+		} else {
+			numberMoviesProcessed++
+		}
 	}
-	numberMoviesProcessed = 0
-	fmt.Println("amazon Movie titles scraped:", len(scrapedResults))
+	if isTV {
+		numberTVProcessed = 0
+	} else {
+		numberMoviesProcessed = 0
+	}
+	fmt.Println("amazon titles scraped:", len(scrapedResults))
 	return scrapedResults
 }
 
-func scrapeTitles(searchResult *types.SearchResults, region string, ch chan<- types.SearchResults) {
+// nolint: dupl, nolintlint
+func scrapeMovieTitles(searchResult *types.SearchResults, region string, ch chan<- types.SearchResults) {
 	dateAdded := searchResult.PlexMovie.DateAdded
 	for i := range searchResult.MovieSearchResults {
 		// this is to limit the number of requests
@@ -134,7 +199,36 @@ func scrapeTitles(searchResult *types.SearchResults, region string, ch chan<- ty
 	ch <- *searchResult
 }
 
-func searchAmazonMovie(plexMovie *types.PlexMovie, language, region string, movieSearchResult chan<- types.SearchResults) {
+// nolint: dupl, nolintlint
+func scrapeTVTitles(searchResult *types.SearchResults, region string, ch chan<- types.SearchResults) {
+	dateAdded := searchResult.PlexTVShow.DateAdded
+	for i := range searchResult.TVSearchResults {
+		// this is to limit the number of requests
+		if !searchResult.TVSearchResults[i].BestMatch {
+			continue
+		}
+		rawData, err := makeRequest(searchResult.TVSearchResults[i].URL, region)
+		if err != nil {
+			fmt.Println("scrapeTitle: Error making request:", err)
+			ch <- *searchResult
+			return
+		}
+		// Find the release date
+		searchResult.TVSearchResults[i].ReleaseDate = time.Time{} // default to zero time
+		r := regexp.MustCompile(`<a class="grey noline" alt=".*">(.*?)</a></span>`)
+		match := r.FindStringSubmatch(rawData)
+		if match != nil {
+			stringDate := match[1]
+			searchResult.TVSearchResults[i].ReleaseDate, _ = time.Parse("Jan 02, 2006", stringDate)
+		}
+		if searchResult.TVSearchResults[i].ReleaseDate.After(dateAdded) {
+			searchResult.TVSearchResults[i].NewRelease = true
+		}
+	}
+	ch <- *searchResult
+}
+
+func searchMovie(plexMovie *types.PlexMovie, language, region string, movieSearchResult chan<- types.SearchResults) {
 	result := types.SearchResults{}
 	result.PlexMovie = *plexMovie
 
@@ -152,7 +246,7 @@ func searchAmazonMovie(plexMovie *types.PlexMovie, language, region string, movi
 	result.SearchURL = amazonURL
 	rawData, err := makeRequest(amazonURL, region)
 	if err != nil {
-		fmt.Println("searchAmazonMovie: Error making request:", err)
+		fmt.Println("searchMovie: Error making request:", err)
 		movieSearchResult <- result
 		return
 	}
@@ -163,12 +257,12 @@ func searchAmazonMovie(plexMovie *types.PlexMovie, language, region string, movi
 	movieSearchResult <- result
 }
 
-func searchAmazonTV(plexTVShow *types.PlexTVShow, language, region string, tvSearchResult chan<- types.SearchResults) {
+func searchTV(plexTVShow *types.PlexTVShow, language, region string, tvSearchResult chan<- types.SearchResults) {
 	result := types.SearchResults{}
 	result.PlexTVShow = *plexTVShow
 	result.SearchURL = amazonURL
 
-	urlEncodedTitle := url.QueryEscape(fmt.Sprintf("%s complete series", plexTVShow.Title)) // complete series
+	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)
 	amazonURL := amazonURL + urlEncodedTitle
 	// this searches for the movie in a language
 	switch language {
@@ -181,7 +275,7 @@ func searchAmazonTV(plexTVShow *types.PlexTVShow, language, region string, tvSea
 
 	rawData, err := makeRequest(amazonURL, region)
 	if err != nil {
-		fmt.Println("searchAmazonTV: Error making request:", err)
+		fmt.Println("searchTV: Error making request:", err)
 		tvSearchResult <- result
 		return
 	}
@@ -202,7 +296,6 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 		}
 		response = response[startIndex:]
 		endIndex := strings.Index(response, `</div></div>`)
-
 		// If both start and end index are found
 		if endIndex != -1 {
 			// Extract the entry
@@ -235,13 +328,14 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 					movieResults = append(movieResults, types.MovieSearchResult{
 						URL: returnURL, Format: format, Year: year, FoundTitle: foundTitle, UITitle: format})
 				} else {
-					boxSet := false
-					if strings.Contains(foundTitle, ": The Complete Series") {
-						foundTitle = strings.TrimSuffix(foundTitle, ": The Complete Series")
-						boxSet = true
-					}
-					tvResults = append(tvResults, types.TVSearchResult{
-						URL: returnURL, Format: []string{format}, Year: year, FoundTitle: foundTitle, UITitle: foundTitle, BoxSet: boxSet})
+					decipheredTitle, number, boxSet := decipherTVName(foundTitle)
+					// split year
+					splitYear := strings.Split(year, "-")
+					year = splitYear[0]
+					tvResult := types.TVSearchResult{
+						URL: returnURL, Format: []string{format}, Year: year, FoundTitle: decipheredTitle, UITitle: decipheredTitle}
+					tvResult.Seasons = append(tvResult.Seasons, types.TVSeasonResult{URL: returnURL, Format: format, Number: number, BoxSet: boxSet})
+					tvResults = append(tvResults, tvResult)
 				}
 			}
 			// remove the movie entry from the response
@@ -290,4 +384,47 @@ func makeRequest(inputURL, region string) (response string, err error) {
 
 	rawResponse := string(body)
 	return rawResponse, nil
+}
+
+func decipherTVName(name string) (title string, number int, boxset bool) {
+	parts := strings.Split(name, ":")
+	title = parts[0]
+	if len(parts) == 1 {
+		//nolint: gocritic
+		// fmt.Printf("warn: decipherTVName, no colon%q\n", name)
+		return title, -1, false
+	}
+	// everything after the first colon
+	seasonBlock := strings.Join(parts[1:], "")
+	seasonBlock = strings.ToLower(seasonBlock)
+	if strings.Contains(seasonBlock, "complete series") || strings.Contains(seasonBlock, "complete seasons") {
+		return title, number, true
+	}
+	// does the second part have a number as an integer or as a word.
+	r := regexp.MustCompile(`seasons?\ (\d+)`)
+	match := r.FindStringSubmatch(seasonBlock)
+	if len(match) > 1 {
+		// var err error
+		number, _ = strconv.Atoi(match[1])
+		//nolint: gocritic
+		// if err != nil {
+		//  fmt.Printf("warn: decipherTVName, integer not converted%q\n", name)
+		// }
+		return title, number, false
+	}
+
+	for k, v := range seasonNumberToInt {
+		if strings.Contains(seasonBlock, ("season "+k)) || strings.Contains(seasonBlock, ("seasons "+k)) {
+			return title, v, false
+		}
+	}
+
+	for k, v := range ordinalNumberToSeason {
+		if strings.Contains(seasonBlock, k) {
+			return title, v, false
+		}
+	}
+	//nolint: gocritic
+	// fmt.Printf("warn: decipherTVName, got to the end%q\n", name)
+	return title, -1, false
 }

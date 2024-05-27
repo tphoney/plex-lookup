@@ -25,6 +25,7 @@ func MarkBestMatch(search *types.SearchResults) types.SearchResults {
 			}
 		}
 	}
+	expectedYear = YearToDate(search.PlexTVShow.Year)
 	for i := range search.TVSearchResults {
 		resultYear := YearToDate(search.TVSearchResults[i].Year)
 		if search.TVSearchResults[i].FoundTitle == search.PlexTVShow.Title && WitinOneYear(resultYear.Year(), expectedYear.Year()) {

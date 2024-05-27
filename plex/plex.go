@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -764,6 +765,9 @@ func GetPlexTV(ipAddress, libraryID, plexToken string) (tvShowList []types.PlexT
 	var filteredTVShows []types.PlexTVShow
 	for i := range tvShowList {
 		if len(tvShowList[i].Seasons) > 0 {
+			// set the first and last episode air dates
+			tvShowList[i].FirstEpisodeAired = tvShowList[i].Seasons[0].FirstEpisodeAired
+			tvShowList[i].LastEpisodeAired = tvShowList[i].Seasons[len(tvShowList[i].Seasons)-1].LastEpisodeAired
 			filteredTVShows = append(filteredTVShows, tvShowList[i])
 		}
 	}
@@ -810,10 +814,16 @@ func getPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []type
 		}
 		// now we have all of the resolutions for the episodes
 		detailedSeasons[i].LowestResolution = findLowestResolution(listOfResolutions)
-		// get the last episode added date
+		// get the dates for the season
 		detailedSeasons[i].LastEpisodeAdded = detailedSeasons[i].Episodes[len(detailedSeasons[i].Episodes)-1].DateAdded
+		detailedSeasons[i].LastEpisodeAired = detailedSeasons[i].Episodes[len(detailedSeasons[i].Episodes)-1].OriginallyAired
+		detailedSeasons[i].FirstEpisodeAired = detailedSeasons[i].Episodes[0].OriginallyAired
 		filteredSeasons = append(filteredSeasons, detailedSeasons[i])
 	}
+	// sort the seasons by season number
+	sort.Slice(filteredSeasons, func(i, j int) bool {
+		return filteredSeasons[i].Number < filteredSeasons[j].Number
+	})
 	return filteredSeasons
 }
 
@@ -877,16 +887,15 @@ func extractTVEpisodes(xmlString string) (episodeList []types.PlexTVEpisode) {
 	}
 
 	for i := range container.Video {
-		intTime, err := strconv.ParseInt(container.Video[i].AddedAt, 10, 64)
-		var parsedDate time.Time
+		dateAdded := parsePlexDate(container.Video[i].AddedAt)
+		// "2017-04-21"
+		originallyAired, err := time.Parse("2006-01-02", container.Video[i].OriginallyAvailableAt)
 		if err != nil {
-			parsedDate = time.Time{}
-		} else {
-			parsedDate = time.Unix(intTime, 0)
+			originallyAired = time.Time{}
 		}
 		episodeList = append(episodeList, types.PlexTVEpisode{
 			Title: container.Video[i].Title, Resolution: container.Video[i].Media.VideoResolution,
-			Index: container.Video[i].Index, DateAdded: parsedDate})
+			Index: container.Video[i].Index, DateAdded: dateAdded, OriginallyAired: originallyAired})
 	}
 	return episodeList
 }

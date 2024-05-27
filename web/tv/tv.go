@@ -51,7 +51,7 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	}
 	filters = newFilters
 	//nolint: gocritic
-	// plexTV = plexTV[:30]
+	//plexTV = plexTV[:10]
 	//lint: gocritic
 
 	tvJobRunning = true
@@ -64,9 +64,10 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		startTime := time.Now()
 		if lookup == "cinemaParadiso" {
-			tvSearchResults = cinemaparadiso.GetCinemaParadisoTVInParallel(plexTV)
+			tvSearchResults = cinemaparadiso.TVInParallel(plexTV)
 		} else {
-			tvSearchResults = amazon.SearchAmazonTVInParallel(plexTV, filters.AudioLanguage, c.Config.AmazonRegion)
+			tvSearchResults = amazon.TVInParallel(plexTV, filters.AudioLanguage, c.Config.AmazonRegion)
+			tvSearchResults = amazon.ScrapeTitlesParallel(tvSearchResults, c.Config.AmazonRegion, true)
 		}
 		tvJobRunning = false
 		fmt.Printf("\nProcessed %d TV Shows in %v\n", totalTV, time.Since(startTime))
@@ -99,30 +100,25 @@ func renderTVTable(searchResults []types.SearchResults) (tableRows string) {
 	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="int"><strong>Blu-ray Seasons</strong></th><th data-sort="int"><strong>4K-ray Seasons</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
 	for i := range searchResults {
 		// build up plex season / resolution row
-		seasony := "Season:"
-		for _, season := range searchResults[i].PlexTVShow.Seasons {
-			seasony += fmt.Sprintf(" %d@%s,", season.Number, season.LowestResolution)
+		plexSeasonsString := "Season:"
+		for j := range searchResults[i].PlexTVShow.Seasons {
+			plexSeasonsString += fmt.Sprintf(" %d@%s,",
+				searchResults[i].PlexTVShow.Seasons[j].Number, searchResults[i].PlexTVShow.Seasons[j].LowestResolution)
 		}
-		seasony = seasony[:len(seasony)-1] // remove trailing comma
+		plexSeasonsString = plexSeasonsString[:len(plexSeasonsString)-1] // remove trailing comma
 		tableRows += fmt.Sprintf(
 			`<tr><td><a href=%q target="_blank">%s [%v]<br>%s</a></td><td>%d</td><td>%d</td>`,
-			searchResults[i].SearchURL, searchResults[i].PlexTVShow.Title, searchResults[i].PlexTVShow.Year, seasony,
+			searchResults[i].SearchURL, searchResults[i].PlexTVShow.Title, searchResults[i].PlexTVShow.Year, plexSeasonsString,
 			searchResults[i].MatchesBluray, searchResults[i].Matches4k)
 		if (searchResults[i].MatchesBluray + searchResults[i].Matches4k) > 0 {
 			tableRows += "<td>"
 			for j := range searchResults[i].TVSearchResults {
 				if searchResults[i].TVSearchResults[j].BestMatch {
-					if searchResults[i].TVSearchResults[j].BoxSet {
-						tableRows += fmt.Sprintf(`<a href=%q target="_blank">%s Box Set</a></br>`,
-							searchResults[i].TVSearchResults[j].URL, searchResults[i].TVSearchResults[j].Format[0])
-					} else {
-						for _, season := range searchResults[i].TVSearchResults[j].Seasons {
-							disks := fmt.Sprintf("%v", season.Format)
-							tableRows += fmt.Sprintf(
-								`<a href=%q target="_blank">Season %d: %v`,
-								searchResults[i].TVSearchResults[j].URL, season.Number, disks)
-							tableRows += "</a><br>"
-						}
+					for _, season := range searchResults[i].TVSearchResults[j].Seasons {
+						tableRows += fmt.Sprintf(
+							`<a href=%q target="_blank">Season %d: %v`,
+							searchResults[i].TVSearchResults[j].URL, season.Number, season.Format)
+						tableRows += "</a><br>"
 					}
 				}
 			}
@@ -148,10 +144,11 @@ func removeOwnedTVSeasons(searchResults []types.SearchResults) []types.SearchRes
 		if len(searchResults[i].TVSearchResults) > 0 {
 			tvSeasonsToRemove := make([]types.TVSeasonResult, 0)
 			// iterate over plex tv season
-			for _, plexSeasons := range searchResults[i].PlexTVShow.Seasons {
+			for plexSeasonPointer := range searchResults[i].PlexTVShow.Seasons {
 				// iterate over search results
 				for _, searchSeasons := range searchResults[i].TVSearchResults[0].Seasons {
-					if searchSeasons.Number == plexSeasons.Number && !discBeatsPlexResolution(plexSeasons.LowestResolution, searchSeasons.Format) {
+					if searchSeasons.Number == searchResults[i].PlexTVShow.Seasons[plexSeasonPointer].Number &&
+						!discBeatsPlexResolution(searchResults[i].PlexTVShow.Seasons[plexSeasonPointer].LowestResolution, searchSeasons.Format) {
 						tvSeasonsToRemove = append(tvSeasonsToRemove, searchSeasons)
 					}
 				}
@@ -167,10 +164,10 @@ func removeOldDiscReleases(searchResults []types.SearchResults) []types.SearchRe
 		if len(searchResults[i].TVSearchResults) > 0 {
 			tvSeasonsToRemove := make([]types.TVSeasonResult, 0)
 			// iterate over plex tv season
-			for _, plexSeasons := range searchResults[i].PlexTVShow.Seasons {
+			for plesSeasonPointer := range searchResults[i].PlexTVShow.Seasons {
 				// iterate over search results
 				for _, searchSeasons := range searchResults[i].TVSearchResults[0].Seasons {
-					if searchSeasons.ReleaseDate.Compare(plexSeasons.LastEpisodeAdded) == 1 {
+					if searchSeasons.ReleaseDate.Compare(searchResults[i].PlexTVShow.Seasons[plesSeasonPointer].LastEpisodeAdded) == 1 {
 						tvSeasonsToRemove = append(tvSeasonsToRemove, searchSeasons)
 					}
 				}
@@ -198,18 +195,16 @@ func cleanTVSeasons(original, toRemove []types.TVSeasonResult) []types.TVSeasonR
 	return cleaned
 }
 
-func discBeatsPlexResolution(lowestPlexResolution string, format []string) bool {
-	for i := range format {
-		switch format[i] {
-		case types.Disk4K:
-			return true // 4K beats everything
-		case types.DiskBluray:
-			if slices.Contains([]string{types.PlexResolution1080, types.PlexResolution720, // HD
-				types.PlexResolution576, types.PlexResolution480, types.PlexResolution240, types.PlexResolutionSD}, // SD
-				lowestPlexResolution) {
-				return true
-			}
-		} // DVD is not considered
-	}
+func discBeatsPlexResolution(lowestPlexResolution, format string) bool {
+	switch format {
+	case types.Disk4K:
+		return true // 4K beats everything
+	case types.DiskBluray:
+		if slices.Contains([]string{types.PlexResolution1080, types.PlexResolution720, // HD
+			types.PlexResolution576, types.PlexResolution480, types.PlexResolution240, types.PlexResolutionSD}, // SD
+			lowestPlexResolution) {
+			return true
+		}
+	} // DVD is not considered
 	return false
 }

@@ -67,27 +67,37 @@ func TestFindTVSeriesInResponse(t *testing.T) {
 		t.Errorf("Error reading testdata/friends.html: %s", err)
 	}
 
-	tvSeries := findTVSeriesInResponse(string(rawdata))
+	tvSeries := findTVSeasonsInResponse(string(rawdata))
 
-	if len(tvSeries) != 10 {
-		t.Errorf("Expected 10 tv series, but got %d", len(tvSeries))
+	if len(tvSeries) != 20 {
+		t.Errorf("Expected 20 tv series, but got %d", len(tvSeries))
 	}
 	// check the first tv series
-	if tvSeries[0].Number != 1 {
+	if tvSeries[1].Number != 1 {
 		t.Errorf("Expected number 1, but got %d", tvSeries[0].Number)
 	}
-	expected := time.Date(2012, time.November, 12, 0, 0, 0, 0, time.UTC)
+	expected := time.Date(2004, time.October, 25, 0, 0, 0, 0, time.UTC)
 	if tvSeries[0].ReleaseDate.Compare(expected) != 0 {
 		t.Errorf("Expected date %s, but got %s", expected, tvSeries[0].ReleaseDate)
 	}
 	if tvSeries[0].Number != 1 {
 		t.Errorf("Expected number 1, but got %d", tvSeries[0].Number)
 	}
-	if tvSeries[0].Format[0] != types.DiskDVD {
-		t.Errorf("Expected format %s, but got %s", types.DiskDVD, tvSeries[0].Format[0])
+	if tvSeries[0].Format != types.DiskDVD {
+		t.Errorf("Expected dvd, but got %s", tvSeries[0].Format)
 	}
-	if tvSeries[0].Format[1] != types.DiskBluray {
-		t.Errorf("Expected format %s, but got %s", types.DiskBluray, tvSeries[0].Format[1])
+	if tvSeries[1].Number != 1 {
+		t.Errorf("Expected number 1, but got %d", tvSeries[0].Number)
+	}
+	expected = time.Date(2012, time.November, 12, 0, 0, 0, 0, time.UTC)
+	if tvSeries[1].ReleaseDate.Compare(expected) != 0 {
+		t.Errorf("Expected date %s, but got %s", expected, tvSeries[0].ReleaseDate)
+	}
+	if tvSeries[1].Number != 1 {
+		t.Errorf("Expected number 1, but got %d", tvSeries[0].Number)
+	}
+	if tvSeries[1].Format != types.DiskBluray {
+		t.Errorf("Expected Blu-ray, but got %s", tvSeries[0].Format)
 	}
 }
 
@@ -104,7 +114,7 @@ func TestSearchCinemaParadisoTV(t *testing.T) {
 		Year:  "2010",
 	}
 	ch := make(chan types.SearchResults, 1)
-	searchCinemaParadisoTV(&show, ch)
+	searchTVShow(&show, ch)
 	got := <-ch
 
 	if len(got.TVSearchResults) == 0 {
@@ -154,7 +164,7 @@ func TestScrapeMovieTitlesParallel(t *testing.T) {
 		},
 	}
 
-	detailedSearchResults := ScrapeMovieTitlesParallel(searchResults)
+	detailedSearchResults := ScrapeMoviesParallel(searchResults)
 
 	if len(detailedSearchResults) != len(searchResults) {
 		t.Errorf("Expected %d detailed search results, but got %d", len(searchResults), len(detailedSearchResults))

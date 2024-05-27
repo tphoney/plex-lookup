@@ -82,15 +82,15 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		startTime := time.Now()
 		if lookup == "cinemaParadiso" {
-			searchResults = cinemaparadiso.GetCinemaParadisoMoviesInParallel(filteredPlexMovies)
+			searchResults = cinemaparadiso.MoviesInParallel(filteredPlexMovies)
 			if lookupFilters.NewerVersion {
-				searchResults = cinemaparadiso.ScrapeMovieTitlesParallel(searchResults)
+				searchResults = cinemaparadiso.ScrapeMoviesParallel(searchResults)
 			}
 		} else {
-			searchResults = amazon.SearchAmazonMoviesInParallel(filteredPlexMovies, lookupFilters.AudioLanguage, c.Config.AmazonRegion)
+			searchResults = amazon.MoviesInParallel(filteredPlexMovies, lookupFilters.AudioLanguage, c.Config.AmazonRegion)
 			// if we are filtering by newer version, we need to search again
 			if lookupFilters.NewerVersion {
-				searchResults = amazon.ScrapeTitlesParallel(searchResults, c.Config.AmazonRegion)
+				searchResults = amazon.ScrapeTitlesParallel(searchResults, c.Config.AmazonRegion, false)
 			}
 		}
 

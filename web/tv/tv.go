@@ -100,14 +100,15 @@ func renderTVTable(searchResults []types.SearchResults) (tableRows string) {
 	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="int"><strong>Blu-ray Seasons</strong></th><th data-sort="int"><strong>4K-ray Seasons</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
 	for i := range searchResults {
 		// build up plex season / resolution row
-		seasony := "Season:"
-		for _, season := range searchResults[i].PlexTVShow.Seasons {
-			seasony += fmt.Sprintf(" %d@%s,", season.Number, season.LowestResolution)
+		plexSeasonsString := "Season:"
+		for j := range searchResults[i].PlexTVShow.Seasons {
+			plexSeasonsString += fmt.Sprintf(" %d@%s,",
+				searchResults[i].PlexTVShow.Seasons[j].Number, searchResults[i].PlexTVShow.Seasons[j].LowestResolution)
 		}
-		seasony = seasony[:len(seasony)-1] // remove trailing comma
+		plexSeasonsString = plexSeasonsString[:len(plexSeasonsString)-1] // remove trailing comma
 		tableRows += fmt.Sprintf(
 			`<tr><td><a href=%q target="_blank">%s [%v]<br>%s</a></td><td>%d</td><td>%d</td>`,
-			searchResults[i].SearchURL, searchResults[i].PlexTVShow.Title, searchResults[i].PlexTVShow.Year, seasony,
+			searchResults[i].SearchURL, searchResults[i].PlexTVShow.Title, searchResults[i].PlexTVShow.Year, plexSeasonsString,
 			searchResults[i].MatchesBluray, searchResults[i].Matches4k)
 		if (searchResults[i].MatchesBluray + searchResults[i].Matches4k) > 0 {
 			tableRows += "<td>"
@@ -143,10 +144,11 @@ func removeOwnedTVSeasons(searchResults []types.SearchResults) []types.SearchRes
 		if len(searchResults[i].TVSearchResults) > 0 {
 			tvSeasonsToRemove := make([]types.TVSeasonResult, 0)
 			// iterate over plex tv season
-			for _, plexSeasons := range searchResults[i].PlexTVShow.Seasons {
+			for plexSeasonPointer := range searchResults[i].PlexTVShow.Seasons {
 				// iterate over search results
 				for _, searchSeasons := range searchResults[i].TVSearchResults[0].Seasons {
-					if searchSeasons.Number == plexSeasons.Number && !discBeatsPlexResolution(plexSeasons.LowestResolution, searchSeasons.Format) {
+					if searchSeasons.Number == searchResults[i].PlexTVShow.Seasons[plexSeasonPointer].Number &&
+						!discBeatsPlexResolution(searchResults[i].PlexTVShow.Seasons[plexSeasonPointer].LowestResolution, searchSeasons.Format) {
 						tvSeasonsToRemove = append(tvSeasonsToRemove, searchSeasons)
 					}
 				}
@@ -162,10 +164,10 @@ func removeOldDiscReleases(searchResults []types.SearchResults) []types.SearchRe
 		if len(searchResults[i].TVSearchResults) > 0 {
 			tvSeasonsToRemove := make([]types.TVSeasonResult, 0)
 			// iterate over plex tv season
-			for _, plexSeasons := range searchResults[i].PlexTVShow.Seasons {
+			for plesSeasonPointer := range searchResults[i].PlexTVShow.Seasons {
 				// iterate over search results
 				for _, searchSeasons := range searchResults[i].TVSearchResults[0].Seasons {
-					if searchSeasons.ReleaseDate.Compare(plexSeasons.LastEpisodeAdded) == 1 {
+					if searchSeasons.ReleaseDate.Compare(searchResults[i].PlexTVShow.Seasons[plesSeasonPointer].LastEpisodeAdded) == 1 {
 						tvSeasonsToRemove = append(tvSeasonsToRemove, searchSeasons)
 					}
 				}

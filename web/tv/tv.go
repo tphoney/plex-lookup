@@ -113,16 +113,11 @@ func renderTVTable(searchResults []types.SearchResults) (tableRows string) {
 			tableRows += "<td>"
 			for j := range searchResults[i].TVSearchResults {
 				if searchResults[i].TVSearchResults[j].BestMatch {
-					if searchResults[i].TVSearchResults[j].BoxSet {
-						tableRows += fmt.Sprintf(`<a href=%q target="_blank">%s Box Set</a></br>`,
-							searchResults[i].TVSearchResults[j].URL, searchResults[i].TVSearchResults[j].Format[0])
-					} else {
-						for _, season := range searchResults[i].TVSearchResults[j].Seasons {
-							tableRows += fmt.Sprintf(
-								`<a href=%q target="_blank">Season %d: %v`,
-								searchResults[i].TVSearchResults[j].URL, season.Number, season.Format)
-							tableRows += "</a><br>"
-						}
+					for _, season := range searchResults[i].TVSearchResults[j].Seasons {
+						tableRows += fmt.Sprintf(
+							`<a href=%q target="_blank">Season %d: %v`,
+							searchResults[i].TVSearchResults[j].URL, season.Number, season.Format)
+						tableRows += "</a><br>"
 					}
 				}
 			}

@@ -296,7 +296,6 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 		}
 		response = response[startIndex:]
 		endIndex := strings.Index(response, `</div></div>`)
-
 		// If both start and end index are found
 		if endIndex != -1 {
 			// Extract the entry
@@ -331,15 +330,12 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 				} else {
 					decipheredTitle, number, boxSet := decipherTVName(foundTitle)
 					// split year
+					splitYear := strings.Split(year, "-")
+					year = splitYear[0]
 					tvResult := types.TVSearchResult{
-						URL: returnURL, Format: []string{format}, Year: year, FoundTitle: decipheredTitle, UITitle: decipheredTitle, BoxSet: boxSet}
-
-					if boxSet {
-						tvResults = append(tvResults, tvResult)
-					} else if number != -1 {
-						tvResult.Seasons = append(tvResult.Seasons, types.TVSeasonResult{URL: returnURL, Format: format, Number: number})
-						tvResults = append(tvResults, tvResult)
-					}
+						URL: returnURL, Format: []string{format}, Year: year, FoundTitle: decipheredTitle, UITitle: decipheredTitle}
+					tvResult.Seasons = append(tvResult.Seasons, types.TVSeasonResult{URL: returnURL, Format: format, Number: number, BoxSet: boxSet})
+					tvResults = append(tvResults, tvResult)
 				}
 			}
 			// remove the movie entry from the response

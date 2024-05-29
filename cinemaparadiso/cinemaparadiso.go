@@ -167,7 +167,7 @@ func searchTVShow(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.Sear
 	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)
 	result.PlexTVShow = *plexTVShow
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
-	rawData, err := makeRequest(result.SearchURL, http.MethodPost, fmt.Sprintf("form-search-field=%s", urlEncodedTitle))
+	rawData, err := makeRequest(result.SearchURL, http.MethodGet, "")
 	if err != nil {
 		fmt.Println("searchTVShow: Error making web request:", err)
 		tvSearchResult <- result
@@ -342,9 +342,20 @@ func makeRequest(urlEncodedTitle, method, content string) (rawResponse string, e
 		fmt.Println("Error reading response body:", err)
 		return rawResponse, err
 	}
+	if resp.StatusCode != http.StatusOK {
+		fmt.Println("Error response code:", resp.StatusCode, urlEncodedTitle)
+	}
 	rawData := string(body)
-	// write the raw data to a file
-	// os.WriteFile("search.html", body, 0644)
+
+	//nolint
+	// bla := strings.Split(urlEncodedTitle, "=")
+	// if len(bla) > 1 {
+	// 	err = os.WriteFile(fmt.Sprintf("%s.html", bla[1]), body, 0644)
+	// 	if err != nil {
+	// 		fmt.Println("Error writing file:", bla[1], err)
+	// 	}
+	// }
+
 	return rawData, nil
 }
 

@@ -96,7 +96,7 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 
 func renderTVTable(searchResults []types.SearchResults) (tableRows string) {
 	searchResults = filterTVSearchResults(searchResults)
-	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
+	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="int"><strong>DVD</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
 	for i := range searchResults {
 		// build up plex season / resolution row
 		plexSeasonsString := ""
@@ -106,10 +106,10 @@ func renderTVTable(searchResults []types.SearchResults) (tableRows string) {
 		}
 		plexSeasonsString = plexSeasonsString[:len(plexSeasonsString)-1] // remove trailing comma
 		tableRows += fmt.Sprintf(
-			`<tr><td><a href=%q target="_blank">%s [%v]:<br>%s</a></td><td>%d</td><td>%d</td>`,
+			`<tr><td><a href=%q target="_blank">%s [%v]:<br>%s</a></td><td>%d</td><td>%d</td><td>%d</td>`,
 			searchResults[i].SearchURL, searchResults[i].PlexTVShow.Title, searchResults[i].PlexTVShow.Year, plexSeasonsString,
-			searchResults[i].MatchesBluray, searchResults[i].Matches4k)
-		if (searchResults[i].MatchesBluray + searchResults[i].Matches4k) > 0 {
+			searchResults[i].MatchesDVD, searchResults[i].MatchesBluray, searchResults[i].Matches4k)
+		if (searchResults[i].MatchesDVD + searchResults[i].MatchesBluray + searchResults[i].Matches4k) > 0 {
 			tableRows += "<td>"
 			for j := range searchResults[i].TVSearchResults {
 				if searchResults[i].TVSearchResults[j].BestMatch {

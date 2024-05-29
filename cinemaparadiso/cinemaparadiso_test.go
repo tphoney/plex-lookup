@@ -106,12 +106,12 @@ func TestSearchCinemaParadisoTV(t *testing.T) {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
 	show := types.PlexTVShow{
-		// Title: "Friends",
-		// Year:  "1994",
-		// Title: "Charmed",
-		// Year:  "1998",
-		Title: "Adventure Time",
-		Year:  "2010",
+		// Title:             "Friends",
+		// FirstEpisodeAired: time.Date(1994, time.September, 22, 0, 0, 0, 0, time.UTC),
+		// LastEpisodeAired:  time.Date(2004, time.May, 6, 0, 0, 0, 0, time.UTC),
+		Title:             "Stargate Origins",
+		FirstEpisodeAired: time.Date(2018, time.February, 15, 0, 0, 0, 0, time.UTC),
+		LastEpisodeAired:  time.Date(2018, time.March, 8, 0, 0, 0, 0, time.UTC),
 	}
 	ch := make(chan types.SearchResults, 1)
 	searchTVShow(&show, ch)

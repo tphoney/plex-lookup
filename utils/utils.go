@@ -33,9 +33,12 @@ func MarkBestMatchTV(search *types.SearchResults) types.SearchResults {
 	lastEpisodeBoundry := search.PlexTVShow.LastEpisodeAired.Year() + 1
 	for i := range search.TVSearchResults {
 		resultYear := YearToDate(search.TVSearchResults[i].FirstAiredYear)
-		if strings.EqualFold(search.TVSearchResults[i].FoundTitle, search.PlexTVShow.Title) &&
-			resultYear.Year() >= firstEpisodeBoundry && resultYear.Year() <= lastEpisodeBoundry {
+		if matchTVShow(search.PlexTVShow.Title, search.TVSearchResults[i].FoundTitle,
+			resultYear.Year(), firstEpisodeBoundry, lastEpisodeBoundry) {
 			search.TVSearchResults[i].BestMatch = true
+			if slices.Contains(search.TVSearchResults[i].Format, types.DiskDVD) {
+				search.MatchesDVD++
+			}
 			if slices.Contains(search.TVSearchResults[i].Format, types.DiskBluray) {
 				search.MatchesBluray++
 			}
@@ -45,6 +48,28 @@ func MarkBestMatchTV(search *types.SearchResults) types.SearchResults {
 		}
 	}
 	return *search
+}
+
+func matchTVShow(plexTitle, foundTitle string, foundYear, lowerBound, upperBound int) bool {
+	plexTitle = strings.ToLower(plexTitle)
+	foundTitle = strings.ToLower(foundTitle)
+	remove := []string{"the"}
+	for _, word := range remove {
+		plexTitle = strings.ReplaceAll(plexTitle, word, "")
+		foundTitle = strings.ReplaceAll(foundTitle, word, "")
+	}
+	// remove colons
+	plexTitle = strings.ReplaceAll(plexTitle, ":", "")
+	foundTitle = strings.ReplaceAll(foundTitle, ":", "")
+	// trim whitespace
+	plexTitle = strings.TrimSpace(plexTitle)
+	foundTitle = strings.TrimSpace(foundTitle)
+
+	if strings.EqualFold(plexTitle, foundTitle) &&
+		foundYear >= lowerBound && foundYear <= upperBound {
+		return true
+	}
+	return false
 }
 
 func YearToDate(yearString string) time.Time {

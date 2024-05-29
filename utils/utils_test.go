@@ -211,3 +211,48 @@ func TestWitinOneYear(t *testing.T) {
 		t.Errorf("Expected %v, but got %v", expectedResult, result)
 	}
 }
+
+func Test_matchTVShow(t *testing.T) {
+	type args struct {
+		plexTitle  string
+		foundTitle string
+		foundYear  int
+		lowerBound int
+		upperBound int
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "colons in title",
+			args: args{
+				plexTitle:  "Stargate origins",
+				foundTitle: "Stargate: Origins",
+				foundYear:  2018,
+				lowerBound: 2018,
+				upperBound: 2018,
+			},
+			want: true,
+		},
+		{
+			name: "Peter Serafinowicz Show",
+			args: args{
+				plexTitle:  "The Peter Serafinowicz Show",
+				foundTitle: "Peter Serafinowicz Show",
+				foundYear:  2008,
+				lowerBound: 2007,
+				upperBound: 2009,
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := matchTVShow(tt.args.plexTitle, tt.args.foundTitle, tt.args.foundYear, tt.args.lowerBound, tt.args.upperBound); got != tt.want {
+				t.Errorf("matchTVShow() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -25,6 +25,7 @@ type SearchResults struct {
 	SearchURL          string
 	Matches4k          int
 	MatchesBluray      int
+	MatchesDVD         int
 	MovieSearchResults []MovieSearchResult
 	TVSearchResults    []TVSearchResult
 	MusicSearchResults []MusicArtistSearchResult

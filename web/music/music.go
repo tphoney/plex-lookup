@@ -228,7 +228,7 @@ func removeOwnedAlbums(searchResults []types.SearchResults) []types.SearchResult
 			for _, plexAlbum := range searchResults[i].PlexMusicArtist.Albums {
 				// iterate over search results
 				for _, album := range searchResults[i].MusicSearchResults[0].Albums {
-					if utils.CompareTitles(plexAlbum.Title, album.Title) {
+					if utils.CompareAlbumTitles(plexAlbum.Title, album.Title) {
 						albumsToRemove = append(albumsToRemove, album)
 					}
 				}

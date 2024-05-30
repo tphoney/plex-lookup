@@ -168,7 +168,7 @@ func Test_albumTitlesMatch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("title1=%s, title2=%s", tt.title1, tt.title2), func(t *testing.T) {
-			if got := CompareTitles(tt.title1, tt.title2); got != tt.want {
+			if got := CompareAlbumTitles(tt.title1, tt.title2); got != tt.want {
 				t.Errorf("albumTitlesMatch() = %v, want %v", got, tt.want)
 			}
 		})
@@ -250,7 +250,7 @@ func Test_matchTVShow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := matchTVShow(tt.args.plexTitle, tt.args.foundTitle, tt.args.foundYear, tt.args.lowerBound, tt.args.upperBound); got != tt.want {
+			if got := matchTitle(tt.args.plexTitle, tt.args.foundTitle, tt.args.foundYear, tt.args.lowerBound, tt.args.upperBound); got != tt.want {
 				t.Errorf("matchTVShow() = %v, want %v", got, tt.want)
 			}
 		})

@@ -8,7 +8,6 @@
 
 - improve cinema-paradiso movie scrape, many search results are the same page. wasted processing
 - mandalorian is not showing up on amazon tv search
-- vikings, Once Upon a Time in Wonderland,What We Do in the Shadows is not showing up on cinema-paradiso tv search
 
 ## done
 
@@ -46,3 +45,4 @@
 - new release for amazon tv series
 - allow amazon tv search for indivdual series
 - improve best match for tv series
+- vikings, Once Upon a Time in Wonderland, What We Do in the Shadows, The Peter Serafinowicz Show  is not showing up on cinema-paradiso tv search

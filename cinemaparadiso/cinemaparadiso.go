@@ -180,7 +180,12 @@ func searchTVShow(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.Sear
 	// now we can get the season information for each best match
 	for i := range result.TVSearchResults {
 		if result.TVSearchResults[i].BestMatch {
-			result.TVSearchResults[i].Seasons, _ = findTVSeasonInfo(result.TVSearchResults[i].URL)
+			seasonInfo, _ := findTVSeasonInfo(result.TVSearchResults[i].URL)
+			if len(seasonInfo) == 0 {
+				// we have no season information, likely because it has not been released properly
+				seasonInfo = append(seasonInfo, types.TVSeasonResult{Number: 1, Format: "DVD", URL: result.TVSearchResults[i].URL})
+			}
+			result.TVSearchResults[i].Seasons = seasonInfo
 		}
 	}
 	tvSearchResult <- result

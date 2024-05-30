@@ -11,11 +11,12 @@ import (
 )
 
 func MarkBestMatchMovie(search *types.SearchResults) types.SearchResults {
-	expectedYear := YearToDate(search.PlexMovie.Year)
+	lowerBound := YearToDate(search.PlexMovie.Year).Year() - 1
+	upperBound := YearToDate(search.PlexMovie.Year).Year() + 1
 	for i := range search.MovieSearchResults {
 		// normally a match if the year is within 1 year of each other
 		resultYear := YearToDate(search.MovieSearchResults[i].Year)
-		if search.MovieSearchResults[i].FoundTitle == search.PlexMovie.Title && WitinOneYear(resultYear.Year(), expectedYear.Year()) {
+		if matchTitle(search.PlexMovie.Title, search.MovieSearchResults[i].FoundTitle, resultYear.Year(), lowerBound, upperBound) {
 			search.MovieSearchResults[i].BestMatch = true
 			if search.MovieSearchResults[i].Format == types.DiskBluray {
 				search.MatchesBluray++
@@ -33,7 +34,7 @@ func MarkBestMatchTV(search *types.SearchResults) types.SearchResults {
 	lastEpisodeBoundry := search.PlexTVShow.LastEpisodeAired.Year() + 1
 	for i := range search.TVSearchResults {
 		resultYear := YearToDate(search.TVSearchResults[i].FirstAiredYear)
-		if matchTVShow(search.PlexTVShow.Title, search.TVSearchResults[i].FoundTitle,
+		if matchTitle(search.PlexTVShow.Title, search.TVSearchResults[i].FoundTitle,
 			resultYear.Year(), firstEpisodeBoundry, lastEpisodeBoundry) {
 			search.TVSearchResults[i].BestMatch = true
 			if slices.Contains(search.TVSearchResults[i].Format, types.DiskDVD) {
@@ -50,7 +51,7 @@ func MarkBestMatchTV(search *types.SearchResults) types.SearchResults {
 	return *search
 }
 
-func matchTVShow(plexTitle, foundTitle string, foundYear, lowerBound, upperBound int) bool {
+func matchTitle(plexTitle, foundTitle string, foundYear, lowerBound, upperBound int) bool {
 	plexTitle = strings.ToLower(plexTitle)
 	foundTitle = strings.ToLower(foundTitle)
 	remove := []string{"the"}
@@ -80,7 +81,7 @@ func YearToDate(yearString string) time.Time {
 	return time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
 }
 
-func CompareTitles(title1, title2 string) bool {
+func CompareAlbumTitles(title1, title2 string) bool {
 	// remove anything between ()
 	r := regexp.MustCompile(`\((.*?)\)`)
 	title1 = r.ReplaceAllString(title1, "")

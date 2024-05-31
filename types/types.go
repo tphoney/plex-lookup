@@ -168,3 +168,9 @@ type PlexLibrary struct {
 	Type  string
 	ID    string
 }
+
+type PlexPlaylist struct {
+	Title     string
+	Type      string
+	RatingKey string
+}

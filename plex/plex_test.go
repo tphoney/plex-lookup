@@ -117,6 +117,35 @@ func TestGetPlexMusic(t *testing.T) {
 	}
 }
 
+func TestGetPlaylists(t *testing.T) {
+	if plexIP == "" || plexToken == "" {
+		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
+	}
+
+	playlists, err := GetPlaylists(plexIP, plexToken)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	// Check the number of playlists
+	if len(playlists) == 0 {
+		t.Errorf("Expected at least one playlist, but got %d", len(playlists))
+	}
+}
+
+func TestGetPlaylistItems(t *testing.T) {
+	if plexIP == "" || plexToken == "" {
+		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
+	}
+
+	items, err := GetPlaylistItems(plexIP, plexToken, "1", "111897")
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	// Check the number of items
+	if len(items) == 0 {
+		t.Errorf("Expected at least one item, but got %d", len(items))
+	}
+}
 func Test_findLowestResolution(t *testing.T) {
 	tests := []struct {
 		name                 string

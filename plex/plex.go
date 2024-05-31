@@ -1003,7 +1003,7 @@ func extractTVEpisodes(xmlString string) (episodeList []types.PlexTVEpisode) {
 }
 
 // =================================================================================================
-func GetPlexMusicArtists(ipAddress, libraryID, plexToken string) (artists []types.PlexMusicArtist) {
+func GetPlexMusicArtists(ipAddress, plexToken, libraryID string) (artists []types.PlexMusicArtist) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
 	response, err := makePlexAPIRequest(url, plexToken)
@@ -1106,17 +1106,19 @@ func extractLibraries(xmlString string) (libraryList []types.PlexLibrary, err er
 
 // =================================================================================================
 
-func GetPlaylists(ipAddress, plexToken string) (playlistList []types.PlexPlaylist, err error) {
-	url := fmt.Sprintf("http://%s:32400/playlists", ipAddress)
+func GetPlaylists(ipAddress, plexToken, libraryID string) (playlists []types.PlexPlaylist, err error) {
+	start := time.Now()
+	url := fmt.Sprintf("http://%s:32400/playlists?sectionID=%s", ipAddress, libraryID)
 
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
 		fmt.Println("GetPlaylists: Error making request:", err)
-		return playlistList, err
+		return playlists, err
 	}
 
-	playlistList, err = extractPlaylists(response)
-	return playlistList, err
+	playlists, err = extractPlaylists(response)
+	fmt.Printf("Plex playlists: %d. Duration: %v\n", len(playlists), time.Since(start))
+	return playlists, err
 }
 
 func extractPlaylists(xmlString string) (playlistList []types.PlexPlaylist, err error) {
@@ -1138,20 +1140,22 @@ func extractPlaylists(xmlString string) (playlistList []types.PlexPlaylist, err 
 	return playlistList, nil
 }
 
-func GetPlaylistItems(ipAddress, plexToken, libraryID, ratingKey string) (playlistItems []types.PlexMusicArtist, err error) {
+func GetArtistsFromPlaylist(ipAddress, plexToken, ratingKey string) (playlistItems []types.PlexMusicArtist) {
 	url := fmt.Sprintf("http://%s:32400/playlists/%s/items", ipAddress, ratingKey)
-
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
 		fmt.Println("GetPlaylistItems: Error making request:", err)
-		return playlistItems, err
+		return playlistItems
 	}
 
-	playlistItems, err = extractPlaylistItems(response, libraryID)
-	return playlistItems, err
+	playlistItems, err = extractPlaylistItems(response)
+	if err != nil {
+		fmt.Println("Error extracting playlist items:", err)
+	}
+	return playlistItems
 }
 
-func extractPlaylistItems(xmlString, libraryID string) (playlistItems []types.PlexMusicArtist, err error) {
+func extractPlaylistItems(xmlString string) (playlistItems []types.PlexMusicArtist, err error) {
 	var container MusicPlayList
 	err = xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
@@ -1160,13 +1164,8 @@ func extractPlaylistItems(xmlString, libraryID string) (playlistItems []types.Pl
 	}
 
 	// verify the library ID matches
-	fmt.Println("Library ID:", libraryID)
 	artists := make(map[string]types.PlexMusicArtist)
 	for i := range container.Track {
-		if container.Track[i].LibrarySectionID != libraryID {
-			fmt.Println("Library ID does not match playlist items library ID.")
-			return playlistItems, fmt.Errorf("plex music library ID does not match playlist items library ID")
-		}
 		album := types.PlexMusicAlbum{
 			Title:     container.Track[i].ParentTitle,
 			RatingKey: container.Track[i].ParentRatingKey,

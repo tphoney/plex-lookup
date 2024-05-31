@@ -27,8 +27,13 @@
     <h1 class="container">Music</h1>
     <div hx-get="/settings/plexinfook" class="container" hx-trigger="load"></div>
     <form hx-post="/musicprocess" class="container" hx-target="#progress" hx-boost="true" hx-indicator="#indicator">
-        <fieldset>
-            <legend><strong>Plex Filter:</strong> only lookup music that matches the following criteria.</legend>
+        <legend><strong>Plex:</strong> filter by playlist</legend>
+        <fieldset id="playlist" hx-get="/musicplaylists" class="container" name="playlist" hx-trigger="load once"
+            hx-swap="outerHTML" hx-boost="true" hx-target="this">
+            <label for="All">
+                <input type="radio" id="playlist" name="playlist" value="all" checked />
+                All: dont use a playlist.
+            </label>
         </fieldset>
         <fieldset>
             <legend><strong>Lookup:</strong></legend>

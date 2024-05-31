@@ -102,7 +102,7 @@ func TestGetPlexMusic(t *testing.T) {
 	if plexIP == "" || plexMusicLibraryID == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
-	result := GetPlexMusicArtists(plexIP, plexMusicLibraryID, plexToken)
+	result := GetPlexMusicArtists(plexIP, plexToken, plexMusicLibraryID)
 
 	if len(result) == 0 {
 		t.Errorf("Expected at least one album, but got %d", len(result))
@@ -121,8 +121,7 @@ func TestGetPlaylists(t *testing.T) {
 	if plexIP == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
-
-	playlists, err := GetPlaylists(plexIP, plexToken)
+	playlists, err := GetPlaylists(plexIP, plexToken, "1")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -136,11 +135,7 @@ func TestGetPlaylistItems(t *testing.T) {
 	if plexIP == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
-
-	items, err := GetPlaylistItems(plexIP, plexToken, "1", "111897")
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
+	items := GetArtistsFromPlaylist(plexIP, plexToken, "111897")
 	// Check the number of items
 	if len(items) == 0 {
 		t.Errorf("Expected at least one item, but got %d", len(items))

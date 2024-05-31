@@ -2,8 +2,6 @@
 
 ## features
 
-- allow the use of playlists for finding music / TV / movies `https://www.plexopedia.com/plex-media-server/api/playlists/view/`
-
 ## bugs
 
 - mandalorian is not showing up on amazon tv search
@@ -45,3 +43,4 @@
 - allow amazon tv search for indivdual series
 - improve best match for tv series
 - vikings, Once Upon a Time in Wonderland, What We Do in the Shadows, The Peter Serafinowicz Show  is not showing up on cinema-paradiso tv search
+- allow the use of playlists for finding music / TV / movies `https://www.plexopedia.com/plex-media-server/api/playlists/view/`

@@ -52,6 +52,7 @@ func MusicHandler(w http.ResponseWriter, _ *http.Request) {
 
 // nolint: lll, nolintlint
 func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
+	playlist := r.FormValue("playlist")
 	lookup = r.FormValue("lookup")
 	if lookup == "musicbrainz" {
 		if c.Config.MusicBrainzURL == "" {
@@ -75,8 +76,10 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	}
 	lookupType = r.FormValue("lookuptype")
 	// only get the artists from plex once
-	if len(plexMusic) == 0 {
-		plexMusic = plex.GetPlexMusicArtists(c.Config.PlexIP, c.Config.PlexMusicLibraryID, c.Config.PlexToken)
+	if playlist == "all" {
+		plexMusic = plex.GetPlexMusicArtists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexMusicLibraryID)
+	} else {
+		plexMusic = plex.GetArtistsFromPlaylist(c.Config.PlexIP, c.Config.PlexToken, playlist)
 	}
 	//nolint: gocritic
 	// plexMusic = plexMusic[:30]
@@ -131,6 +134,26 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("Processed %d artists in %v\n", totalArtists, time.Since(startTime))
 }
 
+func (c MusicConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
+	playlistHTML := `<fieldset id="playlist">
+	 <label for="All">
+		 <input type="radio" id="playlist" name="playlist" value="all" checked />
+		 All: dont use a playlist. (SLOW, only use for small libraries)
+	 </label>`
+	playlists, _ := plex.GetPlaylists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexMusicLibraryID)
+	fmt.Println("Playlists:", len(playlists))
+	for i := range playlists {
+		playlistHTML += fmt.Sprintf(
+			`<label for=%q>
+			<input type="radio" id="playlist" name="playlist" value=%q/>
+			%s</label>`,
+			playlists[i].Title, playlists[i].RatingKey, playlists[i].Title)
+	}
+
+	playlistHTML += `</fieldset>`
+	fmt.Fprint(w, playlistHTML)
+}
+
 func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 	if lookup == spotifyString {
 		numberOfArtistsProcessed = spotify.GetJobProgress()
@@ -146,7 +169,7 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 			tableContents = renderSimilarArtistsTable()
 		}
 		fmt.Fprintf(w,
-			`<table class="table-sortable">%s</tbody></table>
+			`<table class="table-sortable" hx-boost="true">%s</tbody></table>
 		</script><script>document.querySelector('.table-sortable').tsortable()</script>`,
 			tableContents)
 		// reset variables

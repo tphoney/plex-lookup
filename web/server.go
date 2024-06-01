@@ -50,6 +50,7 @@ func StartServer(startingConfig *types.Configuration) {
 
 	mux.HandleFunc("/music", music.MusicHandler)
 	mux.HandleFunc("/musicprocess", music.MusicConfig{Config: config}.ProcessHTML)
+	mux.HandleFunc("/musicplaylists", music.MusicConfig{Config: config}.PlaylistHTML)
 	mux.HandleFunc("/musicprogress", music.ProgressBarHTML)
 
 	mux.HandleFunc("/", indexHandler)

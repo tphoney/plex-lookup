@@ -57,7 +57,7 @@ func TestGetPlexMovies(t *testing.T) {
 	if plexIP == "" || plexMovieLibraryID == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
-	result := GetPlexMovies(plexIP, plexMovieLibraryID, plexToken, nil)
+	result := GetPlexMovies(plexIP, plexMovieLibraryID, plexToken)
 
 	if len(result) == 0 {
 		t.Errorf("Expected at least one TV show, but got %d", len(result))

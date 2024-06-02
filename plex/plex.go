@@ -827,17 +827,8 @@ type Filter struct {
 	Modifier string
 }
 
-func GetPlexMovies(ipAddress, libraryID, plexToken string, filters []Filter) (movieList []types.PlexMovie) {
+func GetPlexMovies(ipAddress, libraryID, plexToken string) (movieList []types.PlexMovie) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
-
-	for i := range filters {
-		if i == 0 {
-			url += "?"
-		} else {
-			url += "&"
-		}
-		url += fmt.Sprintf("%s%s%s", filters[i].Name, filters[i].Modifier, filters[i].Value)
-	}
 
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
@@ -914,17 +905,6 @@ func getPlexMovieDetails(ipAddress, plexToken string, movie *types.PlexMovie, ch
 		movie.AudioLanguages = append(movie.AudioLanguages, value)
 	}
 	ch <- *movie
-}
-
-func FilterPlexMovies(movies []types.PlexMovie, filters types.PlexLookupFilters) []types.PlexMovie {
-	// filter resolutions first
-	var filteredMovies []types.PlexMovie
-	for i := range movies {
-		if slices.Contains(filters.MatchesResolutions, movies[i].Resolution) {
-			filteredMovies = append(filteredMovies, movies[i])
-		}
-	}
-	return filteredMovies
 }
 
 // =================================================================================================

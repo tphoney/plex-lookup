@@ -48,7 +48,7 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	// fetch from plex
 	if playlist == "all" {
 		if len(plexMovies) == 0 {
-			plexMovies = plex.GetPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken, nil)
+			plexMovies = plex.GetPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken)
 		}
 	} else {
 		plexMovies = plex.GetMoviesFromPlaylist(c.Config.PlexIP, c.Config.PlexToken, playlist)
@@ -128,7 +128,6 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 }
 
 func renderTable(searchResults []types.SearchResults) (tableRows string) {
-	searchResults = filterMovieSearchResults(searchResults)
 	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="string"><strong>Plex Audio</strong></th><th data-sort="string"><strong>Plex Resolution</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th data-sort="string"><strong>New release</strong></th><th><strong>Available Discs</strong></th></tr></thead><tbody>` //nolint: lll
 	for i := range searchResults {
 		newRelease := "no"
@@ -156,8 +155,4 @@ func renderTable(searchResults []types.SearchResults) (tableRows string) {
 		tableRows += "</tr>"
 	}
 	return tableRows // Return the generated HTML for table rows
-}
-
-func filterMovieSearchResults(searchResults []types.SearchResults) []types.SearchResults {
-	return searchResults
 }

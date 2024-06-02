@@ -27,6 +27,14 @@
     <h1 class="container">Movies</h1>
     <div hx-get="/settings/plexinfook" class="container" hx-trigger="load"></div>
     <form hx-post="/moviesprocess" class="container" hx-target="#progress" hx-boost="true" hx-indicator="#indicator">
+        <legend><strong>Plex:</strong> filter by playlist</legend>
+        <fieldset id="playlist" hx-get="/moviesPlaylists" class="container" name="playlist" hx-trigger="load once"
+            hx-swap="outerHTML" hx-boost="true" hx-target="this">
+            <label for="All">
+                <input type="radio" id="playlist" name="playlist" value="all" checked />
+                All: dont use a playlist.
+            </label>
+        </fieldset>
         <fieldset>
             <legend><strong>Lookup:</strong></legend>
             <label for="amazon">
@@ -36,33 +44,6 @@
             <label for="cinemaParadiso">
                 <input type="radio" id="cinemaParadiso" name="lookup" value="cinemaParadiso" checked />
                 Cinema Paradiso
-            </label>
-        </fieldset>
-        <fieldset>
-            <legend><strong>Plex Filter:</strong> only compare movies that match the following criteria.</legend>
-            <label for="title" data-sort="title">
-                <input type="checkbox" id="sd" name="sd" value="sd" checked>
-                SD
-            </label>
-            <label for="title" data-sort="title">
-                <input type="checkbox" id="480" name="480" value="480" checked>
-                480p
-            </label>
-            <label for="title" data-sort="title">
-                <input type="checkbox" id="576" name="576" value="576" checked>
-                576p
-            </label>
-            <label for="title" data-sort="title">
-                <input type="checkbox" id="720" name="720" value="720" checked>
-                720p
-            </label>
-            <label for="title" data-sort="title">
-                <input type="checkbox" id="1080" name="1080" value="1080">
-                1080p
-            </label>
-            <label for="title" data-sort="title">
-                <input type="checkbox" id="4k" name="4k" value="4k">
-                4K
             </label>
         </fieldset>
         <fieldset>

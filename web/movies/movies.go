@@ -23,7 +23,6 @@ var (
 	searchResults           []types.SearchResults
 	plexMovies              []types.PlexMovie
 	lookup                  string
-	plexFilters             types.PlexLookupFilters
 	lookupFilters           types.MovieLookupFilters
 )
 
@@ -41,40 +40,25 @@ func MoviesHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
+	playlist := r.FormValue("playlist")
 	lookup = r.FormValue("lookup")
-	// plex filters
-	sd := r.FormValue("sd")
-	r240 := r.FormValue("240")
-	r480 := r.FormValue("480")
-	r576 := r.FormValue("576")
-	r720 := r.FormValue("720")
-	r1080 := r.FormValue("1080")
-	r4k := r.FormValue("4k")
-	plexResolutions := []string{sd, r240, r480, r576, r720, r1080, r4k}
-	// remove empty resolutions
-	var filteredResolutions []string
-	for _, resolution := range plexResolutions {
-		if resolution != "" {
-			filteredResolutions = append(filteredResolutions, resolution)
-		}
-	}
-	plexFilters.MatchesResolutions = filteredResolutions
 	// lookup filters
 	lookupFilters.AudioLanguage = r.FormValue("language")
 	lookupFilters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
 	// fetch from plex
-	if len(plexMovies) == 0 {
-		plexMovies = plex.GetPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken, nil)
+	if playlist == "all" {
+		if len(plexMovies) == 0 {
+			plexMovies = plex.GetPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken, nil)
+		}
+	} else {
+		plexMovies = plex.GetMoviesFromPlaylist(c.Config.PlexIP, c.Config.PlexToken, playlist)
 	}
-	// filter plex movies based on preferences, eg. only movies with a certain resolution
-	filteredPlexMovies := plex.FilterPlexMovies(plexMovies, plexFilters)
 	//nolint: gocritic
-	// filteredPlexMovies = filteredPlexMovies[:30]
+	// plexMovies = plexMovies[:30]
 	//lint: gocritic
 	jobRunning = true
 	numberOfMoviesProcessed = 0
-	totalMovies = len(filteredPlexMovies) - 1
-
+	totalMovies = len(plexMovies) - 1
 	// write progress bar
 	fmt.Fprintf(w, `<div hx-get="/moviesprogress" hx-trigger="every 100ms" class="container" id="progress">
 	<progress value="%d" max= "%d"/></div>`, numberOfMoviesProcessed, totalMovies)
@@ -82,12 +66,12 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		startTime := time.Now()
 		if lookup == "cinemaParadiso" {
-			searchResults = cinemaparadiso.MoviesInParallel(filteredPlexMovies)
+			searchResults = cinemaparadiso.MoviesInParallel(plexMovies)
 			if lookupFilters.NewerVersion {
 				searchResults = cinemaparadiso.ScrapeMoviesParallel(searchResults)
 			}
 		} else {
-			searchResults = amazon.MoviesInParallel(filteredPlexMovies, lookupFilters.AudioLanguage, c.Config.AmazonRegion)
+			searchResults = amazon.MoviesInParallel(plexMovies, lookupFilters.AudioLanguage, c.Config.AmazonRegion)
 			// if we are filtering by newer version, we need to search again
 			if lookupFilters.NewerVersion {
 				searchResults = amazon.ScrapeTitlesParallel(searchResults, c.Config.AmazonRegion, false)
@@ -97,6 +81,26 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		jobRunning = false
 		fmt.Printf("\nProcessed %d movies in %v\n", totalMovies, time.Since(startTime))
 	}()
+}
+
+func (c MoviesConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
+	playlistHTML := `<fieldset id="playlist">
+	 <label for="All">
+		 <input type="radio" id="playlist" name="playlist" value="all" checked />
+		 All: dont use a playlist. (SLOW, only use for small libraries)
+	 </label>`
+	playlists, _ := plex.GetPlaylists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexMovieLibraryID)
+	fmt.Println("Playlists:", len(playlists))
+	for i := range playlists {
+		playlistHTML += fmt.Sprintf(
+			`<label for=%q>
+			<input type="radio" id="playlist" name="playlist" value=%q/>
+			%s</label>`,
+			playlists[i].Title, playlists[i].RatingKey, playlists[i].Title)
+	}
+
+	playlistHTML += `</fieldset>`
+	fmt.Fprint(w, playlistHTML)
 }
 
 func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {

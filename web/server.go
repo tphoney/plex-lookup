@@ -42,6 +42,7 @@ func StartServer(startingConfig *types.Configuration) {
 
 	mux.HandleFunc("/movies", movies.MoviesHandler)
 	mux.HandleFunc("/moviesprocess", movies.MoviesConfig{Config: config}.ProcessHTML)
+	mux.HandleFunc("/moviesPlaylists", movies.MoviesConfig{Config: config}.PlaylistHTML)
 	mux.HandleFunc("/moviesprogress", movies.ProgressBarHTML)
 
 	mux.HandleFunc("/tv", tv.TVHandler)

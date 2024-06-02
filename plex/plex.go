@@ -726,6 +726,101 @@ type MusicPlayList struct {
 	} `xml:"Track"`
 }
 
+type MoviePlaylist struct {
+	XMLName      xml.Name `xml:"MediaContainer"`
+	Text         string   `xml:",chardata"`
+	Size         string   `xml:"size,attr"`
+	Composite    string   `xml:"composite,attr"`
+	Duration     string   `xml:"duration,attr"`
+	LeafCount    string   `xml:"leafCount,attr"`
+	PlaylistType string   `xml:"playlistType,attr"`
+	RatingKey    string   `xml:"ratingKey,attr"`
+	Smart        string   `xml:"smart,attr"`
+	Title        string   `xml:"title,attr"`
+	Video        []struct {
+		Text                  string `xml:",chardata"`
+		RatingKey             string `xml:"ratingKey,attr"`
+		Key                   string `xml:"key,attr"`
+		GUID                  string `xml:"guid,attr"`
+		Studio                string `xml:"studio,attr"`
+		Type                  string `xml:"type,attr"`
+		Title                 string `xml:"title,attr"`
+		LibrarySectionTitle   string `xml:"librarySectionTitle,attr"`
+		LibrarySectionID      string `xml:"librarySectionID,attr"`
+		LibrarySectionKey     string `xml:"librarySectionKey,attr"`
+		ContentRating         string `xml:"contentRating,attr"`
+		Summary               string `xml:"summary,attr"`
+		Rating                string `xml:"rating,attr"`
+		AudienceRating        string `xml:"audienceRating,attr"`
+		ViewCount             string `xml:"viewCount,attr"`
+		LastViewedAt          string `xml:"lastViewedAt,attr"`
+		Year                  string `xml:"year,attr"`
+		Tagline               string `xml:"tagline,attr"`
+		Thumb                 string `xml:"thumb,attr"`
+		Art                   string `xml:"art,attr"`
+		Duration              string `xml:"duration,attr"`
+		OriginallyAvailableAt string `xml:"originallyAvailableAt,attr"`
+		AddedAt               string `xml:"addedAt,attr"`
+		UpdatedAt             string `xml:"updatedAt,attr"`
+		AudienceRatingImage   string `xml:"audienceRatingImage,attr"`
+		ChapterSource         string `xml:"chapterSource,attr"`
+		PrimaryExtraKey       string `xml:"primaryExtraKey,attr"`
+		RatingImage           string `xml:"ratingImage,attr"`
+		TitleSort             string `xml:"titleSort,attr"`
+		OriginalTitle         string `xml:"originalTitle,attr"`
+		Slug                  string `xml:"slug,attr"`
+		SkipCount             string `xml:"skipCount,attr"`
+		Media                 []struct {
+			Text            string `xml:",chardata"`
+			ID              string `xml:"id,attr"`
+			Duration        string `xml:"duration,attr"`
+			Bitrate         string `xml:"bitrate,attr"`
+			Width           string `xml:"width,attr"`
+			Height          string `xml:"height,attr"`
+			AspectRatio     string `xml:"aspectRatio,attr"`
+			AudioChannels   string `xml:"audioChannels,attr"`
+			AudioCodec      string `xml:"audioCodec,attr"`
+			VideoCodec      string `xml:"videoCodec,attr"`
+			VideoResolution string `xml:"videoResolution,attr"`
+			Container       string `xml:"container,attr"`
+			VideoFrameRate  string `xml:"videoFrameRate,attr"`
+			VideoProfile    string `xml:"videoProfile,attr"`
+			AudioProfile    string `xml:"audioProfile,attr"`
+			Part            struct {
+				Text         string `xml:",chardata"`
+				ID           string `xml:"id,attr"`
+				Key          string `xml:"key,attr"`
+				Duration     string `xml:"duration,attr"`
+				File         string `xml:"file,attr"`
+				Size         string `xml:"size,attr"`
+				Container    string `xml:"container,attr"`
+				VideoProfile string `xml:"videoProfile,attr"`
+				AudioProfile string `xml:"audioProfile,attr"`
+			} `xml:"Part"`
+		} `xml:"Media"`
+		Genre []struct {
+			Text string `xml:",chardata"`
+			Tag  string `xml:"tag,attr"`
+		} `xml:"Genre"`
+		Country []struct {
+			Text string `xml:",chardata"`
+			Tag  string `xml:"tag,attr"`
+		} `xml:"Country"`
+		Director []struct {
+			Text string `xml:",chardata"`
+			Tag  string `xml:"tag,attr"`
+		} `xml:"Director"`
+		Writer []struct {
+			Text string `xml:",chardata"`
+			Tag  string `xml:"tag,attr"`
+		} `xml:"Writer"`
+		Role []struct {
+			Text string `xml:",chardata"`
+			Tag  string `xml:"tag,attr"`
+		} `xml:"Role"`
+	} `xml:"Video"`
+}
+
 type Filter struct {
 	Name     string
 	Value    string
@@ -734,22 +829,6 @@ type Filter struct {
 
 func GetPlexMovies(ipAddress, libraryID, plexToken string, filters []Filter) (movieList []types.PlexMovie) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
-	//nolint:gocritic
-	// EG
-	// filter = []plex.Filter{
-	// 	// does not have german audio
-	// 	{
-	// 		Name:     "audioLanguage",
-	// 		Value:    "de",
-	// 		Modifier: "\u0021=",
-	// 	},
-	// 	// has german audio
-	// 	{
-	// 		Name:     "audioLanguage",
-	// 		Value:    "de",
-	// 		Modifier: "=",
-	// 	},
-	// }
 
 	for i := range filters {
 		if i == 0 {
@@ -1144,18 +1223,33 @@ func GetArtistsFromPlaylist(ipAddress, plexToken, ratingKey string) (playlistIte
 	url := fmt.Sprintf("http://%s:32400/playlists/%s/items", ipAddress, ratingKey)
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("GetPlaylistItems: Error making request:", err)
+		fmt.Println("GetArtistsFromPlaylist: Error making request:", err)
 		return playlistItems
 	}
 
-	playlistItems, err = extractPlaylistItems(response)
+	playlistItems, err = extractArtistsFromPlaylist(response)
+	if err != nil {
+		fmt.Println("Error extracting artists from playlist:", err)
+	}
+	return playlistItems
+}
+
+func GetMoviesFromPlaylist(ipAddress, plexToken, ratingKey string) (playlistItems []types.PlexMovie) {
+	url := fmt.Sprintf("http://%s:32400/playlists/%s/items", ipAddress, ratingKey)
+	response, err := makePlexAPIRequest(url, plexToken)
+	if err != nil {
+		fmt.Println("GetMoviesromPlaylist: Error making request:", err)
+		return playlistItems
+	}
+
+	playlistItems, err = extractMoviesFromPlaylist(response)
 	if err != nil {
 		fmt.Println("Error extracting playlist items:", err)
 	}
 	return playlistItems
 }
 
-func extractPlaylistItems(xmlString string) (playlistItems []types.PlexMusicArtist, err error) {
+func extractArtistsFromPlaylist(xmlString string) (playlistItems []types.PlexMusicArtist, err error) {
 	var container MusicPlayList
 	err = xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
@@ -1188,6 +1282,25 @@ func extractPlaylistItems(xmlString string) (playlistItems []types.PlexMusicArti
 	// convert map to slice
 	for _, value := range artists {
 		playlistItems = append(playlistItems, value)
+	}
+	return playlistItems, nil
+}
+
+func extractMoviesFromPlaylist(xmlString string) (playlistItems []types.PlexMovie, err error) {
+	var container MoviePlaylist
+	err = xml.Unmarshal([]byte(xmlString), &container)
+	if err != nil {
+		fmt.Println("Error parsing XML:", err)
+		return playlistItems, err
+	}
+
+	for i := range container.Video {
+		playlistItems = append(playlistItems, types.PlexMovie{
+			Title:      container.Video[i].Title,
+			RatingKey:  container.Video[i].RatingKey,
+			Resolution: container.Video[i].Media[0].VideoResolution,
+			Year:       container.Video[i].Year,
+			DateAdded:  parsePlexDate(container.Video[i].AddedAt)})
 	}
 	return playlistItems, nil
 }

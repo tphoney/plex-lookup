@@ -20,6 +20,7 @@ A tool to compare your plex libraries with other physical media rental / purchas
   - [x] amazon via blu-ray.com (customisable region)
   - [x] cinema paradiso
   - [x] filter by resolution, audio language or new releases
+  - [x] use playlists to filter what you search for
 - [x] TV
   - [x] amazon via blu-ray.com (customisable region)
   - [x] cinema paradiso
@@ -28,6 +29,7 @@ A tool to compare your plex libraries with other physical media rental / purchas
   - [x] spotify (requires a client id and secret)
   - [x] musicbrainz (can use a local copy of the database)
   - [x] find new releases, or find similar new artists
+  - [x] use playlists to filter what you search for
 - [x] Runs locally
   - [x] no data is stored
   - [x] no ads

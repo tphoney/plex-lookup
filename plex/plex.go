@@ -827,7 +827,7 @@ type Filter struct {
 	Modifier string
 }
 
-func GetPlexMovies(ipAddress, libraryID, plexToken string) (movieList []types.PlexMovie) {
+func AllMovies(ipAddress, libraryID, plexToken string) (movieList []types.PlexMovie) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
 	response, err := makePlexAPIRequest(url, plexToken)
@@ -845,7 +845,7 @@ func GetPlexMovies(ipAddress, libraryID, plexToken string) (movieList []types.Pl
 		semaphore <- struct{}{}
 		go func(i int) {
 			defer func() { <-semaphore }()
-			getPlexMovieDetails(ipAddress, plexToken, &movieList[i], ch)
+			getMovieDetails(ipAddress, plexToken, &movieList[i], ch)
 		}(i)
 	}
 	detailedMovies := make([]types.PlexMovie, len(movieList))
@@ -876,7 +876,7 @@ func extractMovies(xmlString string) (movieList []types.PlexMovie) {
 	return movieList
 }
 
-func getPlexMovieDetails(ipAddress, plexToken string, movie *types.PlexMovie, ch chan<- types.PlexMovie) {
+func getMovieDetails(ipAddress, plexToken string, movie *types.PlexMovie, ch chan<- types.PlexMovie) {
 	url := fmt.Sprintf("http://%s:32400/library/metadata/%s", ipAddress, movie.RatingKey)
 
 	response, err := makePlexAPIRequest(url, plexToken)
@@ -908,7 +908,7 @@ func getPlexMovieDetails(ipAddress, plexToken string, movie *types.PlexMovie, ch
 }
 
 // =================================================================================================
-func GetPlexTV(ipAddress, libraryID, plexToken string) (tvShowList []types.PlexTVShow) {
+func AllTV(ipAddress, libraryID, plexToken string) (tvShowList []types.PlexTVShow) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
 	response, err := makePlexAPIRequest(url, plexToken)
@@ -954,7 +954,7 @@ func getPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []type
 		semaphore <- struct{}{}
 		go func(i int) {
 			defer func() { <-semaphore }()
-			getPlexTVEpisodes(ipAddress, plexToken, &seasonList[i], ch)
+			getTVEpisodes(ipAddress, plexToken, &seasonList[i], ch)
 		}(i)
 	}
 
@@ -988,7 +988,7 @@ func getPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []type
 	return filteredSeasons
 }
 
-func getPlexTVEpisodes(ipAddress, plexToken string, season *types.PlexTVSeason, ch chan<- types.PlexTVSeason) {
+func getTVEpisodes(ipAddress, plexToken string, season *types.PlexTVSeason, ch chan<- types.PlexTVSeason) {
 	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, season.RatingKey)
 
 	response, err := makePlexAPIRequest(url, plexToken)
@@ -1062,7 +1062,7 @@ func extractTVEpisodes(xmlString string) (episodeList []types.PlexTVEpisode) {
 }
 
 // =================================================================================================
-func GetPlexMusicArtists(ipAddress, plexToken, libraryID string) (artists []types.PlexMusicArtist) {
+func AllMusicArtists(ipAddress, plexToken, libraryID string) (artists []types.PlexMusicArtist) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
 	response, err := makePlexAPIRequest(url, plexToken)
@@ -1079,14 +1079,14 @@ func GetPlexMusicArtists(ipAddress, plexToken, libraryID string) (artists []type
 	}
 	// now we need to get the albums for each artist
 	for i := range artists {
-		artists[i].Albums = GetPlexMusicAlbums(ipAddress, plexToken, libraryID, artists[i].RatingKey)
+		artists[i].Albums = GetArtistMusicAlbums(ipAddress, plexToken, libraryID, artists[i].RatingKey)
 	}
 
 	fmt.Printf("Plex music artists: %d.\n", len(artists))
 	return artists
 }
 
-func GetPlexMusicAlbums(ipAddress, plexToken, libraryID, ratingKey string) (albums []types.PlexMusicAlbum) {
+func GetArtistMusicAlbums(ipAddress, plexToken, libraryID, ratingKey string) (albums []types.PlexMusicAlbum) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all?artist.id=%s&type=9", ipAddress, libraryID, ratingKey)
 
 	response, err := makePlexAPIRequest(url, plexToken)

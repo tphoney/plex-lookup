@@ -77,7 +77,7 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	lookupType = r.FormValue("lookuptype")
 	// only get the artists from plex once
 	if playlist == "all" {
-		plexMusic = plex.GetPlexMusicArtists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexMusicLibraryID)
+		plexMusic = plex.AllMusicArtists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexMusicLibraryID)
 	} else {
 		plexMusic = plex.GetArtistsFromPlaylist(c.Config.PlexIP, c.Config.PlexToken, playlist)
 	}

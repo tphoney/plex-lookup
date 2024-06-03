@@ -46,7 +46,7 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	newFilters.AudioLanguage = r.FormValue("language")
 	newFilters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
 	if len(plexTV) == 0 || filters != newFilters {
-		plexTV = plex.GetPlexTV(c.Config.PlexIP, c.Config.PlexTVLibraryID, c.Config.PlexToken)
+		plexTV = plex.AllTV(c.Config.PlexIP, c.Config.PlexTVLibraryID, c.Config.PlexToken)
 	}
 	filters = newFilters
 	//nolint: gocritic

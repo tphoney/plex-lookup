@@ -48,7 +48,7 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	// fetch from plex
 	if playlist == "all" {
 		if len(plexMovies) == 0 {
-			plexMovies = plex.GetPlexMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken)
+			plexMovies = plex.AllMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken)
 		}
 	} else {
 		plexMovies = plex.GetMoviesFromPlaylist(c.Config.PlexIP, c.Config.PlexToken, playlist)

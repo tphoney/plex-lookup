@@ -50,6 +50,26 @@ func MusicHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
+func (c MusicConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
+	playlistHTML := `<fieldset id="playlist">
+	 <label for="All">
+		 <input type="radio" id="playlist" name="playlist" value="all" checked />
+		 All: dont use a playlist. (SLOW, only use for small libraries)
+	 </label>`
+	playlists, _ := plex.GetPlaylists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexMusicLibraryID)
+	fmt.Println("Playlists:", len(playlists))
+	for i := range playlists {
+		playlistHTML += fmt.Sprintf(
+			`<label for=%q>
+			<input type="radio" id="playlist" name="playlist" value=%q/>
+			%s</label>`,
+			playlists[i].Title, playlists[i].RatingKey, playlists[i].Title)
+	}
+
+	playlistHTML += `</fieldset>`
+	fmt.Fprint(w, playlistHTML)
+}
+
 // nolint: lll, nolintlint
 func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	playlist := r.FormValue("playlist")
@@ -132,26 +152,6 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	fmt.Printf("Processed %d artists in %v\n", totalArtists, time.Since(startTime))
-}
-
-func (c MusicConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
-	playlistHTML := `<fieldset id="playlist">
-	 <label for="All">
-		 <input type="radio" id="playlist" name="playlist" value="all" checked />
-		 All: dont use a playlist. (SLOW, only use for small libraries)
-	 </label>`
-	playlists, _ := plex.GetPlaylists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexMusicLibraryID)
-	fmt.Println("Playlists:", len(playlists))
-	for i := range playlists {
-		playlistHTML += fmt.Sprintf(
-			`<label for=%q>
-			<input type="radio" id="playlist" name="playlist" value=%q/>
-			%s</label>`,
-			playlists[i].Title, playlists[i].RatingKey, playlists[i].Title)
-	}
-
-	playlistHTML += `</fieldset>`
-	fmt.Fprint(w, playlistHTML)
 }
 
 func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {

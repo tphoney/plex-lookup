@@ -42,11 +42,12 @@ func StartServer(startingConfig *types.Configuration) {
 
 	mux.HandleFunc("/movies", movies.MoviesHandler)
 	mux.HandleFunc("/moviesprocess", movies.MoviesConfig{Config: config}.ProcessHTML)
-	mux.HandleFunc("/moviesPlaylists", movies.MoviesConfig{Config: config}.PlaylistHTML)
+	mux.HandleFunc("/moviesplaylists", movies.MoviesConfig{Config: config}.PlaylistHTML)
 	mux.HandleFunc("/moviesprogress", movies.ProgressBarHTML)
 
 	mux.HandleFunc("/tv", tv.TVHandler)
 	mux.HandleFunc("/tvprocess", tv.TVConfig{Config: config}.ProcessHTML)
+	mux.HandleFunc("/tvplaylists", tv.TVConfig{Config: config}.PlaylistHTML)
 	mux.HandleFunc("/tvprogress", tv.ProgressBarHTML)
 
 	mux.HandleFunc("/music", music.MusicHandler)

@@ -39,6 +39,26 @@ func MoviesHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
+func (c MoviesConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
+	playlistHTML := `<fieldset id="playlist">
+	 <label for="All">
+		 <input type="radio" id="playlist" name="playlist" value="all" checked />
+		 All: dont use a playlist. (SLOW, only use for small libraries)
+	 </label>`
+	playlists, _ := plex.GetPlaylists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexMovieLibraryID)
+	fmt.Println("Playlists:", len(playlists))
+	for i := range playlists {
+		playlistHTML += fmt.Sprintf(
+			`<label for=%q>
+			<input type="radio" id="playlist" name="playlist" value=%q/>
+			%s</label>`,
+			playlists[i].Title, playlists[i].RatingKey, playlists[i].Title)
+	}
+
+	playlistHTML += `</fieldset>`
+	fmt.Fprint(w, playlistHTML)
+}
+
 func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	playlist := r.FormValue("playlist")
 	lookup = r.FormValue("lookup")
@@ -47,9 +67,7 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	lookupFilters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
 	// fetch from plex
 	if playlist == "all" {
-		if len(plexMovies) == 0 {
-			plexMovies = plex.AllMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken)
-		}
+		plexMovies = plex.AllMovies(c.Config.PlexIP, c.Config.PlexMovieLibraryID, c.Config.PlexToken)
 	} else {
 		plexMovies = plex.GetMoviesFromPlaylist(c.Config.PlexIP, c.Config.PlexToken, playlist)
 	}
@@ -81,26 +99,6 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		jobRunning = false
 		fmt.Printf("\nProcessed %d movies in %v\n", totalMovies, time.Since(startTime))
 	}()
-}
-
-func (c MoviesConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
-	playlistHTML := `<fieldset id="playlist">
-	 <label for="All">
-		 <input type="radio" id="playlist" name="playlist" value="all" checked />
-		 All: dont use a playlist. (SLOW, only use for small libraries)
-	 </label>`
-	playlists, _ := plex.GetPlaylists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexMovieLibraryID)
-	fmt.Println("Playlists:", len(playlists))
-	for i := range playlists {
-		playlistHTML += fmt.Sprintf(
-			`<label for=%q>
-			<input type="radio" id="playlist" name="playlist" value=%q/>
-			%s</label>`,
-			playlists[i].Title, playlists[i].RatingKey, playlists[i].Title)
-	}
-
-	playlistHTML += `</fieldset>`
-	fmt.Fprint(w, playlistHTML)
 }
 
 func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {

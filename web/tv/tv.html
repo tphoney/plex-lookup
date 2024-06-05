@@ -27,6 +27,14 @@
     <h1 class="container">TV</h1>
     <div hx-get="/settings/plexinfook" class="container" hx-trigger="load"></div>
     <form hx-post="/tvprocess" class="container" hx-target="#progress" hx-boost="true" hx-indicator="#indicator">
+        <legend><strong>Plex:</strong> filter by playlist</legend>
+        <fieldset id="playlist" hx-get="/tvplaylists" class="container" name="playlist" hx-trigger="load once"
+            hx-swap="outerHTML" hx-boost="true" hx-target="this">
+            <label for="All">
+                <input type="radio" id="playlist" name="playlist" value="all" checked />
+                All: dont use a playlist.
+            </label>
+        </fieldset>
         <fieldset>
             <legend><strong>Lookup:</strong></legend>
             <label for="amazon">

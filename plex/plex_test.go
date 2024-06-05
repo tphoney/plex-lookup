@@ -121,7 +121,7 @@ func TestGetPlaylists(t *testing.T) {
 	if plexIP == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
-	playlists, err := GetPlaylists(plexIP, plexToken, "3")
+	playlists, err := GetPlaylists(plexIP, plexToken, "2")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -153,6 +153,16 @@ func TestGetMoviesFromPlaylist(t *testing.T) {
 	}
 }
 
+func TestGetTVFromPlaylist(t *testing.T) {
+	if plexIP == "" || plexToken == "" {
+		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
+	}
+	items := GetTVFromPlaylist(plexIP, plexToken, "111908")
+	// Check the number of items
+	if len(items) == 0 {
+		t.Errorf("Expected at least one item, but got %d", len(items))
+	}
+}
 func Test_findLowestResolution(t *testing.T) {
 	tests := []struct {
 		name                 string

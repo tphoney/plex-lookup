@@ -39,16 +39,38 @@ func TVHandler(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
+func (c TVConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
+	playlistHTML := `<fieldset id="playlist">
+	 <label for="All">
+		 <input type="radio" id="playlist" name="playlist" value="all" checked />
+		 All: dont use a playlist. (SLOW, only use for small libraries)
+	 </label>`
+	playlists, _ := plex.GetPlaylists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexTVLibraryID)
+	fmt.Println("Playlists:", len(playlists))
+	for i := range playlists {
+		playlistHTML += fmt.Sprintf(
+			`<label for=%q>
+			<input type="radio" id="playlist" name="playlist" value=%q/>
+			%s</label>`,
+			playlists[i].Title, playlists[i].RatingKey, playlists[i].Title)
+	}
+
+	playlistHTML += `</fieldset>`
+	fmt.Fprint(w, playlistHTML)
+}
+
 func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
+	playlist := r.FormValue("playlist")
 	lookup = r.FormValue("lookup")
 	// lookup filters
 	newFilters := types.MovieLookupFilters{}
 	newFilters.AudioLanguage = r.FormValue("language")
 	newFilters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
-	if len(plexTV) == 0 || filters != newFilters {
-		plexTV = plex.GetPlexTV(c.Config.PlexIP, c.Config.PlexTVLibraryID, c.Config.PlexToken)
+	if playlist == "all" {
+		plexTV = plex.AllTV(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexTVLibraryID)
+	} else {
+		plexTV = plex.GetTVFromPlaylist(c.Config.PlexIP, c.Config.PlexToken, playlist)
 	}
-	filters = newFilters
 	//nolint: gocritic
 	// plexTV = plexTV[:20]
 	//lint: gocritic
@@ -95,7 +117,6 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 }
 
 func renderTVTable(searchResults []types.SearchResults) (tableRows string) {
-	searchResults = filterTVSearchResults(searchResults)
 	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="int"><strong>DVD</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>` //nolint: lll
 	for i := range searchResults {
 		// build up plex season / resolution row
@@ -138,8 +159,4 @@ func renderTVTable(searchResults []types.SearchResults) (tableRows string) {
 		tableRows += "</tr>"
 	}
 	return tableRows // Return the generated HTML for table rows
-}
-
-func filterTVSearchResults(searchResults []types.SearchResults) []types.SearchResults {
-	return searchResults
 }

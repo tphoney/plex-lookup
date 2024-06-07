@@ -28,7 +28,7 @@
     <div hx-get="/settings/plexinfook" class="container" hx-trigger="load"></div>
     <form hx-post="/moviesprocess" class="container" hx-target="#progress" hx-boost="true" hx-indicator="#indicator">
         <legend><strong>Plex:</strong> filter by playlist</legend>
-        <fieldset id="playlist" hx-get="/moviesPlaylists" class="container" name="playlist" hx-trigger="load once"
+        <fieldset id="playlist" hx-get="/moviesplaylists" class="container" name="playlist" hx-trigger="load once"
             hx-swap="outerHTML" hx-boost="true" hx-target="this">
             <label for="All">
                 <input type="radio" id="playlist" name="playlist" value="all" checked />

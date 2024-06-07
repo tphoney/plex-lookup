@@ -57,7 +57,7 @@ func TestGetPlexMovies(t *testing.T) {
 	if plexIP == "" || plexMovieLibraryID == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
-	result := GetPlexMovies(plexIP, plexMovieLibraryID, plexToken)
+	result := AllMovies(plexIP, plexMovieLibraryID, plexToken)
 
 	if len(result) == 0 {
 		t.Errorf("Expected at least one TV show, but got %d", len(result))
@@ -68,7 +68,7 @@ func TestGetPlexTV(t *testing.T) {
 	if plexIP == "" || plexTVLibraryID == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
-	result := GetPlexTV(plexIP, plexTVLibraryID, plexToken)
+	result := AllTV(plexIP, plexTVLibraryID, plexToken)
 
 	if len(result) == 0 {
 		t.Errorf("Expected at least one TV show, but got %d", len(result))
@@ -102,7 +102,7 @@ func TestGetPlexMusic(t *testing.T) {
 	if plexIP == "" || plexMusicLibraryID == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
-	result := GetPlexMusicArtists(plexIP, plexToken, plexMusicLibraryID)
+	result := AllMusicArtists(plexIP, plexToken, plexMusicLibraryID)
 
 	if len(result) == 0 {
 		t.Errorf("Expected at least one album, but got %d", len(result))
@@ -121,7 +121,7 @@ func TestGetPlaylists(t *testing.T) {
 	if plexIP == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
-	playlists, err := GetPlaylists(plexIP, plexToken, "3")
+	playlists, err := GetPlaylists(plexIP, plexToken, "2")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -153,6 +153,16 @@ func TestGetMoviesFromPlaylist(t *testing.T) {
 	}
 }
 
+func TestGetTVFromPlaylist(t *testing.T) {
+	if plexIP == "" || plexToken == "" {
+		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
+	}
+	items := GetTVFromPlaylist(plexIP, plexToken, "111908")
+	// Check the number of items
+	if len(items) == 0 {
+		t.Errorf("Expected at least one item, but got %d", len(items))
+	}
+}
 func Test_findLowestResolution(t *testing.T) {
 	tests := []struct {
 		name                 string

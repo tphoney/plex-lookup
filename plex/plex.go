@@ -821,13 +821,211 @@ type MoviePlaylist struct {
 	} `xml:"Video"`
 }
 
+type TVPlaylist struct {
+	XMLName      xml.Name `xml:"MediaContainer"`
+	Text         string   `xml:",chardata"`
+	Size         string   `xml:"size,attr"`
+	Composite    string   `xml:"composite,attr"`
+	Duration     string   `xml:"duration,attr"`
+	LeafCount    string   `xml:"leafCount,attr"`
+	PlaylistType string   `xml:"playlistType,attr"`
+	RatingKey    string   `xml:"ratingKey,attr"`
+	Smart        string   `xml:"smart,attr"`
+	Title        string   `xml:"title,attr"`
+	Video        []struct {
+		Text                  string `xml:",chardata"`
+		RatingKey             string `xml:"ratingKey,attr"`
+		Key                   string `xml:"key,attr"`
+		ParentRatingKey       string `xml:"parentRatingKey,attr"`
+		GrandparentRatingKey  string `xml:"grandparentRatingKey,attr"`
+		GUID                  string `xml:"guid,attr"`
+		ParentGUID            string `xml:"parentGuid,attr"`
+		GrandparentGUID       string `xml:"grandparentGuid,attr"`
+		Type                  string `xml:"type,attr"`
+		Title                 string `xml:"title,attr"`
+		GrandparentKey        string `xml:"grandparentKey,attr"`
+		ParentKey             string `xml:"parentKey,attr"`
+		LibrarySectionTitle   string `xml:"librarySectionTitle,attr"`
+		LibrarySectionID      string `xml:"librarySectionID,attr"`
+		LibrarySectionKey     string `xml:"librarySectionKey,attr"`
+		GrandparentTitle      string `xml:"grandparentTitle,attr"`
+		ParentTitle           string `xml:"parentTitle,attr"`
+		ContentRating         string `xml:"contentRating,attr"`
+		Summary               string `xml:"summary,attr"`
+		Index                 string `xml:"index,attr"`
+		ParentIndex           string `xml:"parentIndex,attr"`
+		AudienceRating        string `xml:"audienceRating,attr"`
+		ViewCount             string `xml:"viewCount,attr"`
+		LastViewedAt          string `xml:"lastViewedAt,attr"`
+		Year                  string `xml:"year,attr"`
+		Thumb                 string `xml:"thumb,attr"`
+		Art                   string `xml:"art,attr"`
+		ParentThumb           string `xml:"parentThumb,attr"`
+		GrandparentThumb      string `xml:"grandparentThumb,attr"`
+		GrandparentArt        string `xml:"grandparentArt,attr"`
+		GrandparentTheme      string `xml:"grandparentTheme,attr"`
+		Duration              string `xml:"duration,attr"`
+		OriginallyAvailableAt string `xml:"originallyAvailableAt,attr"`
+		AddedAt               string `xml:"addedAt,attr"`
+		AudienceRatingImage   string `xml:"audienceRatingImage,attr"`
+		TitleSort             string `xml:"titleSort,attr"`
+		UpdatedAt             string `xml:"updatedAt,attr"`
+		ChapterSource         string `xml:"chapterSource,attr"`
+		GrandparentSlug       string `xml:"grandparentSlug,attr"`
+		SkipCount             string `xml:"skipCount,attr"`
+		Media                 []struct {
+			Text                  string `xml:",chardata"`
+			ID                    string `xml:"id,attr"`
+			Duration              string `xml:"duration,attr"`
+			Bitrate               string `xml:"bitrate,attr"`
+			Width                 string `xml:"width,attr"`
+			Height                string `xml:"height,attr"`
+			AspectRatio           string `xml:"aspectRatio,attr"`
+			AudioChannels         string `xml:"audioChannels,attr"`
+			AudioCodec            string `xml:"audioCodec,attr"`
+			VideoCodec            string `xml:"videoCodec,attr"`
+			VideoResolution       string `xml:"videoResolution,attr"`
+			Container             string `xml:"container,attr"`
+			VideoFrameRate        string `xml:"videoFrameRate,attr"`
+			OptimizedForStreaming string `xml:"optimizedForStreaming,attr"`
+			AudioProfile          string `xml:"audioProfile,attr"`
+			Has64bitOffsets       string `xml:"has64bitOffsets,attr"`
+			VideoProfile          string `xml:"videoProfile,attr"`
+			DisplayOffset         string `xml:"displayOffset,attr"`
+			Part                  struct {
+				Text                  string `xml:",chardata"`
+				ID                    string `xml:"id,attr"`
+				Key                   string `xml:"key,attr"`
+				Duration              string `xml:"duration,attr"`
+				File                  string `xml:"file,attr"`
+				Size                  string `xml:"size,attr"`
+				AudioProfile          string `xml:"audioProfile,attr"`
+				Container             string `xml:"container,attr"`
+				Has64bitOffsets       string `xml:"has64bitOffsets,attr"`
+				OptimizedForStreaming string `xml:"optimizedForStreaming,attr"`
+				VideoProfile          string `xml:"videoProfile,attr"`
+			} `xml:"Part"`
+		} `xml:"Media"`
+		Role []struct {
+			Text string `xml:",chardata"`
+			Tag  string `xml:"tag,attr"`
+		} `xml:"Role"`
+		Director []struct {
+			Text string `xml:",chardata"`
+			Tag  string `xml:"tag,attr"`
+		} `xml:"Director"`
+		Writer []struct {
+			Text string `xml:",chardata"`
+			Tag  string `xml:"tag,attr"`
+		} `xml:"Writer"`
+		MediaContainer struct {
+			Text         string `xml:",chardata"`
+			Size         string `xml:"size,attr"`
+			Composite    string `xml:"composite,attr"`
+			Duration     string `xml:"duration,attr"`
+			LeafCount    string `xml:"leafCount,attr"`
+			PlaylistType string `xml:"playlistType,attr"`
+			RatingKey    string `xml:"ratingKey,attr"`
+			Smart        string `xml:"smart,attr"`
+			Title        string `xml:"title,attr"`
+			Video        []struct {
+				Text                  string `xml:",chardata"`
+				RatingKey             string `xml:"ratingKey,attr"`
+				Key                   string `xml:"key,attr"`
+				ParentRatingKey       string `xml:"parentRatingKey,attr"`
+				GrandparentRatingKey  string `xml:"grandparentRatingKey,attr"`
+				GUID                  string `xml:"guid,attr"`
+				ParentGUID            string `xml:"parentGuid,attr"`
+				GrandparentGUID       string `xml:"grandparentGuid,attr"`
+				Type                  string `xml:"type,attr"`
+				Title                 string `xml:"title,attr"`
+				GrandparentKey        string `xml:"grandparentKey,attr"`
+				ParentKey             string `xml:"parentKey,attr"`
+				LibrarySectionTitle   string `xml:"librarySectionTitle,attr"`
+				LibrarySectionID      string `xml:"librarySectionID,attr"`
+				LibrarySectionKey     string `xml:"librarySectionKey,attr"`
+				GrandparentTitle      string `xml:"grandparentTitle,attr"`
+				ParentTitle           string `xml:"parentTitle,attr"`
+				ContentRating         string `xml:"contentRating,attr"`
+				Summary               string `xml:"summary,attr"`
+				Index                 string `xml:"index,attr"`
+				ParentIndex           string `xml:"parentIndex,attr"`
+				AudienceRating        string `xml:"audienceRating,attr"`
+				ViewCount             string `xml:"viewCount,attr"`
+				LastViewedAt          string `xml:"lastViewedAt,attr"`
+				Year                  string `xml:"year,attr"`
+				Thumb                 string `xml:"thumb,attr"`
+				Art                   string `xml:"art,attr"`
+				ParentThumb           string `xml:"parentThumb,attr"`
+				GrandparentThumb      string `xml:"grandparentThumb,attr"`
+				GrandparentArt        string `xml:"grandparentArt,attr"`
+				GrandparentTheme      string `xml:"grandparentTheme,attr"`
+				Duration              string `xml:"duration,attr"`
+				OriginallyAvailableAt string `xml:"originallyAvailableAt,attr"`
+				AddedAt               string `xml:"addedAt,attr"`
+				AudienceRatingImage   string `xml:"audienceRatingImage,attr"`
+				TitleSort             string `xml:"titleSort,attr"`
+				UpdatedAt             string `xml:"updatedAt,attr"`
+				ChapterSource         string `xml:"chapterSource,attr"`
+				GrandparentSlug       string `xml:"grandparentSlug,attr"`
+				SkipCount             string `xml:"skipCount,attr"`
+				Media                 []struct {
+					Text                  string `xml:",chardata"`
+					ID                    string `xml:"id,attr"`
+					Duration              string `xml:"duration,attr"`
+					Bitrate               string `xml:"bitrate,attr"`
+					Width                 string `xml:"width,attr"`
+					Height                string `xml:"height,attr"`
+					AspectRatio           string `xml:"aspectRatio,attr"`
+					AudioChannels         string `xml:"audioChannels,attr"`
+					AudioCodec            string `xml:"audioCodec,attr"`
+					VideoCodec            string `xml:"videoCodec,attr"`
+					VideoResolution       string `xml:"videoResolution,attr"`
+					Container             string `xml:"container,attr"`
+					VideoFrameRate        string `xml:"videoFrameRate,attr"`
+					OptimizedForStreaming string `xml:"optimizedForStreaming,attr"`
+					AudioProfile          string `xml:"audioProfile,attr"`
+					Has64bitOffsets       string `xml:"has64bitOffsets,attr"`
+					VideoProfile          string `xml:"videoProfile,attr"`
+					DisplayOffset         string `xml:"displayOffset,attr"`
+					Part                  struct {
+						Text                  string `xml:",chardata"`
+						ID                    string `xml:"id,attr"`
+						Key                   string `xml:"key,attr"`
+						Duration              string `xml:"duration,attr"`
+						File                  string `xml:"file,attr"`
+						Size                  string `xml:"size,attr"`
+						AudioProfile          string `xml:"audioProfile,attr"`
+						Container             string `xml:"container,attr"`
+						Has64bitOffsets       string `xml:"has64bitOffsets,attr"`
+						OptimizedForStreaming string `xml:"optimizedForStreaming,attr"`
+						VideoProfile          string `xml:"videoProfile,attr"`
+					} `xml:"Part"`
+				} `xml:"Media"`
+				Role []struct {
+					Text string `xml:",chardata"`
+					Tag  string `xml:"tag,attr"`
+				} `xml:"Role"`
+				Director []struct {
+					Text string `xml:",chardata"`
+					Tag  string `xml:"tag,attr"`
+				} `xml:"Director"`
+				Writer []struct {
+					Text string `xml:",chardata"`
+					Tag  string `xml:"tag,attr"`
+				} `xml:"Writer"`
+			} `xml:"Video"`
+		} `xml:"MediaContainer"`
+	} `xml:"Video"`
+}
+
 type Filter struct {
 	Name     string
 	Value    string
 	Modifier string
 }
 
-func GetPlexMovies(ipAddress, libraryID, plexToken string) (movieList []types.PlexMovie) {
+func AllMovies(ipAddress, libraryID, plexToken string) (movieList []types.PlexMovie) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
 	response, err := makePlexAPIRequest(url, plexToken)
@@ -845,7 +1043,7 @@ func GetPlexMovies(ipAddress, libraryID, plexToken string) (movieList []types.Pl
 		semaphore <- struct{}{}
 		go func(i int) {
 			defer func() { <-semaphore }()
-			getPlexMovieDetails(ipAddress, plexToken, &movieList[i], ch)
+			getMovieDetails(ipAddress, plexToken, &movieList[i], ch)
 		}(i)
 	}
 	detailedMovies := make([]types.PlexMovie, len(movieList))
@@ -876,7 +1074,7 @@ func extractMovies(xmlString string) (movieList []types.PlexMovie) {
 	return movieList
 }
 
-func getPlexMovieDetails(ipAddress, plexToken string, movie *types.PlexMovie, ch chan<- types.PlexMovie) {
+func getMovieDetails(ipAddress, plexToken string, movie *types.PlexMovie, ch chan<- types.PlexMovie) {
 	url := fmt.Sprintf("http://%s:32400/library/metadata/%s", ipAddress, movie.RatingKey)
 
 	response, err := makePlexAPIRequest(url, plexToken)
@@ -908,7 +1106,7 @@ func getPlexMovieDetails(ipAddress, plexToken string, movie *types.PlexMovie, ch
 }
 
 // =================================================================================================
-func GetPlexTV(ipAddress, libraryID, plexToken string) (tvShowList []types.PlexTVShow) {
+func AllTV(ipAddress, plexToken, libraryID string) (tvShowList []types.PlexTVShow) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
 	response, err := makePlexAPIRequest(url, plexToken)
@@ -954,7 +1152,7 @@ func getPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []type
 		semaphore <- struct{}{}
 		go func(i int) {
 			defer func() { <-semaphore }()
-			getPlexTVEpisodes(ipAddress, plexToken, &seasonList[i], ch)
+			getTVEpisodes(ipAddress, plexToken, &seasonList[i], ch)
 		}(i)
 	}
 
@@ -988,7 +1186,7 @@ func getPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []type
 	return filteredSeasons
 }
 
-func getPlexTVEpisodes(ipAddress, plexToken string, season *types.PlexTVSeason, ch chan<- types.PlexTVSeason) {
+func getTVEpisodes(ipAddress, plexToken string, season *types.PlexTVSeason, ch chan<- types.PlexTVSeason) {
 	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, season.RatingKey)
 
 	response, err := makePlexAPIRequest(url, plexToken)
@@ -1033,7 +1231,7 @@ func extractTVSeasons(xmlString string) (seasonList []types.PlexTVSeason) {
 		if strings.HasPrefix(container.Directory[i].Title, "Season") {
 			seasonNumber, _ := strconv.Atoi(container.Directory[i].Index)
 			seasonList = append(seasonList, types.PlexTVSeason{
-				Title: container.Directory[i].Title, RatingKey: container.Directory[i].RatingKey, Number: seasonNumber})
+				RatingKey: container.Directory[i].RatingKey, Number: seasonNumber})
 		}
 	}
 	return seasonList
@@ -1062,7 +1260,7 @@ func extractTVEpisodes(xmlString string) (episodeList []types.PlexTVEpisode) {
 }
 
 // =================================================================================================
-func GetPlexMusicArtists(ipAddress, plexToken, libraryID string) (artists []types.PlexMusicArtist) {
+func AllMusicArtists(ipAddress, plexToken, libraryID string) (artists []types.PlexMusicArtist) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all", ipAddress, libraryID)
 
 	response, err := makePlexAPIRequest(url, plexToken)
@@ -1079,14 +1277,14 @@ func GetPlexMusicArtists(ipAddress, plexToken, libraryID string) (artists []type
 	}
 	// now we need to get the albums for each artist
 	for i := range artists {
-		artists[i].Albums = GetPlexMusicAlbums(ipAddress, plexToken, libraryID, artists[i].RatingKey)
+		artists[i].Albums = GetArtistMusicAlbums(ipAddress, plexToken, libraryID, artists[i].RatingKey)
 	}
 
 	fmt.Printf("Plex music artists: %d.\n", len(artists))
 	return artists
 }
 
-func GetPlexMusicAlbums(ipAddress, plexToken, libraryID, ratingKey string) (albums []types.PlexMusicAlbum) {
+func GetArtistMusicAlbums(ipAddress, plexToken, libraryID, ratingKey string) (albums []types.PlexMusicAlbum) {
 	url := fmt.Sprintf("http://%s:32400/library/sections/%s/all?artist.id=%s&type=9", ipAddress, libraryID, ratingKey)
 
 	response, err := makePlexAPIRequest(url, plexToken)
@@ -1199,6 +1397,36 @@ func extractPlaylists(xmlString string) (playlistList []types.PlexPlaylist, err 
 	return playlistList, nil
 }
 
+func GetMoviesFromPlaylist(ipAddress, plexToken, ratingKey string) (playlistItems []types.PlexMovie) {
+	url := fmt.Sprintf("http://%s:32400/playlists/%s/items", ipAddress, ratingKey)
+	response, err := makePlexAPIRequest(url, plexToken)
+	if err != nil {
+		fmt.Println("GetMoviesromPlaylist: Error making request:", err)
+		return playlistItems
+	}
+
+	playlistItems, err = extractMoviesFromPlaylist(response)
+	if err != nil {
+		fmt.Println("Error extracting playlist items:", err)
+	}
+	return playlistItems
+}
+
+func GetTVFromPlaylist(ipAddress, plexToken, ratingKey string) (playlistItems []types.PlexTVShow) {
+	url := fmt.Sprintf("http://%s:32400/playlists/%s/items", ipAddress, ratingKey)
+	response, err := makePlexAPIRequest(url, plexToken)
+	if err != nil {
+		fmt.Println("getTVFromPlaylist: Error making request:", err)
+		return playlistItems
+	}
+
+	playlistItems, err = extractTVFromPlaylist(response)
+	if err != nil {
+		fmt.Println("Error extracting playlist items:", err)
+	}
+	return playlistItems
+}
+
 func GetArtistsFromPlaylist(ipAddress, plexToken, ratingKey string) (playlistItems []types.PlexMusicArtist) {
 	url := fmt.Sprintf("http://%s:32400/playlists/%s/items", ipAddress, ratingKey)
 	response, err := makePlexAPIRequest(url, plexToken)
@@ -1214,19 +1442,105 @@ func GetArtistsFromPlaylist(ipAddress, plexToken, ratingKey string) (playlistIte
 	return playlistItems
 }
 
-func GetMoviesFromPlaylist(ipAddress, plexToken, ratingKey string) (playlistItems []types.PlexMovie) {
-	url := fmt.Sprintf("http://%s:32400/playlists/%s/items", ipAddress, ratingKey)
-	response, err := makePlexAPIRequest(url, plexToken)
+func extractMoviesFromPlaylist(xmlString string) (playlistItems []types.PlexMovie, err error) {
+	var container MoviePlaylist
+	err = xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
-		fmt.Println("GetMoviesromPlaylist: Error making request:", err)
-		return playlistItems
+		fmt.Println("Error parsing XML:", err)
+		return playlistItems, err
 	}
 
-	playlistItems, err = extractMoviesFromPlaylist(response)
-	if err != nil {
-		fmt.Println("Error extracting playlist items:", err)
+	for i := range container.Video {
+		playlistItems = append(playlistItems, types.PlexMovie{
+			Title:      container.Video[i].Title,
+			RatingKey:  container.Video[i].RatingKey,
+			Resolution: container.Video[i].Media[0].VideoResolution,
+			Year:       container.Video[i].Year,
+			DateAdded:  parsePlexDate(container.Video[i].AddedAt)})
 	}
-	return playlistItems
+	return playlistItems, nil
+}
+
+func extractTVFromPlaylist(xmlString string) (playlistItems []types.PlexTVShow, err error) {
+	var container TVPlaylist
+	err = xml.Unmarshal([]byte(xmlString), &container)
+	if err != nil {
+		fmt.Println("Error parsing XML:", err)
+		return playlistItems, err
+	}
+
+	tvShows := make(map[string]types.PlexTVShow)
+	for i := range container.Video {
+		seasonNumber, _ := strconv.Atoi(container.Video[i].ParentIndex)
+		if seasonNumber == 0 {
+			continue
+		}
+		season := types.PlexTVSeason{
+			Number:    seasonNumber,
+			RatingKey: container.Video[i].ParentRatingKey,
+		}
+
+		originallyAired, err := time.Parse("2006-01-02", container.Video[i].OriginallyAvailableAt)
+		if err != nil {
+			originallyAired = time.Time{}
+		}
+		episode := types.PlexTVEpisode{
+			Index:           container.Video[i].Index,
+			Title:           container.Video[i].Title,
+			Resolution:      container.Video[i].Media[0].VideoResolution,
+			OriginallyAired: originallyAired,
+			DateAdded:       parsePlexDate(container.Video[i].AddedAt),
+		}
+
+		foundTVShow, ok := tvShows[container.Video[i].GrandparentTitle]
+		if !ok {
+			season.Episodes = append(season.Episodes, episode)
+			tvShows[container.Video[i].GrandparentTitle] = types.PlexTVShow{
+				Title:     container.Video[i].GrandparentTitle,
+				RatingKey: container.Video[i].GrandparentRatingKey,
+				Year:      container.Video[i].Year,
+				DateAdded: parsePlexDate(container.Video[i].AddedAt),
+				Seasons:   []types.PlexTVSeason{season},
+			}
+		} else {
+			seasonFound := false
+			for j := range foundTVShow.Seasons {
+				if foundTVShow.Seasons[j].Number == season.Number {
+					foundTVShow.Seasons[j].Episodes = append(foundTVShow.Seasons[j].Episodes, episode)
+					seasonFound = true
+					break
+				}
+			}
+			if !seasonFound {
+				fmt.Println("Adding season:", season.Number, "to TV show:", foundTVShow.Title)
+				season.Episodes = append(season.Episodes, episode)
+				foundTVShow.Seasons = append(foundTVShow.Seasons, season)
+				// replace the TV show in the map with the updated TV show
+				tvShows[container.Video[i].GrandparentTitle] = foundTVShow
+			}
+		}
+	}
+	// convert map to slice
+	for i := range tvShows {
+		bla := tvShows[i]
+		year, _ := strconv.Atoi(bla.Year)
+		bla.Year = fmt.Sprintf("%d", (year-bla.Seasons[0].Number)+1)
+		// find the lowest resolution for each season
+		for j := range bla.Seasons {
+			var listOfResolutions []string
+			for k := range bla.Seasons[j].Episodes {
+				listOfResolutions = append(listOfResolutions, bla.Seasons[j].Episodes[k].Resolution)
+			}
+			bla.Seasons[j].FirstEpisodeAired = bla.Seasons[j].Episodes[0].OriginallyAired
+			bla.Seasons[j].LastEpisodeAired = bla.Seasons[j].Episodes[len(bla.Seasons[j].Episodes)-1].OriginallyAired
+			bla.Seasons[j].LastEpisodeAdded = bla.Seasons[j].Episodes[len(bla.Seasons[j].Episodes)-1].DateAdded
+			bla.Seasons[j].LowestResolution = findLowestResolution(listOfResolutions)
+		}
+		bla.FirstEpisodeAired = tvShows[i].Seasons[0].FirstEpisodeAired
+		bla.LastEpisodeAired = tvShows[i].Seasons[len(tvShows[i].Seasons)-1].LastEpisodeAired
+		playlistItems = append(playlistItems, bla)
+	}
+	return playlistItems, nil
 }
 
 func extractArtistsFromPlaylist(xmlString string) (playlistItems []types.PlexMusicArtist, err error) {
@@ -1262,25 +1576,6 @@ func extractArtistsFromPlaylist(xmlString string) (playlistItems []types.PlexMus
 	// convert map to slice
 	for _, value := range artists {
 		playlistItems = append(playlistItems, value)
-	}
-	return playlistItems, nil
-}
-
-func extractMoviesFromPlaylist(xmlString string) (playlistItems []types.PlexMovie, err error) {
-	var container MoviePlaylist
-	err = xml.Unmarshal([]byte(xmlString), &container)
-	if err != nil {
-		fmt.Println("Error parsing XML:", err)
-		return playlistItems, err
-	}
-
-	for i := range container.Video {
-		playlistItems = append(playlistItems, types.PlexMovie{
-			Title:      container.Video[i].Title,
-			RatingKey:  container.Video[i].RatingKey,
-			Resolution: container.Video[i].Media[0].VideoResolution,
-			Year:       container.Video[i].Year,
-			DateAdded:  parsePlexDate(container.Video[i].AddedAt)})
 	}
 	return playlistItems, nil
 }

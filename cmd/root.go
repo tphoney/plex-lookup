@@ -66,7 +66,7 @@ func initializeFlags() {
 
 func initializePlexMovies() []types.PlexMovie {
 	var allMovies []types.PlexMovie
-	allMovies = append(allMovies, plex.GetPlexMovies(plexIP, plexMovieLibraryID, plexToken)...)
+	allMovies = append(allMovies, plex.AllMovies(plexIP, plexMovieLibraryID, plexToken)...)
 
 	fmt.Printf("\nThere are a total of %d movies in the library.\n\nMovies available:\n", len(allMovies))
 	return allMovies

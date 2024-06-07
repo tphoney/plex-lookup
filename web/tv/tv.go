@@ -63,9 +63,9 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	playlist := r.FormValue("playlist")
 	lookup = r.FormValue("lookup")
 	// lookup filters
-	newFilters := types.MovieLookupFilters{}
-	newFilters.AudioLanguage = r.FormValue("language")
-	newFilters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
+	filters.AudioLanguage = r.FormValue("language")
+	filters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
+	// get TV shows from plex
 	if playlist == "all" {
 		plexTV = plex.AllTV(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexTVLibraryID)
 	} else {

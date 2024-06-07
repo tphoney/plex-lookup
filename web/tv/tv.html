@@ -49,8 +49,11 @@
         <fieldset>
             <legend><strong>Lookup Filters:</strong></legend>
             <label for="language">
-                <input type="checkbox" id="language" name="language" value="german">
-                German audio
+                Audio language:
+                <select id="language" name="language">
+                    <option value="english" selected>English</option>
+                    <option value="german">German</option>
+                </select>
             </label>
             <label for="newerVersion">
                 <input type="checkbox" id="newerVersion" name="newerVersion" value="true">

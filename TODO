@@ -2,7 +2,6 @@
 
 ## features
 
-- make language a pull down menu tv / movies page
 - re-assess new filter for tv / movie page
 
 ## bugs
@@ -47,3 +46,4 @@
 - improve best match for tv series
 - vikings, Once Upon a Time in Wonderland, What We Do in the Shadows, The Peter Serafinowicz Show  is not showing up on cinema-paradiso tv search
 - allow the use of playlists for finding music / TV / movies `https://www.plexopedia.com/plex-media-server/api/playlists/view/`
+- make language a pull down menu tv / movies page

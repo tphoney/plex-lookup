@@ -68,7 +68,7 @@ func TestGetPlexTV(t *testing.T) {
 	if plexIP == "" || plexTVLibraryID == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
-	result := AllTV(plexIP, plexTVLibraryID, plexToken)
+	result := AllTV(plexIP, plexToken, plexTVLibraryID)
 
 	if len(result) == 0 {
 		t.Errorf("Expected at least one TV show, but got %d", len(result))

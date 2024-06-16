@@ -42,7 +42,7 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 					{
 						Name:   "AC/DC",
 						ID:     "66c662b6-6e2f-4930-8610-912e24c63ed1",
-						Albums: make([]types.MusicAlbumSearchResult, 18),
+						Albums: make([]types.MusicAlbumSearchResult, 17),
 					},
 				},
 			},

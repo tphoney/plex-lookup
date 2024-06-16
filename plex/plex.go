@@ -1405,7 +1405,7 @@ func GetMoviesFromPlaylist(ipAddress, plexToken, ratingKey string) (playlistItem
 		return playlistItems
 	}
 
-	playlistItems, err = extractMoviesFromPlaylist(response)
+	playlistItems, err = extractMoviesFromPlaylist(response, ipAddress, plexToken)
 	if err != nil {
 		fmt.Println("Error extracting playlist items:", err)
 	}
@@ -1442,23 +1442,41 @@ func GetArtistsFromPlaylist(ipAddress, plexToken, ratingKey string) (playlistIte
 	return playlistItems
 }
 
-func extractMoviesFromPlaylist(xmlString string) (playlistItems []types.PlexMovie, err error) {
+func extractMoviesFromPlaylist(xmlString, ipAddress, plexToken string) (movieList []types.PlexMovie, err error) {
 	var container MoviePlaylist
 	err = xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
 		fmt.Println("Error parsing XML:", err)
-		return playlistItems, err
+		return movieList, err
 	}
 
 	for i := range container.Video {
-		playlistItems = append(playlistItems, types.PlexMovie{
+		movieList = append(movieList, types.PlexMovie{
 			Title:      container.Video[i].Title,
 			RatingKey:  container.Video[i].RatingKey,
 			Resolution: container.Video[i].Media[0].VideoResolution,
 			Year:       container.Video[i].Year,
 			DateAdded:  parsePlexDate(container.Video[i].AddedAt)})
 	}
-	return playlistItems, nil
+	// this is were we get the movie details
+	ch := make(chan types.PlexMovie, len(movieList))
+	semaphore := make(chan struct{}, types.ConcurrencyLimit)
+
+	for i := range movieList {
+		semaphore <- struct{}{}
+		go func(i int) {
+			defer func() { <-semaphore }()
+			getMovieDetails(ipAddress, plexToken, &movieList[i], ch)
+		}(i)
+	}
+	detailedMovies := make([]types.PlexMovie, len(movieList))
+	// wait for all of the go routines to finish
+	for i := range movieList {
+		detailedMovies[i] = <-ch
+	}
+	fmt.Printf("Plex movies: %d.\n", len(detailedMovies))
+
+	return movieList, nil
 }
 
 func extractTVFromPlaylist(xmlString string) (playlistItems []types.PlexTVShow, err error) {

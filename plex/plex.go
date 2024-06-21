@@ -1585,7 +1585,13 @@ func extractArtistsFromPlaylist(xmlString string) (playlistItems []types.PlexMus
 				RatingKey: container.Track[i].GrandparentRatingKey,
 				Albums:    []types.PlexMusicAlbum{album},
 			}
-		} else if !slices.Contains(artists[container.Track[i].GrandparentTitle].Albums, album) {
+		}
+		// get the ratingKeys from the albums
+		albumkeys := []string{}
+		for j := range artists[container.Track[i].GrandparentTitle].Albums {
+			albumkeys = append(albumkeys, artists[container.Track[i].GrandparentTitle].Albums[j].RatingKey)
+		}
+		if !slices.Contains(albumkeys, album.RatingKey) {
 			foundArtist.Albums = append(artists[container.Track[i].GrandparentTitle].Albums, album) //nolint:gocritic
 			// replace the artist in the map with the updated artist
 			artists[container.Track[i].GrandparentTitle] = foundArtist

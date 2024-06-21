@@ -94,6 +94,11 @@ func CompareAlbumTitles(title1, title2 string) bool {
 	r = regexp.MustCompile(`\{(.*?)\}`)
 	title1 = r.ReplaceAllString(title1, "")
 	title2 = r.ReplaceAllString(title2, "")
+	// remove plurals ' and ’
+	r = regexp.MustCompile(`[',’]`)
+	title1 = r.ReplaceAllString(title1, "")
+	title2 = r.ReplaceAllString(title2, "")
+	title1 = r.ReplaceAllString(title1, "")
 	// strip whitespace
 	title1 = strings.TrimSpace(title1)
 	title2 = strings.TrimSpace(title2)

@@ -165,6 +165,11 @@ func Test_albumTitlesMatch(t *testing.T) {
 			title2: "test album",
 			want:   true,
 		},
+		{
+			title1: "paula's",
+			title2: "paula’s",
+			want:   true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("title1=%s, title2=%s", tt.title1, tt.title2), func(t *testing.T) {

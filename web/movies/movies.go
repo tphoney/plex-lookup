@@ -137,8 +137,8 @@ func renderTable(searchResults []types.SearchResults) (tableRows string) {
 		}
 		tableRows += fmt.Sprintf(
 			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%s</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td>`,
-			searchResults[i].SearchURL, searchResults[i].PlexMovie.Title, searchResults[i].PlexMovie.Year, searchResults[i].PlexMovie.AudioLanguages,
-			searchResults[i].PlexMovie.Resolution, searchResults[i].MatchesBluray, searchResults[i].Matches4k, newRelease)
+			searchResults[i].SearchURL, searchResults[i].PlexMovie.Title, searchResults[i].PlexMovie.Year, searchResults[i].AudioLanguages,
+			searchResults[i].Resolution, searchResults[i].MatchesBluray, searchResults[i].Matches4k, newRelease)
 		if searchResults[i].MatchesBluray+searchResults[i].Matches4k > 0 {
 			tableRows += "<td>"
 			for _, result := range searchResults[i].MovieSearchResults {

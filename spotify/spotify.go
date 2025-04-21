@@ -250,7 +250,7 @@ func searchSpotifyAlbum(m *types.SearchResults, token string, ch chan<- *types.S
 	// get oauth token
 	if len(m.MusicSearchResults) == 0 {
 		// no artist found for the plex artist
-		fmt.Printf("SearchSpotifyAlbums: no artist found for %s\n", m.PlexMusicArtist.Name)
+		fmt.Printf("SearchSpotifyAlbums: no artist found for %v\n", m.PlexMusicArtist)
 		ch <- m
 		return
 	}
@@ -285,7 +285,7 @@ func searchSpotifySimilarArtist(m *types.SearchResults, token string, ch chan<- 
 	defer cancel()
 	if len(m.MusicSearchResults) == 0 {
 		// no artist found for the plex artist
-		fmt.Printf("SearchSpotifySimilarArtist: no artist found for %s\n", m.PlexMusicArtist.Name)
+		fmt.Printf("SearchSpotifySimilarArtist: no artist found for %v\n", m.PlexMusicArtist)
 		ch <- SimilarArtistsResponse{}
 		return
 	}

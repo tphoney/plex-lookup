@@ -185,7 +185,7 @@ func renderArtistAlbumsTable() (tableRows string) {
 		if len(searchResults[i].MusicSearchResults) > 0 {
 			tableRows += fmt.Sprintf(`<tr><td><a href=%q target="_blank">%s</a></td><td>%d</td><td>%d</td><td><ul>`,
 				searchResults[i].MusicSearchResults[0].URL,
-				searchResults[i].PlexMusicArtist.Name,
+				searchResults[i].Name,
 				searchResults[i].MusicSearchResults[0].OwnedAlbums,
 				len(searchResults[i].MusicSearchResults[0].Albums))
 			for j := range searchResults[i].MusicSearchResults[0].Albums {
@@ -246,9 +246,9 @@ func removeOwnedAlbums(searchResults []types.SearchResults) []types.SearchResult
 		if len(searchResults[i].MusicSearchResults) > 0 {
 			albumsToRemove := make([]types.MusicAlbumSearchResult, 0)
 			// set the number of owned albums
-			searchResults[i].MusicSearchResults[0].OwnedAlbums = len(searchResults[i].PlexMusicArtist.Albums)
+			searchResults[i].MusicSearchResults[0].OwnedAlbums = len(searchResults[i].Albums)
 			// iterate over plex albums
-			for _, plexAlbum := range searchResults[i].PlexMusicArtist.Albums {
+			for _, plexAlbum := range searchResults[i].Albums {
 				// iterate over search results
 				for _, album := range searchResults[i].MusicSearchResults[0].Albums {
 					if utils.CompareAlbumTitles(plexAlbum.Title, album.Title) {

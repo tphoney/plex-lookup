@@ -121,7 +121,7 @@ func renderTVTable(searchResults []types.SearchResults) (tableRows string) {
 	for i := range searchResults {
 		// build up plex season / resolution row
 		plexSeasonsString := ""
-		for j := range searchResults[i].PlexTVShow.Seasons {
+		for j := range searchResults[i].Seasons {
 			plexSeasonsString += fmt.Sprintf("Season %d %s<br>",
 				searchResults[i].PlexTVShow.Seasons[j].Number, searchResults[i].PlexTVShow.Seasons[j].LowestResolution)
 		}

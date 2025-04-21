@@ -30,8 +30,8 @@ func MarkBestMatchMovie(search *types.SearchResults) types.SearchResults {
 }
 
 func MarkBestMatchTV(search *types.SearchResults) types.SearchResults {
-	firstEpisodeBoundry := search.PlexTVShow.FirstEpisodeAired.Year() - 1
-	lastEpisodeBoundry := search.PlexTVShow.LastEpisodeAired.Year() + 1
+	firstEpisodeBoundry := search.FirstEpisodeAired.Year() - 1
+	lastEpisodeBoundry := search.LastEpisodeAired.Year() + 1
 	for i := range search.TVSearchResults {
 		resultYear := YearToDate(search.TVSearchResults[i].FirstAiredYear)
 		if matchTitle(search.PlexTVShow.Title, search.TVSearchResults[i].FoundTitle,

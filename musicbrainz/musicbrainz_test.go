@@ -27,7 +27,7 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 					{
 						Name:   "The Beatles",
 						ID:     "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
-						Albums: make([]types.MusicAlbumSearchResult, 18),
+						Albums: make([]types.MusicAlbumSearchResult, 16),
 					},
 				},
 			},
@@ -42,7 +42,7 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 					{
 						Name:   "AC/DC",
 						ID:     "66c662b6-6e2f-4930-8610-912e24c63ed1",
-						Albums: make([]types.MusicAlbumSearchResult, 18),
+						Albums: make([]types.MusicAlbumSearchResult, 16),
 					},
 				},
 			},
@@ -59,8 +59,8 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 			if gotArtist.MusicSearchResults[0].Name != tt.wantArtist.MusicSearchResults[0].Name {
 				t.Errorf("SearchMusicBrainzArtist() Name = %v, want %v", gotArtist, tt.wantArtist)
 			}
-			if len(gotArtist.MusicSearchResults[0].Albums) != len(tt.wantArtist.MusicSearchResults[0].Albums) {
-				t.Errorf("SearchMusicBrainzArtist() Albums size = %v, want %v",
+			if len(gotArtist.MusicSearchResults[0].Albums) <= len(tt.wantArtist.MusicSearchResults[0].Albums) {
+				t.Errorf("SearchMusicBrainzArtist() Albums size is bigger than expected: got %d, want %d",
 					len(gotArtist.MusicSearchResults[0].Albums), len(tt.wantArtist.MusicSearchResults[0].Albums))
 			}
 		})

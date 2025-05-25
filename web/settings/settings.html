@@ -4,7 +4,8 @@
 <head>
     <title>Plex-lookup Settings</title>
     <script src="//unpkg.com/htmx.org@1.8.2"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <link rel="stylesheet" href="/static/pico.min.css" />
+    <link rel="stylesheet" href="/static/custom.css" />
     <!-- from https://github.com/picocss/pico -->
 </head>
 
@@ -38,9 +39,11 @@
         <input type="text" placeholder="Amazon Region" name="amazonRegion" id="amazonRegion" value="uk">
     </div>
     <h2 class="container">MusicBrainz</h2>
-    <p class="container">Specify the url for the server to query, by default we use `https://musicbrainz.org/ws/2` which is heavily rate limited.</p>
+    <p class="container">Specify the url for the server to query, by default we use `https://musicbrainz.org/ws/2` which
+        is heavily rate limited.</p>
     <div class="container">
-        <input type="text" placeholder="MusicBrainz URL" name="musicBrainzURL" id="musicBrainzURL" value="https://musicbrainz.org/ws/2">
+        <input type="text" placeholder="MusicBrainz URL" name="musicBrainzURL" id="musicBrainzURL"
+            value="https://musicbrainz.org/ws/2">
     </div>
     <h2 class="container">Spotify</h2>
     <p class="container">Enter your Spotify client ID and secret to get started. You will need to follow the Spotify

@@ -19,7 +19,7 @@ linters:
     - gosec
     - govet
     - ineffassign
-    - lll
+  
     - misspell
     - mnd
     - nakedret

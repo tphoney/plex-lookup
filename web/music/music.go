@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/lithammer/fuzzysearch/fuzzy"
 	"github.com/tphoney/plex-lookup/musicbrainz"
 	"github.com/tphoney/plex-lookup/plex"
 	"github.com/tphoney/plex-lookup/spotify"
@@ -25,7 +28,7 @@ var (
 	totalArtists             int  = 0
 
 	plexMusic             []types.PlexMusicArtist
-	artistsSearchResults  []types.SearchResults
+	artistsSearchResults  []types.SearchResult
 	similarArtistsResults map[string]types.MusicSimilarArtistResult
 	spotifyToken          string
 	lookup                string
@@ -33,8 +36,7 @@ var (
 )
 
 const (
-	albumReleaseYearCutoff int    = 5
-	spotifyString          string = "spotify"
+	spotifyString string = "spotify"
 )
 
 type MusicConfig struct {
@@ -70,7 +72,6 @@ func (c MusicConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprint(w, playlistHTML)
 }
 
-// nolint: lll, nolintlint
 func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	playlist := r.FormValue("playlist")
 	lookup = r.FormValue("lookup")
@@ -104,7 +105,7 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	//nolint: gocritic
 	// plexMusic = plexMusic[:30]
 	//lint: gocritic
-	var searchResult types.SearchResults
+	var searchResult types.SearchResult
 	artistsJobRunning = true
 	numberOfArtistsProcessed = 0
 	totalArtists = len(plexMusic) - 1
@@ -134,6 +135,8 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 			go func() {
 				artistsSearchResults = spotify.GetArtistsInParallel(plexMusic, spotifyToken)
 				artistsSearchResults = spotify.GetAlbumsInParallel(artistsSearchResults, spotifyToken)
+				// sanitize album titles
+				artistsSearchResults = sanitizeAlbumTitles(artistsSearchResults)
 				artistsJobRunning = false
 			}()
 		}
@@ -151,7 +154,7 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, `<div class="alert alert-danger" role="alert">Similar Artist search is not available for this lookup provider</div>`)
 		}
 	}
-	fmt.Printf("Processed %d artists in %v\n", totalArtists, time.Since(startTime))
+	fmt.Printf("Processed %d artists in %v\n", len(plexMusic), time.Since(startTime))
 }
 
 func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
@@ -180,28 +183,41 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 
 func renderArtistAlbumsTable() (tableRows string) {
 	searchResults := filterMusicSearchResults(artistsSearchResults)
-	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Artist</strong></th><th data-sort="int"><strong>Owned Albums</strong></th><th data-sort="int"><strong>Wanted Albums</strong></th><th><strong>Album</strong></th></tr></thead><tbody>` //nolint: lll
+	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Artist</strong></th><th data-sort="int"><strong>Owned Albums</strong></th><th data-sort="int"><strong>Wanted Albums</strong></th></tr></thead><tbody>`
 	for i := range searchResults {
 		if len(searchResults[i].MusicSearchResults) > 0 {
-			tableRows += fmt.Sprintf(`<tr><td><a href=%q target="_blank">%s</a></td><td>%d</td><td>%d</td><td><ul>`,
+			// use accordians https://picocss.com/docs/accordion
+			tableRows += fmt.Sprintf(`<tr><td><a href=%q target="_blank">%s</a></td><td>%s</td><td>%s</td><td>`,
 				searchResults[i].MusicSearchResults[0].URL,
 				searchResults[i].Name,
-				searchResults[i].MusicSearchResults[0].OwnedAlbums,
-				len(searchResults[i].MusicSearchResults[0].Albums))
-			for j := range searchResults[i].MusicSearchResults[0].Albums {
-				tableRows += fmt.Sprintf(`<li><a href=%q target="_blank">%s</a> (%s)</li>`,
-					searchResults[i].MusicSearchResults[0].Albums[j].URL,
-					searchResults[i].MusicSearchResults[0].Albums[j].Title,
-					searchResults[i].MusicSearchResults[0].Albums[j].Year)
-			}
-			tableRows += "</ul></td></tr>"
+				renderAccordian(searchResults[i].MusicSearchResults[0].OwnedAlbums),
+				renderAccordian(stringsFromFoundAlbums(searchResults[i].MusicSearchResults[0].FoundAlbums)))
+			tableRows += "</td></tr>"
 		}
 	}
 	return tableRows // Return the generated HTML for table rows
 }
 
+func stringsFromFoundAlbums(albums []types.MusicAlbumSearchResult) []string {
+	var titles []string
+	for _, album := range albums {
+		entry := fmt.Sprintf("<a href=%q target=\"_blank\">%s (%s)</a>", album.URL, album.Title, album.Year)
+		titles = append(titles, entry)
+	}
+	return titles
+}
+
+func renderAccordian(s []string) string {
+	retval := fmt.Sprintf(`<details><summary>%d</summary><ul>`, len(s))
+	for _, item := range s {
+		retval += fmt.Sprintf(`<li>%s</li>`, item)
+	}
+	retval += `</ul></details>`
+	return retval
+}
+
 func renderSimilarArtistsTable() (tableRows string) {
-	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Artist</strong></th><th data-sort="string"><strong>Owned</strong></th><th data-sort="int"><strong>Similarity Count</strong></th></tr></thead><tbody>` //nolint: lll
+	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Artist</strong></th><th data-sort="string"><strong>Owned</strong></th><th data-sort="int"><strong>Similarity Count</strong></th></tr></thead><tbody>`
 	for i := range similarArtistsResults {
 		ownedString := "No"
 		if similarArtistsResults[i].Owned {
@@ -216,65 +232,116 @@ func renderSimilarArtistsTable() (tableRows string) {
 	return tableRows // Return the generated HTML for table rows
 }
 
-func filterMusicSearchResults(searchResults []types.SearchResults) []types.SearchResults {
-	searchResults = removeOwnedAlbums(searchResults)
+func sanitizeAlbumTitles(artistsSearchResults []types.SearchResult) []types.SearchResult {
+	for i := range artistsSearchResults {
+		if len(artistsSearchResults[i].MusicSearchResults) > 0 {
+			for j := range artistsSearchResults[i].MusicSearchResults[0].FoundAlbums {
+				artistsSearchResults[i].MusicSearchResults[0].FoundAlbums[j].SanitizedTitle =
+					utils.SanitizedAlbumTitle(artistsSearchResults[i].MusicSearchResults[0].FoundAlbums[j].Title)
+			}
+		}
+	}
+	return artistsSearchResults
+}
+
+func filterMusicSearchResults(searchResults []types.SearchResult) []types.SearchResult {
+	searchResults = markOwnedAlbumsInSearchResult(searchResults)
 	searchResults = removeOlderSearchedAlbums(searchResults)
 	return searchResults
 }
 
-func removeOlderSearchedAlbums(searchResults []types.SearchResults) []types.SearchResults {
-	cutoffYear := time.Now().Year() - albumReleaseYearCutoff
-	filteredResults := make([]types.SearchResults, 0)
+func removeOlderSearchedAlbums(searchResults []types.SearchResult) []types.SearchResult {
+	filteredResults := make([]types.SearchResult, 0)
 	for i := range searchResults {
 		if len(searchResults[i].MusicSearchResults) > 0 {
 			filteredAlbums := make([]types.MusicAlbumSearchResult, 0)
-			for _, album := range searchResults[i].MusicSearchResults[0].Albums {
-				albumYear, _ := strconv.Atoi(album.Year)
-				if albumYear >= cutoffYear {
-					filteredAlbums = append(filteredAlbums, album)
-				}
-			}
-			searchResults[i].MusicSearchResults[0].Albums = filteredAlbums
+			filteredAlbums = append(filteredAlbums, searchResults[i].MusicSearchResults[0].FoundAlbums...)
+			searchResults[i].MusicSearchResults[0].FoundAlbums = filteredAlbums
 			filteredResults = append(filteredResults, searchResults[i])
 		}
 	}
 	return filteredResults
 }
 
-func removeOwnedAlbums(searchResults []types.SearchResults) []types.SearchResults {
+func markOwnedAlbumsInSearchResult(searchResults []types.SearchResult) []types.SearchResult {
 	for i := range searchResults {
+		var searchIDsToRemove []string
 		if len(searchResults[i].MusicSearchResults) > 0 {
-			albumsToRemove := make([]types.MusicAlbumSearchResult, 0)
-			// set the number of owned albums
-			searchResults[i].MusicSearchResults[0].OwnedAlbums = len(searchResults[i].Albums)
 			// iterate over plex albums
 			for _, plexAlbum := range searchResults[i].Albums {
-				// iterate over search results
-				for _, album := range searchResults[i].MusicSearchResults[0].Albums {
-					if utils.CompareAlbumTitles(plexAlbum.Title, album.Title) {
-						albumsToRemove = append(albumsToRemove, album)
-					}
-				}
+				searchResults[i].MusicSearchResults[0].OwnedAlbums =
+					append(searchResults[i].MusicSearchResults[0].OwnedAlbums, plexAlbum.Title+" ("+plexAlbum.Year+")")
+				// make a deep copy of the albums in the search results
+				albumsCopy := append([]types.MusicAlbumSearchResult(nil), searchResults[i].MusicSearchResults[0].FoundAlbums...)
+				searchIDsToRemove = append(searchIDsToRemove, findMatchingAlbumFromSearch(plexAlbum, albumsCopy))
 			}
-			searchResults[i].MusicSearchResults[0].Albums = cleanAlbums(searchResults[i].MusicSearchResults[0].Albums, albumsToRemove)
+			searchResults[i].MusicSearchResults[0].FoundAlbums = removeOwnedFromSearchResults(searchResults[i].MusicSearchResults[0].FoundAlbums, searchIDsToRemove)
+		}
+	}
+	// sort the owned albums by year
+	for i := range searchResults {
+		if len(searchResults[i].MusicSearchResults) > 0 {
+			sort.Slice(searchResults[i].MusicSearchResults[0].OwnedAlbums, func(a, b int) bool {
+				yearA := strings.Split(searchResults[i].MusicSearchResults[0].OwnedAlbums[a], " (")
+				yearB := strings.Split(searchResults[i].MusicSearchResults[0].OwnedAlbums[b], " (")
+				yearAInt, _ := strconv.Atoi(strings.TrimSuffix(yearA[1], ")"))
+				yearBInt, _ := strconv.Atoi(strings.TrimSuffix(yearB[1], ")"))
+				return yearAInt > yearBInt // Sort by year descending
+			})
 		}
 	}
 	return searchResults
 }
 
-func cleanAlbums(original, toRemove []types.MusicAlbumSearchResult) []types.MusicAlbumSearchResult {
-	cleaned := make([]types.MusicAlbumSearchResult, 0)
-	for _, album := range original {
-		found := false
-		for _, remove := range toRemove {
-			if album.Title == remove.Title && album.Year == remove.Year {
-				found = true
+func findMatchingAlbumFromSearch(plexAlbum types.PlexMusicAlbum, original []types.MusicAlbumSearchResult) (foundID string) {
+	for j := range original {
+		if utils.WithinOneYear(plexAlbum.Year, original[j].Year) {
+			// if the album is owned, mark it as such
+			original[j].WithinOneYear = true
+		}
+	}
+	// iterate over the search albums and remove any that are not within one year
+	for j := len(original) - 1; j >= 0; j-- {
+		if !original[j].WithinOneYear {
+			original = append(original[:j], original[j+1:]...)
+		}
+	}
+	sanitizedAlbumTitles := make([]string, 0)
+	for _, searchAlbum := range original {
+		sanitizedAlbumTitles = append(sanitizedAlbumTitles, searchAlbum.SanitizedTitle)
+	}
+	matches := fuzzy.RankFind(utils.SanitizedAlbumTitle(plexAlbum.Title), sanitizedAlbumTitles)
+	sort.Sort(matches)
+
+	for _, match := range matches {
+		if match.Distance < 0 {
+			continue // Skip negative scores
+		}
+		// Find the index of the matched album in the original slice
+		for j := range original {
+			if original[j].SanitizedTitle == match.Target {
+				foundID = original[j].ID
 				break
 			}
 		}
-		if !found {
+	}
+	return foundID
+}
+
+func removeOwnedFromSearchResults(original []types.MusicAlbumSearchResult, toRemove []string) []types.MusicAlbumSearchResult {
+	if len(toRemove) == 0 {
+		return original
+	}
+	cleaned := make([]types.MusicAlbumSearchResult, 0, len(original))
+	// Iterate over the original search results and remove any albums that match the IDs in toRemove
+	for _, album := range original {
+		// If the album ID is not in toRemove, keep the search result
+		if !slices.Contains(toRemove, album.ID) {
+			// Add the album to the cleaned search result
 			cleaned = append(cleaned, album)
 		}
 	}
+	// print the number of albums removed
+	fmt.Printf(" %d albums removed from search results\n", len(original)-len(cleaned))
 	return cleaned
 }

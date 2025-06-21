@@ -46,7 +46,7 @@ func TestSearchSpotifyArtist(t *testing.T) {
 	}
 
 	plexArtist := &types.PlexMusicArtist{Name: "The Beatles"}
-	ch := make(chan *types.SearchResults, 1)
+	ch := make(chan *types.SearchResult, 1)
 	searchSpotifyArtist(plexArtist, token, ch)
 
 	got := <-ch
@@ -83,7 +83,7 @@ func TestSearchSpotifyArtistDebug(t *testing.T) {
 
 	plexArtist := &types.PlexMusicArtist{Name: "Angel Olsen"}
 
-	ch := make(chan *types.SearchResults, 1)
+	ch := make(chan *types.SearchResult, 1)
 	searchSpotifyArtist(plexArtist, token, ch)
 
 	got := <-ch
@@ -99,7 +99,7 @@ func TestSearchSpotifyAlbums(t *testing.T) {
 		t.Errorf("GetSpotifyToken() returned an error: %s", err)
 	}
 	type args struct {
-		m *types.SearchResults
+		m *types.SearchResult
 	}
 	tests := []struct {
 		name       string
@@ -109,19 +109,19 @@ func TestSearchSpotifyAlbums(t *testing.T) {
 	}{
 		{
 			name:       "albums exist",
-			args:       args{m: &types.SearchResults{MusicSearchResults: []types.MusicArtistSearchResult{{ID: "711MCceyCBcFnzjGY4Q7Un"}}}},
+			args:       args{m: &types.SearchResult{MusicSearchResults: []types.MusicArtistSearchResult{{ID: "711MCceyCBcFnzjGY4Q7Un"}}}},
 			albumCount: 21,
 			wantErr:    false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ch := make(chan *types.SearchResults, 1)
+			ch := make(chan *types.SearchResult, 1)
 			searchSpotifyAlbum(tt.args.m, token, ch)
 			got := <-ch
 
-			if len(got.MusicSearchResults[0].Albums) != tt.albumCount {
-				t.Errorf("SearchSpotifyAlbums() = %v, want %v", len(got.MusicSearchResults[0].Albums), tt.albumCount)
+			if len(got.MusicSearchResults[0].FoundAlbums) != tt.albumCount {
+				t.Errorf("SearchSpotifyAlbums() = %v, want %v", len(got.MusicSearchResults[0].FoundAlbums), tt.albumCount)
 			}
 		})
 	}
@@ -136,7 +136,7 @@ func TestSearchSpotifyAlbumsDebug(t *testing.T) {
 		t.Errorf("GetSpotifyToken() returned an error: %s", err)
 	}
 
-	want := types.SearchResults{
+	want := types.SearchResult{
 		MusicSearchResults: []types.MusicArtistSearchResult{
 			{
 				Name: "",
@@ -145,7 +145,7 @@ func TestSearchSpotifyAlbumsDebug(t *testing.T) {
 			},
 		},
 	}
-	ch := make(chan *types.SearchResults, 1)
+	ch := make(chan *types.SearchResult, 1)
 	searchSpotifyAlbum(&want, token, ch)
 	got := <-ch
 
@@ -163,13 +163,13 @@ func TestSpotifyLookupSimilarArtists(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		searchResult types.SearchResults
+		searchResult types.SearchResult
 		wantErr      bool
 		wantLength   int
 	}{
 		{
 			name:         "similar artists exist",
-			searchResult: types.SearchResults{MusicSearchResults: []types.MusicArtistSearchResult{{ID: "711MCceyCBcFnzjGY4Q7Un"}}},
+			searchResult: types.SearchResult{MusicSearchResults: []types.MusicArtistSearchResult{{ID: "711MCceyCBcFnzjGY4Q7Un"}}},
 			wantErr:      false,
 			wantLength:   20,
 		},

@@ -102,9 +102,9 @@ type SimilarArtistsResponse struct {
 	}
 }
 
-func GetArtistsInParallel(plexArtists []types.PlexMusicArtist, token string) []types.SearchResults {
+func GetArtistsInParallel(plexArtists []types.PlexMusicArtist, token string) []types.SearchResult {
 	numberOfArtistsProcessed = 0
-	ch := make(chan *types.SearchResults, len(plexArtists))
+	ch := make(chan *types.SearchResult, len(plexArtists))
 	semaphore := make(chan struct{}, spotifyThreads)
 	for i := range len(plexArtists) {
 		go func(i int) {
@@ -114,7 +114,7 @@ func GetArtistsInParallel(plexArtists []types.PlexMusicArtist, token string) []t
 		}(i)
 	}
 	// gather results
-	artistsSearchResults := make([]types.SearchResults, 0, len(plexArtists))
+	artistsSearchResults := make([]types.SearchResult, 0, len(plexArtists))
 	for range len(plexArtists) {
 		result := <-ch
 		artistsSearchResults = append(artistsSearchResults, *result)
@@ -125,9 +125,9 @@ func GetArtistsInParallel(plexArtists []types.PlexMusicArtist, token string) []t
 	return artistsSearchResults
 }
 
-func GetAlbumsInParallel(artistsSearchResults []types.SearchResults, token string) []types.SearchResults {
+func GetAlbumsInParallel(artistsSearchResults []types.SearchResult, token string) []types.SearchResult {
 	numberOfArtistsProcessed = 0
-	ch := make(chan *types.SearchResults, len(artistsSearchResults))
+	ch := make(chan *types.SearchResult, len(artistsSearchResults))
 	semaphore := make(chan struct{}, spotifyThreads)
 	for i := range artistsSearchResults {
 		go func(i int) {
@@ -137,7 +137,7 @@ func GetAlbumsInParallel(artistsSearchResults []types.SearchResults, token strin
 		}(i)
 	}
 	// gather results
-	enrichedArtistSearchResults := make([]types.SearchResults, 0)
+	enrichedArtistSearchResults := make([]types.SearchResult, 0)
 	for range artistsSearchResults {
 		result := <-ch
 		enrichedArtistSearchResults = append(enrichedArtistSearchResults, *result)
@@ -148,7 +148,7 @@ func GetAlbumsInParallel(artistsSearchResults []types.SearchResults, token strin
 	return enrichedArtistSearchResults
 }
 
-func GetSimilarArtistsInParallel(artistsSearchResults []types.SearchResults, token string) map[string]types.MusicSimilarArtistResult {
+func GetSimilarArtistsInParallel(artistsSearchResults []types.SearchResult, token string) map[string]types.MusicSimilarArtistResult {
 	numberOfArtistsProcessed = 0
 	ch := make(chan SimilarArtistsResponse, len(artistsSearchResults))
 	semaphore := make(chan struct{}, spotifyThreads)
@@ -208,11 +208,11 @@ func GetJobProgress() int {
 	return numberOfArtistsProcessed
 }
 
-func searchSpotifyArtist(plexArtist *types.PlexMusicArtist, token string, ch chan<- *types.SearchResults) {
+func searchSpotifyArtist(plexArtist *types.PlexMusicArtist, token string, ch chan<- *types.SearchResult) {
 	// context with a timeout of 30 seconds
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(lookupTimeout))
 	defer cancel()
-	searchResults := types.SearchResults{}
+	searchResults := types.SearchResult{}
 	searchResults.PlexMusicArtist = *plexArtist
 	urlEncodedArtist := url.QueryEscape(plexArtist.Name)
 	artistURL := fmt.Sprintf("%s/search?q=%s&type=artist&limit=10", spotifyAPIURL, urlEncodedArtist)
@@ -244,7 +244,7 @@ func searchSpotifyArtist(plexArtist *types.PlexMusicArtist, token string, ch cha
 	ch <- &searchResults
 }
 
-func searchSpotifyAlbum(m *types.SearchResults, token string, ch chan<- *types.SearchResults) {
+func searchSpotifyAlbum(m *types.SearchResult, token string, ch chan<- *types.SearchResult) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(lookupTimeout))
 	defer cancel()
 	// get oauth token
@@ -276,11 +276,11 @@ func searchSpotifyAlbum(m *types.SearchResults, token string, ch chan<- *types.S
 		})
 	}
 
-	m.MusicSearchResults[0].Albums = albums
+	m.MusicSearchResults[0].FoundAlbums = albums
 	ch <- m
 }
 
-func searchSpotifySimilarArtist(m *types.SearchResults, token string, ch chan<- SimilarArtistsResponse) {
+func searchSpotifySimilarArtist(m *types.SearchResult, token string, ch chan<- SimilarArtistsResponse) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(lookupTimeout))
 	defer cancel()
 	if len(m.MusicSearchResults) == 0 {

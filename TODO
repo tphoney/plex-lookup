@@ -1,18 +1,27 @@
 # To do list
 
-## features
+## Features
 
-- re-assess new filter for tv / movie page
+- add option for allow duplicates or exact match
+- try using the fuzzysearch package for artist matching
+- fix the new artist search
 
-## bugs
+## Bugs
 
 - mandalorian is not showing up on amazon tv search
 
-## done
+## Done
 
+- fix album matching, why is beta band albums not matching
+- remove limitation of 5 years for music search
+- fix sort on table with accordians
+- use an accordian for the music search results, wanted compressed
+- fix sort order for owned music albums
+- use accordian on owned albums
+- try using lithammer/fuzzysearch on album matching
 - fix links on the tv page to a tv series to cinema paradiso. use a hx-post
 - remove the dvds from the tv page
-- add a link back to the index page on the tv page/ movie page
+- add a link back to the index page on the tv page / movie page
 - embed the tablesorter as a static file
 - use a proper mux for the server
 - use hx-boost

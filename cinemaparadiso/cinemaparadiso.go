@@ -27,9 +27,9 @@ var (
 )
 
 // nolint: dupl, nolintlint
-func MoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.SearchResults) {
+func MoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.SearchResult) {
 	numberMoviesProcessed = 0
-	ch := make(chan types.SearchResults, len(plexMovies))
+	ch := make(chan types.SearchResult, len(plexMovies))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 
 	for i := range plexMovies {
@@ -40,7 +40,7 @@ func MoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.Searc
 		}(i)
 	}
 
-	searchResults = make([]types.SearchResults, 0, len(plexMovies))
+	searchResults = make([]types.SearchResult, 0, len(plexMovies))
 	for range plexMovies {
 		result := <-ch
 		searchResults = append(searchResults, result)
@@ -50,9 +50,9 @@ func MoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.Searc
 	return searchResults
 }
 
-func ScrapeMoviesParallel(searchResults []types.SearchResults) []types.SearchResults {
+func ScrapeMoviesParallel(searchResults []types.SearchResult) []types.SearchResult {
 	numberMoviesProcessed = 0
-	ch := make(chan types.SearchResults, len(searchResults))
+	ch := make(chan types.SearchResult, len(searchResults))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 
 	for i := range searchResults {
@@ -62,7 +62,7 @@ func ScrapeMoviesParallel(searchResults []types.SearchResults) []types.SearchRes
 			scrapeMovieTitle(&searchResults[i], ch)
 		}(i)
 	}
-	detailedSearchResults := make([]types.SearchResults, 0, len(searchResults))
+	detailedSearchResults := make([]types.SearchResult, 0, len(searchResults))
 	for range searchResults {
 		result := <-ch
 		detailedSearchResults = append(detailedSearchResults, result)
@@ -73,8 +73,8 @@ func ScrapeMoviesParallel(searchResults []types.SearchResults) []types.SearchRes
 }
 
 // nolint: dupl, nolintlint
-func TVInParallel(plexTVShows []types.PlexTVShow) (searchResults []types.SearchResults) {
-	ch := make(chan types.SearchResults, len(plexTVShows))
+func TVInParallel(plexTVShows []types.PlexTVShow) (searchResults []types.SearchResult) {
+	ch := make(chan types.SearchResult, len(plexTVShows))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 
 	for i := range plexTVShows {
@@ -85,7 +85,7 @@ func TVInParallel(plexTVShows []types.PlexTVShow) (searchResults []types.SearchR
 		}(i)
 	}
 
-	searchResults = make([]types.SearchResults, 0, len(plexTVShows))
+	searchResults = make([]types.SearchResult, 0, len(plexTVShows))
 	for range plexTVShows {
 		result := <-ch
 		searchResults = append(searchResults, result)
@@ -103,8 +103,8 @@ func GetTVJobProgress() int {
 	return numberTVProcessed
 }
 
-func searchCinemaParadisoMovie(plexMovie *types.PlexMovie, movieSearchResult chan<- types.SearchResults) {
-	result := types.SearchResults{}
+func searchCinemaParadisoMovie(plexMovie *types.PlexMovie, movieSearchResult chan<- types.SearchResult) {
+	result := types.SearchResult{}
 	result.PlexMovie = *plexMovie
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
@@ -121,7 +121,7 @@ func searchCinemaParadisoMovie(plexMovie *types.PlexMovie, movieSearchResult cha
 	movieSearchResult <- result
 }
 
-func scrapeMovieTitle(result *types.SearchResults, movieSearchResult chan<- types.SearchResults) {
+func scrapeMovieTitle(result *types.SearchResult, movieSearchResult chan<- types.SearchResult) {
 	// now we can get the season information for each best match
 	for i := range result.MovieSearchResults {
 		if !result.MovieSearchResults[i].BestMatch {
@@ -162,8 +162,8 @@ func scrapeMovieTitle(result *types.SearchResults, movieSearchResult chan<- type
 	movieSearchResult <- *result
 }
 
-func searchTVShow(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.SearchResults) {
-	result := types.SearchResults{}
+func searchTVShow(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.SearchResult) {
+	result := types.SearchResult{}
 	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)
 	result.PlexTVShow = *plexTVShow
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle

@@ -74,7 +74,7 @@ func TestSearchAmazonTV(t *testing.T) {
 }
 
 func TestScrapeTitlesParallel(t *testing.T) {
-	result := ScrapeTitlesParallel([]types.SearchResults{
+	result := ScrapeTitlesParallel([]types.SearchResult{
 		{
 			PlexMovie: types.PlexMovie{
 				Title: "napoleon dynamite",

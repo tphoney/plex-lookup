@@ -14,20 +14,20 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 	tests := []struct {
 		name       string
 		args       *types.PlexMusicArtist
-		wantArtist types.SearchResults
+		wantArtist types.SearchResult
 		wantErr    bool
 	}{
 		{
 			name: "artist exists",
 			args: &types.PlexMusicArtist{Name: "The Beatles"},
-			wantArtist: types.SearchResults{
+			wantArtist: types.SearchResult{
 				SearchURL: "https://musicbrainz.org/artist/b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
 				MusicSearchResults: []types.MusicArtistSearchResult{
 
 					{
 						Name:   "The Beatles",
 						ID:     "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
-						Albums: make([]types.MusicAlbumSearchResult, 16),
+						FoundAlbums: make([]types.MusicAlbumSearchResult, 16),
 					},
 				},
 			},
@@ -36,13 +36,13 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 		{
 			name: "artist has special characters",
 			args: &types.PlexMusicArtist{Name: "AC/DC"},
-			wantArtist: types.SearchResults{
+			wantArtist: types.SearchResult{
 				SearchURL: "https://musicbrainz.org/artist/66c662b6-6e2f-4930-8610-912e24c63ed1",
 				MusicSearchResults: []types.MusicArtistSearchResult{
 					{
 						Name:   "AC/DC",
 						ID:     "66c662b6-6e2f-4930-8610-912e24c63ed1",
-						Albums: make([]types.MusicAlbumSearchResult, 16),
+						FoundAlbums: make([]types.MusicAlbumSearchResult, 16),
 					},
 				},
 			},
@@ -59,9 +59,9 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 			if gotArtist.MusicSearchResults[0].Name != tt.wantArtist.MusicSearchResults[0].Name {
 				t.Errorf("SearchMusicBrainzArtist() Name = %v, want %v", gotArtist, tt.wantArtist)
 			}
-			if len(gotArtist.MusicSearchResults[0].Albums) <= len(tt.wantArtist.MusicSearchResults[0].Albums) {
+			if len(gotArtist.MusicSearchResults[0].FoundAlbums) <= len(tt.wantArtist.MusicSearchResults[0].FoundAlbums) {
 				t.Errorf("SearchMusicBrainzArtist() Albums size is bigger than expected: got %d, want %d",
-					len(gotArtist.MusicSearchResults[0].Albums), len(tt.wantArtist.MusicSearchResults[0].Albums))
+					len(gotArtist.MusicSearchResults[0].FoundAlbums), len(tt.wantArtist.MusicSearchResults[0].FoundAlbums))
 			}
 		})
 	}

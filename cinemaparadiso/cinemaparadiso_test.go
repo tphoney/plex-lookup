@@ -116,7 +116,7 @@ func TestSearchCinemaParadisoTV(t *testing.T) {
 		FirstEpisodeAired: time.Date(2013, time.October, 10, 0, 0, 0, 0, time.UTC),
 		LastEpisodeAired:  time.Date(2014, time.April, 3, 0, 0, 0, 0, time.UTC),
 	}
-	ch := make(chan types.SearchResults, 1)
+	ch := make(chan types.SearchResult, 1)
 	searchTVShow(&show, ch)
 	got := <-ch
 
@@ -137,7 +137,7 @@ func TestSearchCinemaParadisoMovies(t *testing.T) {
 		Title: "Cats",
 		Year:  "1998",
 	}
-	ch := make(chan types.SearchResults, 1)
+	ch := make(chan types.SearchResult, 1)
 	searchCinemaParadisoMovie(&movie, ch)
 	result := <-ch
 
@@ -150,7 +150,7 @@ func TestSearchCinemaParadisoMovies(t *testing.T) {
 	}
 }
 func TestScrapeMovieTitlesParallel(t *testing.T) {
-	searchResults := []types.SearchResults{
+	searchResults := []types.SearchResult{
 		{
 			PlexMovie: types.PlexMovie{
 				Title: "Elf",

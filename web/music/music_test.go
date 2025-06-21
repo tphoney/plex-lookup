@@ -11,12 +11,12 @@ import (
 func Test_removeOwnedAlbums(t *testing.T) {
 	tests := []struct {
 		name                string
-		args                []types.SearchResults
-		wantFilteredResults []types.SearchResults
+		args                []types.SearchResult
+		wantFilteredResults []types.SearchResult
 	}{
 		{
 			name: "Filter already owned albums",
-			args: []types.SearchResults{
+			args: []types.SearchResult{
 				{
 					PlexMusicArtist: types.PlexMusicArtist{
 						Name: "Test Artist",
@@ -30,7 +30,7 @@ func Test_removeOwnedAlbums(t *testing.T) {
 					MusicSearchResults: []types.MusicArtistSearchResult{
 						{
 							Name: "Test Artist",
-							Albums: []types.MusicAlbumSearchResult{
+							FoundAlbums: []types.MusicAlbumSearchResult{
 								{
 									Title: "Test Album",
 									Year:  "2022",
@@ -44,7 +44,7 @@ func Test_removeOwnedAlbums(t *testing.T) {
 					},
 				},
 			},
-			wantFilteredResults: []types.SearchResults{
+			wantFilteredResults: []types.SearchResult{
 				{
 					PlexMusicArtist: types.PlexMusicArtist{
 						Name: "Test Artist",
@@ -59,7 +59,7 @@ func Test_removeOwnedAlbums(t *testing.T) {
 						{
 							Name:        "Test Artist",
 							OwnedAlbums: 1,
-							Albums: []types.MusicAlbumSearchResult{
+							FoundAlbums: []types.MusicAlbumSearchResult{
 								{
 									Title: "Test Album 2",
 									Year:  "2021",
@@ -73,7 +73,7 @@ func Test_removeOwnedAlbums(t *testing.T) {
 		// remove 2 albums
 		{
 			name: "Filter 2 owned albums",
-			args: []types.SearchResults{
+			args: []types.SearchResult{
 				{
 					PlexMusicArtist: types.PlexMusicArtist{
 						Name: "Another Artist",
@@ -91,7 +91,7 @@ func Test_removeOwnedAlbums(t *testing.T) {
 					MusicSearchResults: []types.MusicArtistSearchResult{
 						{
 							Name: "Another Artist",
-							Albums: []types.MusicAlbumSearchResult{
+							FoundAlbums: []types.MusicAlbumSearchResult{
 								{
 									Title: "Another Album",
 									Year:  "2021",
@@ -109,7 +109,7 @@ func Test_removeOwnedAlbums(t *testing.T) {
 					},
 				},
 			},
-			wantFilteredResults: []types.SearchResults{
+			wantFilteredResults: []types.SearchResult{
 				{
 					PlexMusicArtist: types.PlexMusicArtist{
 						Name: "Another Artist",
@@ -128,7 +128,7 @@ func Test_removeOwnedAlbums(t *testing.T) {
 						{
 							Name:        "Another Artist",
 							OwnedAlbums: 2,
-							Albums: []types.MusicAlbumSearchResult{
+							FoundAlbums: []types.MusicAlbumSearchResult{
 								{
 									Title: "Another Album 3",
 									Year:  "2023",
@@ -143,7 +143,7 @@ func Test_removeOwnedAlbums(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if gotFilteredResults := removeOwnedAlbums(tt.args); !reflect.DeepEqual(gotFilteredResults, tt.wantFilteredResults) {
+			if gotFilteredResults := markOwnedAlbumsInSearchResult(tt.args); !reflect.DeepEqual(gotFilteredResults, tt.wantFilteredResults) {
 				t.Errorf("removeOwnedAlbums() = \n%v\n%v", gotFilteredResults, tt.wantFilteredResults)
 			}
 		})
@@ -152,13 +152,13 @@ func Test_removeOwnedAlbums(t *testing.T) {
 func Test_removeOlderSearchedAlbums(t *testing.T) {
 	tests := []struct {
 		name                string
-		args                []types.SearchResults
-		wantFilteredResults []types.SearchResults
+		args                []types.SearchResult
+		wantFilteredResults []types.SearchResult
 	}{
 		// Existing test case
 		{
 			name: "Filter out search results that are older than 5 years",
-			args: []types.SearchResults{
+			args: []types.SearchResult{
 				{
 					PlexMusicArtist: types.PlexMusicArtist{
 						Name: "Test Artist",
@@ -172,7 +172,7 @@ func Test_removeOlderSearchedAlbums(t *testing.T) {
 					MusicSearchResults: []types.MusicArtistSearchResult{
 						{
 							Name: "Test Artist",
-							Albums: []types.MusicAlbumSearchResult{
+							FoundAlbums: []types.MusicAlbumSearchResult{
 								{
 									Title: "Test Album 2",
 									Year:  "2016",
@@ -182,7 +182,7 @@ func Test_removeOlderSearchedAlbums(t *testing.T) {
 					},
 				},
 			},
-			wantFilteredResults: []types.SearchResults{
+			wantFilteredResults: []types.SearchResult{
 				{
 					PlexMusicArtist: types.PlexMusicArtist{
 						Name: "Test Artist",
@@ -196,7 +196,7 @@ func Test_removeOlderSearchedAlbums(t *testing.T) {
 					MusicSearchResults: []types.MusicArtistSearchResult{
 						{
 							Name:   "Test Artist",
-							Albums: []types.MusicAlbumSearchResult{},
+							FoundAlbums: []types.MusicAlbumSearchResult{},
 						},
 					},
 				},

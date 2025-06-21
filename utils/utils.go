@@ -10,7 +10,7 @@ import (
 	"github.com/tphoney/plex-lookup/types"
 )
 
-func MarkBestMatchMovie(search *types.SearchResults) types.SearchResults {
+func MarkBestMatchMovie(search *types.SearchResult) types.SearchResult {
 	lowerBound := YearToDate(search.PlexMovie.Year).Year() - 1
 	upperBound := YearToDate(search.PlexMovie.Year).Year() + 1
 	for i := range search.MovieSearchResults {
@@ -29,7 +29,7 @@ func MarkBestMatchMovie(search *types.SearchResults) types.SearchResults {
 	return *search
 }
 
-func MarkBestMatchTV(search *types.SearchResults) types.SearchResults {
+func MarkBestMatchTV(search *types.SearchResult) types.SearchResult {
 	firstEpisodeBoundry := search.FirstEpisodeAired.Year() - 1
 	lastEpisodeBoundry := search.LastEpisodeAired.Year() + 1
 	for i := range search.TVSearchResults {
@@ -81,33 +81,35 @@ func YearToDate(yearString string) time.Time {
 	return time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
 }
 
-func CompareAlbumTitles(title1, title2 string) bool {
+func SanitizedAlbumTitle(title string) string {
 	// remove anything between ()
 	r := regexp.MustCompile(`\((.*?)\)`)
-	title1 = r.ReplaceAllString(title1, "")
-	title2 = r.ReplaceAllString(title2, "")
+	title = r.ReplaceAllString(title, "")
 	// remove anything between []
 	r = regexp.MustCompile(`\[(.*?)\]`)
-	title1 = r.ReplaceAllString(title1, "")
-	title2 = r.ReplaceAllString(title2, "")
+	title = r.ReplaceAllString(title, "")
 	// remove anything between {}
 	r = regexp.MustCompile(`\{(.*?)\}`)
-	title1 = r.ReplaceAllString(title1, "")
-	title2 = r.ReplaceAllString(title2, "")
+	title = r.ReplaceAllString(title, "")
 	// remove plurals ' and ’
 	r = regexp.MustCompile(`[',’]`)
-	title1 = r.ReplaceAllString(title1, "")
-	title2 = r.ReplaceAllString(title2, "")
-	title1 = r.ReplaceAllString(title1, "")
+	title = r.ReplaceAllString(title, "")
 	// strip whitespace
-	title1 = strings.TrimSpace(title1)
-	title2 = strings.TrimSpace(title2)
+	title = strings.TrimSpace(title)
 	// lowercase
-	title1 = strings.ToLower(title1)
-	title2 = strings.ToLower(title2)
-	return title1 == title2
+	title = strings.ToLower(title)
+
+	return title
 }
 
-func WitinOneYear(year1, year2 int) bool {
-	return year1 == year2 || year1 == year2-1 || year1 == year2+1
+func WithinOneYear(year1, year2 string) bool {
+	year1Int, err := strconv.Atoi(year1)
+	if err != nil {
+		return false
+	}
+	year2Int, err := strconv.Atoi(year2)
+	if err != nil {
+		return false
+	}
+	return year1Int == year2Int || year1Int == year2Int-1 || year1Int == year2Int+1
 }

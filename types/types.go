@@ -18,7 +18,7 @@ const (
 	StringTrue         = "true"
 )
 
-type SearchResults struct {
+type SearchResult struct {
 	PlexMovie
 	PlexTVShow
 	PlexMusicArtist
@@ -140,18 +140,21 @@ type PlexMusicAlbum struct {
 }
 
 type MusicArtistSearchResult struct {
-	Name        string
-	ID          string
-	URL         string
-	OwnedAlbums int
-	Albums      []MusicAlbumSearchResult
+	Name string
+	ID   string
+	URL  string
+
+	OwnedAlbums []string
+	FoundAlbums []MusicAlbumSearchResult
 }
 
 type MusicAlbumSearchResult struct {
-	Title string
-	ID    string
-	URL   string
-	Year  string
+	Title          string
+	SanitizedTitle string
+	ID             string
+	URL            string
+	Year           string
+	WithinOneYear  bool
 }
 
 type MusicSimilarArtistResult struct {

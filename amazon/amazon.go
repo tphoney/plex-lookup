@@ -74,9 +74,9 @@ var (
 )
 
 // nolint: dupl, nolintlint
-func MoviesInParallel(plexMovies []types.PlexMovie, language, region string) (searchResults []types.SearchResults) {
+func MoviesInParallel(plexMovies []types.PlexMovie, language, region string) (searchResults []types.SearchResult) {
 	numberMoviesProcessed = 0
-	ch := make(chan types.SearchResults, len(plexMovies))
+	ch := make(chan types.SearchResult, len(plexMovies))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 
 	for i := range plexMovies {
@@ -87,7 +87,7 @@ func MoviesInParallel(plexMovies []types.PlexMovie, language, region string) (se
 		}(i)
 	}
 
-	searchResults = make([]types.SearchResults, 0, len(plexMovies))
+	searchResults = make([]types.SearchResult, 0, len(plexMovies))
 	for range plexMovies {
 		result := <-ch
 		searchResults = append(searchResults, result)
@@ -99,9 +99,9 @@ func MoviesInParallel(plexMovies []types.PlexMovie, language, region string) (se
 }
 
 // nolint: dupl, nolintlint
-func TVInParallel(plexTVShows []types.PlexTVShow, language, region string) (searchResults []types.SearchResults) {
+func TVInParallel(plexTVShows []types.PlexTVShow, language, region string) (searchResults []types.SearchResult) {
 	numberMoviesProcessed = 0
-	ch := make(chan types.SearchResults, len(plexTVShows))
+	ch := make(chan types.SearchResult, len(plexTVShows))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 
 	for i := range plexTVShows {
@@ -112,7 +112,7 @@ func TVInParallel(plexTVShows []types.PlexTVShow, language, region string) (sear
 		}(i)
 	}
 
-	searchResults = make([]types.SearchResults, 0, len(plexTVShows))
+	searchResults = make([]types.SearchResult, 0, len(plexTVShows))
 	for range plexTVShows {
 		result := <-ch
 		searchResults = append(searchResults, result)
@@ -131,14 +131,14 @@ func GetTVJobProgress() int {
 	return numberTVProcessed
 }
 
-func ScrapeTitlesParallel(searchResults []types.SearchResults, region string, isTV bool) (scrapedResults []types.SearchResults) {
+func ScrapeTitlesParallel(searchResults []types.SearchResult, region string, isTV bool) (scrapedResults []types.SearchResult) {
 	// are we tv or movie
 	if isTV {
 		numberTVProcessed = 0
 	} else {
 		numberMoviesProcessed = 0
 	}
-	ch := make(chan types.SearchResults, len(searchResults))
+	ch := make(chan types.SearchResult, len(searchResults))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 	for i := range searchResults {
 		go func(i int) {
@@ -152,7 +152,7 @@ func ScrapeTitlesParallel(searchResults []types.SearchResults, region string, is
 		}(i)
 	}
 
-	scrapedResults = make([]types.SearchResults, 0, len(searchResults))
+	scrapedResults = make([]types.SearchResult, 0, len(searchResults))
 	for range searchResults {
 		result := <-ch
 		scrapedResults = append(scrapedResults, result)
@@ -172,7 +172,7 @@ func ScrapeTitlesParallel(searchResults []types.SearchResults, region string, is
 }
 
 // nolint: dupl, nolintlint
-func scrapeMovieTitles(searchResult *types.SearchResults, region string, ch chan<- types.SearchResults) {
+func scrapeMovieTitles(searchResult *types.SearchResult, region string, ch chan<- types.SearchResult) {
 	dateAdded := searchResult.PlexMovie.DateAdded
 	for i := range searchResult.MovieSearchResults {
 		// this is to limit the number of requests
@@ -201,7 +201,7 @@ func scrapeMovieTitles(searchResult *types.SearchResults, region string, ch chan
 }
 
 // nolint: dupl, nolintlint
-func scrapeTVTitles(searchResult *types.SearchResults, region string, ch chan<- types.SearchResults) {
+func scrapeTVTitles(searchResult *types.SearchResult, region string, ch chan<- types.SearchResult) {
 	dateAdded := searchResult.PlexTVShow.DateAdded
 	for i := range searchResult.TVSearchResults {
 		// this is to limit the number of requests
@@ -230,8 +230,8 @@ func scrapeTVTitles(searchResult *types.SearchResults, region string, ch chan<- 
 }
 
 // nolint: dupl, nolintlint
-func searchMovie(plexMovie *types.PlexMovie, language, region string, movieSearchResult chan<- types.SearchResults) {
-	result := types.SearchResults{}
+func searchMovie(plexMovie *types.PlexMovie, language, region string, movieSearchResult chan<- types.SearchResult) {
+	result := types.SearchResult{}
 	result.PlexMovie = *plexMovie
 
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
@@ -260,8 +260,8 @@ func searchMovie(plexMovie *types.PlexMovie, language, region string, movieSearc
 }
 
 // nolint: dupl, nolintlint
-func searchTV(plexTVShow *types.PlexTVShow, language, region string, tvSearchResult chan<- types.SearchResults) {
-	result := types.SearchResults{}
+func searchTV(plexTVShow *types.PlexTVShow, language, region string, tvSearchResult chan<- types.SearchResult) {
+	result := types.SearchResult{}
 	result.PlexTVShow = *plexTVShow
 
 	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)

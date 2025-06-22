@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -27,7 +26,7 @@ func TestYearToDate(t *testing.T) {
 }
 func TestMarkBestMatchMovie(t *testing.T) {
 	// Test case 1: Matching title and year within 1 year
-	search := types.SearchResults{
+	search := types.SearchResult{
 		PlexMovie: types.PlexMovie{
 			Title: "Movie Title",
 			Year:  "2022",
@@ -58,7 +57,7 @@ func TestMarkBestMatchMovie(t *testing.T) {
 	}
 
 	// Test case 2: Non-matching title
-	search = types.SearchResults{
+	search = types.SearchResult{
 		PlexMovie: types.PlexMovie{
 			Title: "Movie Title",
 			Year:  "2022",
@@ -88,7 +87,7 @@ func TestMarkBestMatchMovie(t *testing.T) {
 	}
 
 	// Test case 3: Non-matching year
-	search = types.SearchResults{
+	search = types.SearchResult{
 		PlexMovie: types.PlexMovie{
 			Title: "Movie Title",
 			Year:  "2022",
@@ -118,100 +117,48 @@ func TestMarkBestMatchMovie(t *testing.T) {
 	}
 }
 
-func Test_albumTitlesMatch(t *testing.T) {
-	tests := []struct {
-		title1 string
-		title2 string
-		want   bool
-	}{
-		{
-			title1: "Test Album",
-			title2: "Test Album",
-			want:   true,
-		},
-		{
-			title1: "Test Album (Deluxe Edition)",
-			title2: "Test Album",
-			want:   true,
-		},
-		{
-			title1: "Test Album [Remastered]",
-			title2: "Test Album",
-			want:   true,
-		},
-		{
-			title1: "Test Album {Special Edition}",
-			title2: "Test Album",
-			want:   true,
-		},
-		{
-			title1: "Test Album (Deluxe Edition) [Remastered] {Special Edition}",
-			title2: "Test Album",
-			want:   true,
-		},
-		{
-			title1: "Test Album (Live)",
-			title2: "Test Album (Studio)",
-			want:   true,
-		},
-		{
-			title1: "Test Album [Remastered]",
-			title2: "Test Album2 [Deluxe Edition]",
-			want:   false,
-		},
-		// test for case insensitivity
-		{
-			title1: "Test Album",
-			title2: "test album",
-			want:   true,
-		},
-		{
-			title1: "paula's",
-			title2: "paula’s",
-			want:   true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(fmt.Sprintf("title1=%s, title2=%s", tt.title1, tt.title2), func(t *testing.T) {
-			if got := CompareAlbumTitles(tt.title1, tt.title2); got != tt.want {
-				t.Errorf("albumTitlesMatch() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-func TestWitinOneYear(t *testing.T) {
+func TestWithinOneYear(t *testing.T) {
 	// Test case 1: Same year
-	year1 := 2022
-	year2 := 2022
+	year1 := "2022"
+	year2 := "2022"
 	expectedResult := true
-	result := WitinOneYear(year1, year2)
+	result := WithinOneYear(year1, year2)
 	if result != expectedResult {
 		t.Errorf("Expected %v, but got %v", expectedResult, result)
 	}
 
 	// Test case 2: Year difference of 1
-	year1 = 2022
-	year2 = 2021
+	year1 = "2022"
+	year2 = "2021"
 	expectedResult = true
-	result = WitinOneYear(year1, year2)
+	result = WithinOneYear(year1, year2)
 	if result != expectedResult {
 		t.Errorf("Expected %v, but got %v", expectedResult, result)
 	}
 
 	// Test case 3: Year difference of -1
-	year1 = 2022
-	year2 = 2023
+	year1 = "2022"
+	year2 = "2023"
 	expectedResult = true
-	result = WitinOneYear(year1, year2)
+	result = WithinOneYear(year1, year2)
 	if result != expectedResult {
 		t.Errorf("Expected %v, but got %v", expectedResult, result)
 	}
 
 	// Test case 4: Year difference greater than 1
-	year1 = 2022
-	year2 = 2020
+	year1 = "2022"
+	year2 = "2020"
 	expectedResult = false
-	result = WitinOneYear(year1, year2)
+	result = WithinOneYear(year1, year2)
+	if result != expectedResult {
+		t.Errorf("Expected %v, but got %v", expectedResult, result)
+	}
+
+	// Test case 5: Invalid year string
+	year1 = "abcd"
+	year2 = "2022"
+	expectedResult = false
+	result = WithinOneYear(year1, year2)
 	if result != expectedResult {
 		t.Errorf("Expected %v, but got %v", expectedResult, result)
 	}

@@ -20,7 +20,7 @@ const (
 	lookupTimeout = 2
 )
 
-func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist, musicBrainzURL string) (artist types.SearchResults, err error) {
+func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist, musicBrainzURL string) (artist types.SearchResult, err error) {
 	artist.PlexMusicArtist = *plexArtist
 	client, err := gomusicbrainz.NewWS2Client(
 		musicBrainzURL, agent, agentVersion, "")
@@ -73,7 +73,7 @@ func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist, musicBrainzURL s
 		url := fmt.Sprintf("https://musicbrainz.org/artist/%v", found.ID)
 		found.URL = url
 		// get the albums
-		found.Albums, _ = SearchMusicBrainzAlbums(found.ID, musicBrainzURL)
+		found.FoundAlbums, _ = SearchMusicBrainzAlbums(found.ID, musicBrainzURL)
 		artist.MusicSearchResults = append(artist.MusicSearchResults, found)
 		break
 	}

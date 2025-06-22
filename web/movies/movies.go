@@ -20,7 +20,7 @@ var (
 	numberOfMoviesProcessed int  = 0
 	jobRunning              bool = false
 	totalMovies             int  = 0
-	searchResults           []types.SearchResults
+	searchResults           []types.SearchResult
 	plexMovies              []types.PlexMovie
 	lookup                  string
 	lookupFilters           types.MovieLookupFilters
@@ -121,12 +121,12 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 		// reset variables
 		numberOfMoviesProcessed = 0
 		totalMovies = 0
-		searchResults = []types.SearchResults{}
+		searchResults = []types.SearchResult{}
 	}
 }
 
-func renderTable(searchResults []types.SearchResults) (tableRows string) {
-	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="string"><strong>Plex Audio</strong></th><th data-sort="string"><strong>Plex Resolution</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th data-sort="string"><strong>New release</strong></th><th><strong>Available Discs</strong></th></tr></thead><tbody>` //nolint: lll
+func renderTable(searchResults []types.SearchResult) (tableRows string) {
+	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="string"><strong>Plex Audio</strong></th><th data-sort="string"><strong>Plex Resolution</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th data-sort="string"><strong>New release</strong></th><th><strong>Available Discs</strong></th></tr></thead><tbody>`
 	for i := range searchResults {
 		newRelease := "no"
 		for j := range searchResults[i].MovieSearchResults {

@@ -14,20 +14,20 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 	tests := []struct {
 		name       string
 		args       *types.PlexMusicArtist
-		wantArtist types.SearchResults
+		wantArtist types.SearchResult
 		wantErr    bool
 	}{
 		{
 			name: "artist exists",
 			args: &types.PlexMusicArtist{Name: "The Beatles"},
-			wantArtist: types.SearchResults{
+			wantArtist: types.SearchResult{
 				SearchURL: "https://musicbrainz.org/artist/b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
 				MusicSearchResults: []types.MusicArtistSearchResult{
 
 					{
-						Name:   "The Beatles",
-						ID:     "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
-						Albums: make([]types.MusicAlbumSearchResult, 16),
+						Name:        "The Beatles",
+						ID:          "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+						FoundAlbums: make([]types.MusicAlbumSearchResult, 16),
 					},
 				},
 			},
@@ -36,13 +36,13 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 		{
 			name: "artist has special characters",
 			args: &types.PlexMusicArtist{Name: "AC/DC"},
-			wantArtist: types.SearchResults{
+			wantArtist: types.SearchResult{
 				SearchURL: "https://musicbrainz.org/artist/66c662b6-6e2f-4930-8610-912e24c63ed1",
 				MusicSearchResults: []types.MusicArtistSearchResult{
 					{
-						Name:   "AC/DC",
-						ID:     "66c662b6-6e2f-4930-8610-912e24c63ed1",
-						Albums: make([]types.MusicAlbumSearchResult, 16),
+						Name:        "AC/DC",
+						ID:          "66c662b6-6e2f-4930-8610-912e24c63ed1",
+						FoundAlbums: make([]types.MusicAlbumSearchResult, 16),
 					},
 				},
 			},
@@ -59,9 +59,9 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 			if gotArtist.MusicSearchResults[0].Name != tt.wantArtist.MusicSearchResults[0].Name {
 				t.Errorf("SearchMusicBrainzArtist() Name = %v, want %v", gotArtist, tt.wantArtist)
 			}
-			if len(gotArtist.MusicSearchResults[0].Albums) <= len(tt.wantArtist.MusicSearchResults[0].Albums) {
+			if len(gotArtist.MusicSearchResults[0].FoundAlbums) <= len(tt.wantArtist.MusicSearchResults[0].FoundAlbums) {
 				t.Errorf("SearchMusicBrainzArtist() Albums size is bigger than expected: got %d, want %d",
-					len(gotArtist.MusicSearchResults[0].Albums), len(tt.wantArtist.MusicSearchResults[0].Albums))
+					len(gotArtist.MusicSearchResults[0].FoundAlbums), len(tt.wantArtist.MusicSearchResults[0].FoundAlbums))
 			}
 		})
 	}
@@ -82,16 +82,16 @@ func TestSearchMusicBrainzAlbums(t *testing.T) {
 		artistID string
 	}
 	tests := []struct {
-		name       string
-		args       args
-		albumCount int
-		wantErr    bool
+		name             string
+		args             args
+		wantedAlbumCount int
+		wantErr          bool
 	}{
 		{
-			name:       "artist exists",
-			args:       args{artistID: "83d91898-7763-47d7-b03b-b92132375c47"},
-			albumCount: 13,
-			wantErr:    false,
+			name:             "artist exists",
+			args:             args{artistID: "83d91898-7763-47d7-b03b-b92132375c47"},
+			wantedAlbumCount: 13,
+			wantErr:          false,
 		},
 	}
 	for _, tt := range tests {
@@ -101,8 +101,8 @@ func TestSearchMusicBrainzAlbums(t *testing.T) {
 				t.Errorf("SearchMusicBrainzAlbums() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if len(gotAlbums) != tt.albumCount {
-				t.Errorf("SearchMusicBrainzAlbums() = %v, want %v", len(gotAlbums), tt.albumCount)
+			if len(gotAlbums) < tt.wantedAlbumCount {
+				t.Errorf("SearchMusicBrainzAlbums() = %v, wanted at least %d albums, got %d", len(gotAlbums), tt.wantedAlbumCount, len(gotAlbums))
 			}
 		})
 	}

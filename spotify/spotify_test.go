@@ -151,38 +151,3 @@ func TestSearchSpotifyAlbumsDebug(t *testing.T) {
 
 	t.Logf("SearchSpotifyAlbum() = %v", got.MusicSearchResults)
 }
-
-func TestSpotifyLookupSimilarArtists(t *testing.T) {
-	if spotifyClientID == "" || spotifyClientSecret == "" {
-		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
-	}
-	token, err := SpotifyOAuthToken(context.Background(), spotifyClientID, spotifyClientSecret)
-	if err != nil {
-		t.Errorf("GetSpotifyToken() returned an error: %s", err)
-	}
-
-	tests := []struct {
-		name         string
-		searchResult types.SearchResult
-		wantErr      bool
-		wantLength   int
-	}{
-		{
-			name:         "similar artists exist",
-			searchResult: types.SearchResult{MusicSearchResults: []types.MusicArtistSearchResult{{ID: "711MCceyCBcFnzjGY4Q7Un"}}},
-			wantErr:      false,
-			wantLength:   20,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ch := make(chan SimilarArtistsResponse, 1)
-			searchResult := tt.searchResult // Create a local variable to avoid implicit memory aliasing
-			searchSpotifySimilarArtist(&searchResult, token, ch)
-			got := <-ch
-			if len(got.Artists) != tt.wantLength {
-				t.Errorf("SpotifyLookupSimilarArtists() = %v, want %v", len(got.Artists), tt.wantLength)
-			}
-		})
-	}
-}

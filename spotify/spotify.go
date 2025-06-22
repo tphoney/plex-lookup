@@ -148,62 +148,6 @@ func GetAlbumsInParallel(artistsSearchResults []types.SearchResult, token string
 	return enrichedArtistSearchResults
 }
 
-func GetSimilarArtistsInParallel(artistsSearchResults []types.SearchResult, token string) map[string]types.MusicSimilarArtistResult {
-	numberOfArtistsProcessed = 0
-	ch := make(chan SimilarArtistsResponse, len(artistsSearchResults))
-	semaphore := make(chan struct{}, spotifyThreads)
-	for i := range artistsSearchResults {
-		go func(i int) {
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-			searchSpotifySimilarArtist(&artistsSearchResults[i], token, ch)
-		}(i)
-	}
-	// gather results
-	rawSimilarArtists := make([]SimilarArtistsResponse, 0)
-	for range artistsSearchResults {
-		result := <-ch
-		rawSimilarArtists = append(rawSimilarArtists, result)
-		fmt.Print(".")
-		numberOfArtistsProcessed++
-	}
-	// seed the similar artists map with our owned artists
-	similarArtistsResults := make(map[string]types.MusicSimilarArtistResult)
-	for i := range artistsSearchResults {
-		// skip artists with no search results
-		if len(artistsSearchResults[i].MusicSearchResults) == 0 {
-			continue
-		}
-		similarArtistsResults[artistsSearchResults[i].MusicSearchResults[0].ID] = types.MusicSimilarArtistResult{
-			Name:            artistsSearchResults[i].MusicSearchResults[0].Name,
-			URL:             artistsSearchResults[i].MusicSearchResults[0].URL,
-			Owned:           true,
-			SimilarityCount: 0,
-		}
-	}
-	// iterate over searches
-	for i := range rawSimilarArtists {
-		// iterate over artists in each search
-		for j := range rawSimilarArtists[i].Artists {
-			artist, ok := similarArtistsResults[rawSimilarArtists[i].Artists[j].ID]
-			if !ok {
-				similarArtistsResults[rawSimilarArtists[i].Artists[j].ID] = types.MusicSimilarArtistResult{
-					Name:            rawSimilarArtists[i].Artists[j].Name,
-					URL:             fmt.Sprintf("https://open.spotify.com/artist/%s", rawSimilarArtists[i].Artists[j].ID),
-					Owned:           false,
-					SimilarityCount: 1,
-				}
-			} else {
-				// increment the similarity count
-				artist.SimilarityCount++
-				similarArtistsResults[rawSimilarArtists[i].Artists[j].ID] = artist
-			}
-		}
-	}
-	numberOfArtistsProcessed = 0
-	return similarArtistsResults
-}
-
 func GetJobProgress() int {
 	return numberOfArtistsProcessed
 }
@@ -278,32 +222,6 @@ func searchSpotifyAlbum(m *types.SearchResult, token string, ch chan<- *types.Se
 
 	m.MusicSearchResults[0].FoundAlbums = albums
 	ch <- m
-}
-
-func searchSpotifySimilarArtist(m *types.SearchResult, token string, ch chan<- SimilarArtistsResponse) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(lookupTimeout))
-	defer cancel()
-	if len(m.MusicSearchResults) == 0 {
-		// no artist found for the plex artist
-		fmt.Printf("SearchSpotifySimilarArtist: no artist found for %v\n", m.PlexMusicArtist)
-		ch <- SimilarArtistsResponse{}
-		return
-	}
-	similarArtistURL := fmt.Sprintf("%s/artists/%s/related-artists", spotifyAPIURL, m.MusicSearchResults[0].ID)
-	body, err := makeRequest(similarArtistURL, token, ctx)
-	if err != nil {
-		fmt.Printf("SearchSpotifySimilarArtist: unable to parse response from spotify: %s\n", err.Error())
-		ch <- SimilarArtistsResponse{}
-		return
-	}
-	var similarArtistsResponse SimilarArtistsResponse
-	jsonErr := json.Unmarshal(body, &similarArtistsResponse)
-	if jsonErr != nil {
-		fmt.Printf("SearchSpotifySimilarArtist: unable to unmarshal response from spotify: %s\n", jsonErr.Error())
-		ch <- SimilarArtistsResponse{}
-		return
-	}
-	ch <- similarArtistsResponse
 }
 
 // function that gets an oauth token from spotify from the client id and secret

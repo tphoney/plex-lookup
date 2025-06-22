@@ -27,12 +27,10 @@ var (
 	artistsJobRunning        bool = false
 	totalArtists             int  = 0
 
-	plexMusic             []types.PlexMusicArtist
-	artistsSearchResults  []types.SearchResult
-	similarArtistsResults map[string]types.MusicSimilarArtistResult
-	spotifyToken          string
-	lookup                string
-	lookupType            string
+	plexMusic            []types.PlexMusicArtist
+	artistsSearchResults []types.SearchResult
+	spotifyToken         string
+	lookup               string
 )
 
 const (
@@ -95,16 +93,14 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	lookupType = r.FormValue("lookuptype")
+
 	// only get the artists from plex once
 	if playlist == "all" {
 		plexMusic = plex.AllMusicArtists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexMusicLibraryID)
 	} else {
 		plexMusic = plex.GetArtistsFromPlaylist(c.Config.PlexIP, c.Config.PlexToken, playlist)
 	}
-	//nolint: gocritic
-	// plexMusic = plexMusic[:30]
-	//lint: gocritic
+
 	var searchResult types.SearchResult
 	artistsJobRunning = true
 	numberOfArtistsProcessed = 0
@@ -113,47 +109,34 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `<div hx-get="/musicprogress" hx-trigger="every 100ms" hx-boost="true" class="container" id="progress">
 		<progress value="%d" max= "%d"/></div>`, numberOfArtistsProcessed, totalArtists)
 	startTime := time.Now()
-	if lookupType == "missingalbums" {
-		switch lookup {
-		case "musicbrainz":
-			// limit the number of artists to 50 for nonlocal musicbrainz instances
-			if strings.Contains(c.Config.MusicBrainzURL, "musicbrainz.org") {
-				plexMusic = plexMusic[:50]
-				totalArtists = len(plexMusic) - 1
+
+	switch lookup {
+	case "musicbrainz":
+		// limit the number of artists to 50 for nonlocal musicbrainz instances
+		if strings.Contains(c.Config.MusicBrainzURL, "musicbrainz.org") {
+			plexMusic = plexMusic[:50]
+			totalArtists = len(plexMusic) - 1
+		}
+		go func() {
+			for i := range plexMusic {
+				fmt.Print(".")
+				searchResult, _ = musicbrainz.SearchMusicBrainzArtist(&plexMusic[i], c.Config.MusicBrainzURL)
+				artistsSearchResults = append(artistsSearchResults, searchResult)
+				numberOfArtistsProcessed = i
 			}
-			go func() {
-				for i := range plexMusic {
-					fmt.Print(".")
-					searchResult, _ = musicbrainz.SearchMusicBrainzArtist(&plexMusic[i], c.Config.MusicBrainzURL)
-					artistsSearchResults = append(artistsSearchResults, searchResult)
-					numberOfArtistsProcessed = i
-				}
-				artistsJobRunning = false
-			}()
-		default:
-			// search spotify
-			go func() {
-				artistsSearchResults = spotify.GetArtistsInParallel(plexMusic, spotifyToken)
-				artistsSearchResults = spotify.GetAlbumsInParallel(artistsSearchResults, spotifyToken)
-				// sanitize album titles
-				artistsSearchResults = sanitizeAlbumTitles(artistsSearchResults)
-				artistsJobRunning = false
-			}()
-		}
-	} else {
-		switch lookup {
-		case spotifyString:
-			go func() {
-				artistsSearchResults = spotify.GetArtistsInParallel(plexMusic, spotifyToken)
-				similarArtistsResults = spotify.GetSimilarArtistsInParallel(artistsSearchResults, spotifyToken)
-				totalArtists = numberOfArtistsProcessed
-				artistsJobRunning = false
-			}()
-			fmt.Println("Searching Spotify for similar artists")
-		default:
-			fmt.Fprintf(w, `<div class="alert alert-danger" role="alert">Similar Artist search is not available for this lookup provider</div>`)
-		}
+			artistsJobRunning = false
+		}()
+	default:
+		// search spotify
+		go func() {
+			artistsSearchResults = spotify.GetArtistsInParallel(plexMusic, spotifyToken)
+			artistsSearchResults = spotify.GetAlbumsInParallel(artistsSearchResults, spotifyToken)
+			// sanitize album titles
+			artistsSearchResults = sanitizeAlbumTitles(artistsSearchResults)
+			artistsJobRunning = false
+		}()
 	}
+
 	fmt.Printf("Processed %d artists in %v\n", len(plexMusic), time.Since(startTime))
 }
 
@@ -165,12 +148,7 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprintf(w, `<div hx-get="/musicprogress" hx-trigger="every 100ms" class="container" hx-boost="true" id="progress" hx-swap="outerHTML">
 		<progress value="%d" max= "%d"/></div>`, numberOfArtistsProcessed, totalArtists)
 	} else {
-		tableContents := ""
-		if lookupType == "missingalbums" {
-			tableContents = renderArtistAlbumsTable()
-		} else {
-			tableContents = renderSimilarArtistsTable()
-		}
+		tableContents := renderArtistAlbumsTable()
 		fmt.Fprintf(w,
 			`<table class="table-sortable" hx-boost="true">%s</tbody></table>
 		</script><script>document.querySelector('.table-sortable').tsortable()</script>`,
@@ -214,22 +192,6 @@ func renderAccordian(s []string) string {
 	}
 	retval += `</ul></details>`
 	return retval
-}
-
-func renderSimilarArtistsTable() (tableRows string) {
-	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Artist</strong></th><th data-sort="string"><strong>Owned</strong></th><th data-sort="int"><strong>Similarity Count</strong></th></tr></thead><tbody>`
-	for i := range similarArtistsResults {
-		ownedString := "No"
-		if similarArtistsResults[i].Owned {
-			ownedString = "Yes"
-		}
-		tableRows += fmt.Sprintf(`<tr><td><a href=%q target="_blank">%s</a></td><td>%s</td><td>%d</td></tr>`,
-			similarArtistsResults[i].URL,
-			similarArtistsResults[i].Name,
-			ownedString,
-			similarArtistsResults[i].SimilarityCount)
-	}
-	return tableRows // Return the generated HTML for table rows
 }
 
 func sanitizeAlbumTitles(artistsSearchResults []types.SearchResult) []types.SearchResult {

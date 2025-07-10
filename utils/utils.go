@@ -101,15 +101,3 @@ func SanitizedAlbumTitle(title string) string {
 
 	return title
 }
-
-func WithinOneYear(year1, year2 string) bool {
-	year1Int, err := strconv.Atoi(year1)
-	if err != nil {
-		return false
-	}
-	year2Int, err := strconv.Atoi(year2)
-	if err != nil {
-		return false
-	}
-	return year1Int == year2Int || year1Int == year2Int-1 || year1Int == year2Int+1
-}

@@ -117,53 +117,6 @@ func TestMarkBestMatchMovie(t *testing.T) {
 	}
 }
 
-func TestWithinOneYear(t *testing.T) {
-	// Test case 1: Same year
-	year1 := "2022"
-	year2 := "2022"
-	expectedResult := true
-	result := WithinOneYear(year1, year2)
-	if result != expectedResult {
-		t.Errorf("Expected %v, but got %v", expectedResult, result)
-	}
-
-	// Test case 2: Year difference of 1
-	year1 = "2022"
-	year2 = "2021"
-	expectedResult = true
-	result = WithinOneYear(year1, year2)
-	if result != expectedResult {
-		t.Errorf("Expected %v, but got %v", expectedResult, result)
-	}
-
-	// Test case 3: Year difference of -1
-	year1 = "2022"
-	year2 = "2023"
-	expectedResult = true
-	result = WithinOneYear(year1, year2)
-	if result != expectedResult {
-		t.Errorf("Expected %v, but got %v", expectedResult, result)
-	}
-
-	// Test case 4: Year difference greater than 1
-	year1 = "2022"
-	year2 = "2020"
-	expectedResult = false
-	result = WithinOneYear(year1, year2)
-	if result != expectedResult {
-		t.Errorf("Expected %v, but got %v", expectedResult, result)
-	}
-
-	// Test case 5: Invalid year string
-	year1 = "abcd"
-	year2 = "2022"
-	expectedResult = false
-	result = WithinOneYear(year1, year2)
-	if result != expectedResult {
-		t.Errorf("Expected %v, but got %v", expectedResult, result)
-	}
-}
-
 func Test_matchTVShow(t *testing.T) {
 	type args struct {
 		plexTitle  string

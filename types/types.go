@@ -140,9 +140,11 @@ type PlexMusicAlbum struct {
 }
 
 type MusicArtistSearchResult struct {
-	Name string
-	ID   string
-	URL  string
+	Name           string
+	ID             string
+	URL            string
+	FirstAlbumYear int
+	LastAlbumYear  int
 
 	OwnedAlbums []string
 	FoundAlbums []MusicAlbumSearchResult
@@ -154,7 +156,6 @@ type MusicAlbumSearchResult struct {
 	ID             string
 	URL            string
 	Year           string
-	WithinOneYear  bool
 }
 
 type MusicSimilarArtistResult struct {

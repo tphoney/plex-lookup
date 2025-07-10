@@ -1,6 +1,6 @@
 module github.com/tphoney/plex-lookup
 
-go 1.24.2
+go 1.24.5
 
 require (
 	github.com/lithammer/fuzzysearch v1.1.8
@@ -13,5 +13,5 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/michiwend/golang-pretty v0.0.0-20141116172505-8ac61812ea3f // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
-	golang.org/x/text v0.26.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
 )

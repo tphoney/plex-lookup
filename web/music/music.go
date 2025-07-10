@@ -161,16 +161,16 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 
 func renderArtistAlbumsTable() (tableRows string) {
 	searchResults := filterMusicSearchResults(artistsSearchResults)
-	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Artist</strong></th><th data-sort="int"><strong>Owned Albums</strong></th><th data-sort="int"><strong>Wanted Albums</strong></th></tr></thead><tbody>`
+	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Artist</strong></th><th data-sort="int">First album</th><th data-sort="int">Last album</th><th data-sort="int"><strong>Owned Albums</strong></th><th data-sort="int"><strong>Wanted Albums</strong></th></tr></thead><tbody>`
 	for i := range searchResults {
 		if len(searchResults[i].MusicSearchResults) > 0 {
-			// use accordians https://picocss.com/docs/accordion
-			tableRows += fmt.Sprintf(`<tr><td><a href=%q target="_blank">%s</a></td><td>%s</td><td>%s</td><td>`,
+			tableRows += fmt.Sprintf(`<tr><td><a href=%q target="_blank">%s</a></td><td>%d</td><td>%d</td><td>%s</td><td>%s</td></tr>`,
 				searchResults[i].MusicSearchResults[0].URL,
 				searchResults[i].Name,
+				searchResults[i].MusicSearchResults[0].FirstAlbumYear,
+				searchResults[i].MusicSearchResults[0].LastAlbumYear,
 				renderAccordian(searchResults[i].MusicSearchResults[0].OwnedAlbums),
 				renderAccordian(stringsFromFoundAlbums(searchResults[i].MusicSearchResults[0].FoundAlbums)))
-			tableRows += "</td></tr>"
 		}
 	}
 	return tableRows // Return the generated HTML for table rows
@@ -235,44 +235,43 @@ func markOwnedAlbumsInSearchResult(searchResults []types.SearchResult) []types.S
 					append(searchResults[i].MusicSearchResults[0].OwnedAlbums, plexAlbum.Title+" ("+plexAlbum.Year+")")
 				// make a deep copy of the albums in the search results
 				albumsCopy := append([]types.MusicAlbumSearchResult(nil), searchResults[i].MusicSearchResults[0].FoundAlbums...)
-				searchIDsToRemove = append(searchIDsToRemove, findMatchingAlbumFromSearch(plexAlbum, albumsCopy))
+				searchIDsToRemove = append(searchIDsToRemove, findMatchingAlbumFromSearch(plexAlbum, albumsCopy)...)
 			}
 			searchResults[i].MusicSearchResults[0].FoundAlbums = removeOwnedFromSearchResults(searchResults[i].MusicSearchResults[0].FoundAlbums, searchIDsToRemove)
 		}
 	}
 	// sort the owned albums by year
 	for i := range searchResults {
+		firstAlbumYear, _ := strconv.Atoi(searchResults[i].PlexMusicArtist.Albums[0].Year)
+		lastAlbumYear, _ := strconv.Atoi(searchResults[i].PlexMusicArtist.Albums[0].Year)
 		if len(searchResults[i].MusicSearchResults) > 0 {
 			sort.Slice(searchResults[i].MusicSearchResults[0].OwnedAlbums, func(a, b int) bool {
 				yearA := strings.Split(searchResults[i].MusicSearchResults[0].OwnedAlbums[a], " (")
 				yearB := strings.Split(searchResults[i].MusicSearchResults[0].OwnedAlbums[b], " (")
 				yearAInt, _ := strconv.Atoi(strings.TrimSuffix(yearA[1], ")"))
 				yearBInt, _ := strconv.Atoi(strings.TrimSuffix(yearB[1], ")"))
+				if yearAInt < firstAlbumYear {
+					firstAlbumYear = yearAInt
+				}
+				if yearAInt > lastAlbumYear {
+					lastAlbumYear = yearAInt
+				}
 				return yearAInt > yearBInt // Sort by year descending
 			})
+			searchResults[i].MusicSearchResults[0].FirstAlbumYear = firstAlbumYear
+			searchResults[i].MusicSearchResults[0].LastAlbumYear = lastAlbumYear
 		}
 	}
 	return searchResults
 }
 
-func findMatchingAlbumFromSearch(plexAlbum types.PlexMusicAlbum, original []types.MusicAlbumSearchResult) (foundID string) {
-	for j := range original {
-		if utils.WithinOneYear(plexAlbum.Year, original[j].Year) {
-			// if the album is owned, mark it as such
-			original[j].WithinOneYear = true
-		}
-	}
-	// iterate over the search albums and remove any that are not within one year
-	for j := len(original) - 1; j >= 0; j-- {
-		if !original[j].WithinOneYear {
-			original = append(original[:j], original[j+1:]...)
-		}
-	}
+func findMatchingAlbumFromSearch(plexAlbum types.PlexMusicAlbum, original []types.MusicAlbumSearchResult) (foundIDs []string) {
+	plexSanitizedTitle := utils.SanitizedAlbumTitle(plexAlbum.Title)
 	sanitizedAlbumTitles := make([]string, 0)
 	for _, searchAlbum := range original {
 		sanitizedAlbumTitles = append(sanitizedAlbumTitles, searchAlbum.SanitizedTitle)
 	}
-	matches := fuzzy.RankFind(utils.SanitizedAlbumTitle(plexAlbum.Title), sanitizedAlbumTitles)
+	matches := fuzzy.RankFind(plexSanitizedTitle, sanitizedAlbumTitles)
 	sort.Sort(matches)
 
 	for _, match := range matches {
@@ -282,12 +281,20 @@ func findMatchingAlbumFromSearch(plexAlbum types.PlexMusicAlbum, original []type
 		// Find the index of the matched album in the original slice
 		for j := range original {
 			if original[j].SanitizedTitle == match.Target {
-				foundID = original[j].ID
-				break
+				foundIDs = append(foundIDs, original[j].ID)
 			}
 		}
 	}
-	return foundID
+	keys := make(map[string]bool)
+	cleaned := []string{}
+
+	for _, entry := range foundIDs {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			cleaned = append(cleaned, entry)
+		}
+	}
+	return cleaned
 }
 
 func removeOwnedFromSearchResults(original []types.MusicAlbumSearchResult, toRemove []string) []types.MusicAlbumSearchResult {

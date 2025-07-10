@@ -1,17 +1,19 @@
 # To do list
 
-## Features
+## In Progress
 
-- add option for allow duplicates or exact match
-- try using the fuzzysearch package for artist matching
-- fix the new artist search
+## Features
 
 ## Bugs
 
-- mandalorian is not showing up on amazon tv search
+- alanis morissette albums are not matching correctly, hyphens in the album name
 
 ## Done
 
+- add sort by first album year to music search
+- add sort by last album year to music search
+- remove duplicate found from albums search results
+- remove the new artist search, this was deprecated by spotify
 - fix album matching, why is beta band albums not matching
 - remove limitation of 5 years for music search
 - fix sort on table with accordians

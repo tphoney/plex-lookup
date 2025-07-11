@@ -1,6 +1,7 @@
 package music
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/tphoney/plex-lookup/types"
@@ -81,5 +82,42 @@ func TestRemoveOwnedFromSearchResults(t *testing.T) {
 				t.Errorf("Test %q: Expected album ID at index %d to be %q, got %q", tt.name, i, wantID, result[i].ID)
 			}
 		}
+	}
+}
+
+func TestFindMatchingAlbumFromSearch(t *testing.T) {
+	plexAlbum := types.PlexMusicAlbum{
+		Title:     "So‐Called Chaos",
+		RatingKey: "94388",
+		Year:      "2004",
+	}
+
+	original := []types.MusicAlbumSearchResult{
+		{SanitizedTitle: "the storm before the calm", ID: "id0"},
+		{SanitizedTitle: "such pretty forks in the mix", ID: "id1"},
+		{SanitizedTitle: "such pretty forks in the road", ID: "id2"},
+		{SanitizedTitle: "jagged little pill", ID: "id3"},
+		{SanitizedTitle: "jagged little pill", ID: "id4"},
+		{SanitizedTitle: "jagged little pill", ID: "id5"},
+		{SanitizedTitle: "jagged little pill", ID: "id6"},
+		{SanitizedTitle: "live at montreux 2012", ID: "id7"},
+		{SanitizedTitle: "havoc and bright lights", ID: "id8"},
+		{SanitizedTitle: "flavors of entanglement", ID: "id9"},
+		{SanitizedTitle: "flavors of entanglement", ID: "id10"},
+		{SanitizedTitle: "jagged little pill", ID: "id11"},
+		{SanitizedTitle: "so-called chaos", ID: "id12"},
+		{SanitizedTitle: "feast on scraps", ID: "id13"},
+		{SanitizedTitle: "under rug swept", ID: "id14"},
+		{SanitizedTitle: "live / unplugged", ID: "id15"},
+		{SanitizedTitle: "supposed former infatuation junkie", ID: "id16"},
+		{SanitizedTitle: "supposed former infatuation junkie", ID: "id17"},
+		{SanitizedTitle: "jagged little pill", ID: "id18"},
+	}
+
+	foundIDs := findMatchingAlbumFromSearch(plexAlbum, original)
+
+	expected := []string{"id12"}
+	if !reflect.DeepEqual(foundIDs, expected) {
+		t.Errorf("Expected %v, got %v", expected, foundIDs)
 	}
 }

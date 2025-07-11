@@ -6,10 +6,9 @@
 
 ## Bugs
 
-- alanis morissette albums are not matching correctly, hyphens in the album name
-
 ## Done
 
+- alanis morissette albums are not matching correctly, hyphens in the album name
 - add sort by first album year to music search
 - add sort by last album year to music search
 - remove duplicate found from albums search results

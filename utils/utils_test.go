@@ -161,3 +161,29 @@ func Test_matchTVShow(t *testing.T) {
 		})
 	}
 }
+
+func TestSanitizedAlbumTitle(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		// Unicode dash to ASCII
+		{"So‐Called Chaos", "so-called chaos"}, // U+2010
+		{"So–Called Chaos", "so-called chaos"}, // U+2013
+
+		// Remove brackets
+		{"Album (Deluxe)", "album"},
+		{"Album [Special Edition]", "album"},
+		{"Album {Live}", "album"},
+		// Remove apostrophes
+		{"Rock'n'Roll", "rocknroll"},
+		// Lowercase and trim
+		{"  JAGGED LITTLE PILL  ", "jagged little pill"},
+	}
+	for _, test := range tests {
+		result := SanitizedAlbumTitle(test.input)
+		if result != test.expected {
+			t.Errorf("SanitizedAlbumTitle(%q) = %q; want %q", test.input, result, test.expected)
+		}
+	}
+}

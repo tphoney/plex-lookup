@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rainycape/unidecode"
 	"github.com/tphoney/plex-lookup/types"
 )
 
@@ -82,6 +83,8 @@ func YearToDate(yearString string) time.Time {
 }
 
 func SanitizedAlbumTitle(title string) string {
+	// convert all unicode to ascii
+	title = unidecode.Unidecode(title)
 	// remove anything between ()
 	r := regexp.MustCompile(`\((.*?)\)`)
 	title = r.ReplaceAllString(title, "")

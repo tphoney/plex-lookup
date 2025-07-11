@@ -5,6 +5,7 @@ go 1.24.5
 require (
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/michiwend/gomusicbrainz v0.0.0-20181012083520-6c07e13dd396
+	github.com/rainycape/unidecode v0.0.0-20150907023854-cb7f23ec59be
 	github.com/spf13/cobra v1.9.1
 )
 

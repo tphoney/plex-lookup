@@ -242,24 +242,34 @@ func markOwnedAlbumsInSearchResult(searchResults []types.SearchResult) []types.S
 	}
 	// sort the owned albums by year
 	for i := range searchResults {
-		firstAlbumYear, _ := strconv.Atoi(searchResults[i].PlexMusicArtist.Albums[0].Year)
-		lastAlbumYear, _ := strconv.Atoi(searchResults[i].PlexMusicArtist.Albums[0].Year)
 		if len(searchResults[i].MusicSearchResults) > 0 {
 			sort.Slice(searchResults[i].MusicSearchResults[0].OwnedAlbums, func(a, b int) bool {
 				yearA := strings.Split(searchResults[i].MusicSearchResults[0].OwnedAlbums[a], " (")
 				yearB := strings.Split(searchResults[i].MusicSearchResults[0].OwnedAlbums[b], " (")
 				yearAInt, _ := strconv.Atoi(strings.TrimSuffix(yearA[1], ")"))
 				yearBInt, _ := strconv.Atoi(strings.TrimSuffix(yearB[1], ")"))
-				if yearAInt < firstAlbumYear {
-					firstAlbumYear = yearAInt
-				}
-				if yearAInt > lastAlbumYear {
-					lastAlbumYear = yearAInt
-				}
 				return yearAInt > yearBInt // Sort by year descending
 			})
-			searchResults[i].MusicSearchResults[0].FirstAlbumYear = firstAlbumYear
-			searchResults[i].MusicSearchResults[0].LastAlbumYear = lastAlbumYear
+		}
+		// Calculate the first and last album year for each artist
+		// NB we are sorting by the owned plex albums.
+		if len(searchResults[i].MusicSearchResults) > 0 {
+			youngestAlbumYear := 9999
+			oldestAlbumYear := 0
+			for j := range searchResults[i].Albums {
+				year, err := strconv.Atoi(searchResults[i].Albums[j].Year)
+				if err != nil {
+					continue // Skip albums with invalid year
+				}
+				if year < youngestAlbumYear {
+					youngestAlbumYear = year
+				}
+				if year > oldestAlbumYear {
+					oldestAlbumYear = year
+				}
+			}
+			searchResults[i].MusicSearchResults[0].FirstAlbumYear = youngestAlbumYear
+			searchResults[i].MusicSearchResults[0].LastAlbumYear = oldestAlbumYear
 		}
 	}
 	return searchResults

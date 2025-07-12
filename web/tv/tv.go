@@ -50,11 +50,10 @@ func (c TVConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
 	for i := range playlists {
 		playlistHTML += fmt.Sprintf(
 			`<label for=%q>
-			<input type="radio" id="playlist" name="playlist" value=%q/>
-			%s</label>`,
-			playlists[i].Title, playlists[i].RatingKey, playlists[i].Title)
+				<input type="radio" id=%q name="playlist" value=%q/>%s
+			</label>`,
+			playlists[i].RatingKey, playlists[i].RatingKey, playlists[i].RatingKey, playlists[i].Title)
 	}
-
 	playlistHTML += `</fieldset>`
 	fmt.Fprint(w, playlistHTML)
 }

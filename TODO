@@ -1,5 +1,11 @@
 # To do list
 
+## Wants
+
+- make movie and tv searches as good as the music search
+- make the app multi user, so they can create a user and have their own settings
+  - ask the vscode agent about authentication authorisation and user management
+
 ## In Progress
 
 ## Features
@@ -8,6 +14,8 @@
 
 ## Done
 
+- investigate some albums coming back with a year of 0000 Arcade Fire, Guided by Voices,Weezer,Lambchop,Ólafur Arnalds,Nicholas Britell,Wilco,Crystal Castles,Daft Punk,Rob Hubbard,The Stranglers
+- move the owned plex album year sorting into its own loop
 - alanis morissette albums are not matching correctly, hyphens in the album name
 - add sort by first album year to music search
 - add sort by last album year to music search

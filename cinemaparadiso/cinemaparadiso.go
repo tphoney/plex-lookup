@@ -20,25 +20,6 @@ import (
 const (
 	cinemaparadisoSearchURL = "https://www.cinemaparadiso.co.uk/catalog-w/Search.aspx"
 	cinemaparadisoSeriesURL = "https://www.cinemaparadiso.co.uk/ajax/CPMain.wsFilmDescription,CPMain.ashx?_method=ShowSeries&_session=r"
-
-//		                    "curl 'https://www.cinemaparadiso.co.uk/ajax/CPMain.wsFilmDescription,CPMain.ashx?_method=ShowSeries&_session=r' \
-//	  -H 'accept: */*' \
-//	  -H 'accept-language: en-GB,en;q=0.9,en-US;q=0.8' \
-//	  -H 'content-type: text/plain;charset=UTF-8' \
-//	  -b 'Cookie_Dark_Theme=False; CP-Newsletter-Subscription-Pop-Up=False; _gcl_au=1.1.1430844597.1757272512; _ga=GA1.1.751019711.1762011928; CookieConsent=1; ASP.NET_SessionId=qsa50cz0obtics3c2lcswuju; CP-ReferalID=L440_AoD7T7DcAHz3a0PDA2; _ga_XG78QFZPZ7=GS2.1.s1762292242$o4$g1$t1762297618$j60$l0$h0' \
-//	  -H 'dnt: 1' \
-//	  -H 'origin: https://www.cinemaparadiso.co.uk' \
-//	  -H 'priority: u=1, i' \
-//	  -H 'referer: https://www.cinemaparadiso.co.uk/rentals/airwolf-171955.html' \
-//	  -H 'sec-ch-ua: "Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"' \
-//	  -H 'sec-ch-ua-mobile: ?0' \
-//	  -H 'sec-ch-ua-platform: "Windows"' \
-//	  -H 'sec-fetch-dest: empty' \
-//	  -H 'sec-fetch-mode: cors' \
-//	  -H 'sec-fetch-site: same-origin' \
-//	  -H 'sec-gpc: 1' \
-//	  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36' \
-//	  --data-raw 'FilmID=170265'"
 )
 
 var (
@@ -187,6 +168,7 @@ func searchTVShow(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.Sear
 	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)
 	result.PlexTVShow = *plexTVShow
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
+	// Use GET for TV searches - POST seems to filter results differently
 	rawData, err := makeRequest(result.SearchURL, http.MethodGet, "")
 	if err != nil {
 		fmt.Println("searchTVShow: Error making web request:", err)
@@ -245,7 +227,6 @@ func findTVSeasonsInResponse(response string) (tvSeasons []types.TVSeasonResult)
 		}
 		tvSeasons = append(tvSeasons, types.TVSeasonResult{Number: num, URL: id})
 	}
-	// remove the first entry as it is general information
 	scrapedTVSeasonResults := make([]types.TVSeasonResult, 0, len(tvSeasons))
 	if len(tvSeasons) > 0 {
 		for i := range tvSeasons {
@@ -311,24 +292,70 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 			// Extract the movie entry
 			movieEntry := response[0:endIndex]
 
-			// Find the URL of the movie
-			urlStartIndex := strings.Index(movieEntry, "href=\"") + len("href=\"")
-			urlEndIndex := strings.Index(movieEntry[urlStartIndex:], "\"") + urlStartIndex
+			// Find the URL of the movie/TV show
+			// For TV shows with h4 tags, the URL might be in the h4 link or the image link
+			urlStartIndex := strings.Index(movieEntry, "href=\"")
+			if urlStartIndex == -1 {
+				response = response[endIndex:]
+				continue
+			}
+			urlStartIndex += len("href=\"")
+			urlEndIndex := strings.Index(movieEntry[urlStartIndex:], "\"")
+			if urlEndIndex == -1 {
+				response = response[endIndex:]
+				continue
+			}
+			urlEndIndex += urlStartIndex
 			returnURL := movieEntry[urlStartIndex:urlEndIndex]
+			// Make sure URL is absolute
+			if !strings.HasPrefix(returnURL, "http") {
+				returnURL = "https://www.cinemaparadiso.co.uk" + returnURL
+			}
 
 			// Find the formats of the movies
 			formats := extractDiscFormats(movieEntry)
 
-			// Find the title of the movie
-			r := regexp.MustCompile(`<a.*?>(.*?)\s*\((.*?)\)</a>`)
+			// Find the title of the movie/TV show
+			// For movies: <a>Title (Year)</a>
+			// For TV shows: <a>Title</a> or <a>Title (Year)</a> or <h4><a>Title</a></h4>
+			var r *regexp.Regexp
+			if movie {
+				r = regexp.MustCompile(`<a.*?>(.*?)\s*\((.*?)\)</a>`)
+			} else {
+				// For TV shows, try both patterns: with year and without year, and handle h4 tags
+				// Check for year pattern first (more specific), then h4 with year, then h4 without year
+				r = regexp.MustCompile(`<a[^>]*>(.*?)\s*\((.*?)\)</a>|<h4><a[^>]*>(.*?)\s*\((.*?)\)</a></h4>|<h4><a[^>]*>(.*?)</a></h4>`)
+			}
 
 			// Find the first match
 			match := r.FindStringSubmatch(movieEntry)
 
 			if match != nil {
 				// Extract and print title and year
-				foundTitle := match[1]
-				year := match[2]
+				var foundTitle, year string
+				if movie {
+					foundTitle = match[1]
+					year = match[2]
+				} else {
+					// For TV shows, check which pattern matched
+					if match[1] != "" {
+						// Matched <a>Title (Year)</a> pattern
+						foundTitle = strings.TrimSpace(match[1])
+						year = match[2]
+					} else if match[3] != "" {
+						// Matched <h4><a>Title (Year)</a></h4> pattern
+						foundTitle = strings.TrimSpace(match[3])
+						year = match[4]
+					} else if match[5] != "" {
+						// Matched <h4><a>Title</a></h4> pattern (no year)
+						foundTitle = strings.TrimSpace(match[5])
+						year = "" // No year available
+					} else {
+						// No match, skip
+						response = response[endIndex:]
+						continue
+					}
+				}
 				splitYear := strings.Split(year, "-")
 				year = strings.Trim(splitYear[0], " ")
 				if movie {

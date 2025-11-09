@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +20,25 @@ import (
 const (
 	cinemaparadisoSearchURL = "https://www.cinemaparadiso.co.uk/catalog-w/Search.aspx"
 	cinemaparadisoSeriesURL = "https://www.cinemaparadiso.co.uk/ajax/CPMain.wsFilmDescription,CPMain.ashx?_method=ShowSeries&_session=r"
+
+//		                    "curl 'https://www.cinemaparadiso.co.uk/ajax/CPMain.wsFilmDescription,CPMain.ashx?_method=ShowSeries&_session=r' \
+//	  -H 'accept: */*' \
+//	  -H 'accept-language: en-GB,en;q=0.9,en-US;q=0.8' \
+//	  -H 'content-type: text/plain;charset=UTF-8' \
+//	  -b 'Cookie_Dark_Theme=False; CP-Newsletter-Subscription-Pop-Up=False; _gcl_au=1.1.1430844597.1757272512; _ga=GA1.1.751019711.1762011928; CookieConsent=1; ASP.NET_SessionId=qsa50cz0obtics3c2lcswuju; CP-ReferalID=L440_AoD7T7DcAHz3a0PDA2; _ga_XG78QFZPZ7=GS2.1.s1762292242$o4$g1$t1762297618$j60$l0$h0' \
+//	  -H 'dnt: 1' \
+//	  -H 'origin: https://www.cinemaparadiso.co.uk' \
+//	  -H 'priority: u=1, i' \
+//	  -H 'referer: https://www.cinemaparadiso.co.uk/rentals/airwolf-171955.html' \
+//	  -H 'sec-ch-ua: "Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"' \
+//	  -H 'sec-ch-ua-mobile: ?0' \
+//	  -H 'sec-ch-ua-platform: "Windows"' \
+//	  -H 'sec-fetch-dest: empty' \
+//	  -H 'sec-fetch-mode: cors' \
+//	  -H 'sec-fetch-site: same-origin' \
+//	  -H 'sec-gpc: 1' \
+//	  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36' \
+//	  --data-raw 'FilmID=170265'"
 )
 
 var (
@@ -182,8 +202,9 @@ func searchTVShow(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.Sear
 		if result.TVSearchResults[i].BestMatch {
 			seasonInfo, _ := findTVSeasonInfo(result.TVSearchResults[i].URL)
 			if len(seasonInfo) == 0 {
-				// we have no season information, likely because it has not been released properly
+				// we have no season information, likely because it has not been released properly, and it cannot be a best match
 				seasonInfo = append(seasonInfo, types.TVSeasonResult{Number: 1, Format: "DVD", URL: result.TVSearchResults[i].URL})
+				result.TVSearchResults[i].BestMatch = false
 			}
 			result.TVSearchResults[i].Seasons = seasonInfo
 		}
@@ -204,16 +225,29 @@ func findTVSeasonInfo(seriesURL string) (tvSeasons []types.TVSeasonResult, err e
 
 func findTVSeasonsInResponse(response string) (tvSeasons []types.TVSeasonResult) {
 	// look for the series in the response
-	r := regexp.MustCompile(`<li data-filmId="(\d*)">`)
+	// Match list items with data-filmid (case-insensitive attribute name) and capture the id and the inner text
+	// Example: <li data-filmid="1832">Series 1<span class="arrow"></span></li>
+	r := regexp.MustCompile(`(?i)<li\s+data-filmid="(\d+)">([^<]*)`)
 	match := r.FindAllStringSubmatch(response, -1)
-	for i, m := range match {
-		tvSeasons = append(tvSeasons, types.TVSeasonResult{Number: i, URL: m[1]})
+	for _, m := range match {
+		id := m[1]
+		label := strings.TrimSpace(m[2])
+		// Only include entries with "Series <number>" (case-insensitive)
+		sr := regexp.MustCompile(`(?i)^Series\s+(\d+)$`)
+		sMatch := sr.FindStringSubmatch(label)
+		if sMatch == nil {
+			// skip non-series entries like General info or Specials
+			continue
+		}
+		num, err := strconv.Atoi(sMatch[1])
+		if err != nil {
+			continue
+		}
+		tvSeasons = append(tvSeasons, types.TVSeasonResult{Number: num, URL: id})
 	}
 	// remove the first entry as it is general information
 	scrapedTVSeasonResults := make([]types.TVSeasonResult, 0, len(tvSeasons))
 	if len(tvSeasons) > 0 {
-		tvSeasons = tvSeasons[1:]
-
 		for i := range tvSeasons {
 			detailedSeasonResults, err := makeSeasonRequest(&tvSeasons[i])
 			if err != nil {
@@ -324,6 +358,9 @@ func makeRequest(urlEncodedTitle, method, content string) (rawResponse string, e
 		req, err = http.NewRequestWithContext(context.Background(), http.MethodPost, urlEncodedTitle, bytes.NewBuffer([]byte(content)))
 		if strings.Contains(content, "form-search-field") {
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded") // Assuming form data
+		} else {
+			// this is to look up individual tv series/seasons
+			req.Header.Set("Content-Type", "text/plain;charset=UTF-8")
 		}
 	case http.MethodGet:
 		req, err = http.NewRequestWithContext(context.Background(), http.MethodGet, urlEncodedTitle, http.NoBody)

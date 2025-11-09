@@ -35,21 +35,56 @@ func MarkBestMatchTV(search *types.SearchResult) types.SearchResult {
 	lastEpisodeBoundry := search.LastEpisodeAired.Year() + 1
 	for i := range search.TVSearchResults {
 		resultYear := YearToDate(search.TVSearchResults[i].FirstAiredYear)
-		if matchTitle(search.PlexTVShow.Title, search.TVSearchResults[i].FoundTitle,
-			resultYear.Year(), firstEpisodeBoundry, lastEpisodeBoundry) {
-			search.TVSearchResults[i].BestMatch = true
-			if slices.Contains(search.TVSearchResults[i].Format, types.DiskDVD) {
-				search.MatchesDVD++
+		// If year is empty, match on title only (skip year check)
+		if search.TVSearchResults[i].FirstAiredYear == "" {
+			if matchTitleNoYear(search.PlexTVShow.Title, search.TVSearchResults[i].FoundTitle) {
+				search.TVSearchResults[i].BestMatch = true
+				if slices.Contains(search.TVSearchResults[i].Format, types.DiskDVD) {
+					search.MatchesDVD++
+				}
+				if slices.Contains(search.TVSearchResults[i].Format, types.DiskBluray) {
+					search.MatchesBluray++
+				}
+				if slices.Contains(search.TVSearchResults[i].Format, types.Disk4K) {
+					search.Matches4k++
+				}
 			}
-			if slices.Contains(search.TVSearchResults[i].Format, types.DiskBluray) {
-				search.MatchesBluray++
-			}
-			if slices.Contains(search.TVSearchResults[i].Format, types.Disk4K) {
-				search.Matches4k++
+		} else {
+			// Original logic for shows with years
+			if matchTitle(search.PlexTVShow.Title, search.TVSearchResults[i].FoundTitle,
+				resultYear.Year(), firstEpisodeBoundry, lastEpisodeBoundry) {
+				search.TVSearchResults[i].BestMatch = true
+				if slices.Contains(search.TVSearchResults[i].Format, types.DiskDVD) {
+					search.MatchesDVD++
+				}
+				if slices.Contains(search.TVSearchResults[i].Format, types.DiskBluray) {
+					search.MatchesBluray++
+				}
+				if slices.Contains(search.TVSearchResults[i].Format, types.Disk4K) {
+					search.Matches4k++
+				}
 			}
 		}
 	}
 	return *search
+}
+
+func matchTitleNoYear(plexTitle, foundTitle string) bool {
+	plexTitle = strings.ToLower(plexTitle)
+	foundTitle = strings.ToLower(foundTitle)
+	remove := []string{"the"}
+	for _, word := range remove {
+		plexTitle = strings.ReplaceAll(plexTitle, word, "")
+		foundTitle = strings.ReplaceAll(foundTitle, word, "")
+	}
+	// remove colons
+	plexTitle = strings.ReplaceAll(plexTitle, ":", "")
+	foundTitle = strings.ReplaceAll(foundTitle, ":", "")
+	// trim whitespace
+	plexTitle = strings.TrimSpace(plexTitle)
+	foundTitle = strings.TrimSpace(foundTitle)
+
+	return strings.EqualFold(plexTitle, foundTitle)
 }
 
 func matchTitle(plexTitle, foundTitle string, foundYear, lowerBound, upperBound int) bool {

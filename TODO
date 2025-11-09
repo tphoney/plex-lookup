@@ -2,7 +2,7 @@
 
 ## Wants
 
-- make movie and tv searches as good as the music search
+- maketv searches better for cinema paradiso
 - make the app multi user, so they can create a user and have their own settings
   - ask the vscode agent about authentication authorisation and user management
 
@@ -12,8 +12,12 @@
 
 ## Bugs
 
+- Wellington+Paranormal is not being found on cinema paradiso tv search
+- vikings is bust, and it doesnt handle multi part series correctly, same with breaking bad
+
 ## Done
 
+- cinema paradiso tv search is really broken for all series
 - investigate some albums coming back with a year of 0000 Arcade Fire, Guided by Voices,Weezer,Lambchop,Ólafur Arnalds,Nicholas Britell,Wilco,Crystal Castles,Daft Punk,Rob Hubbard,The Stranglers
 - move the owned plex album year sorting into its own loop
 - alanis morissette albums are not matching correctly, hyphens in the album name

@@ -25,6 +25,9 @@ const (
 var (
 	numberMoviesProcessed int = 0
 	numberTVProcessed     int = 0
+	// Regex to match date patterns with abbreviated or full month names
+	// Note: May appears in both abbreviated and full month lists, but we don't need it twice
+	dateRegex = regexp.MustCompile(`(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})`)
 	//nolint: mnd
 	seasonNumberToInt = map[string]int{
 		"one":       1,
@@ -187,11 +190,52 @@ func scrapeMovieTitles(searchResult *types.SearchResult, region string, ch chan<
 		}
 		// Find the release date
 		searchResult.MovieSearchResults[i].ReleaseDate = time.Time{} // default to zero time
-		r := regexp.MustCompile(`<a class="grey noline" alt=".*">(.*?)</a></span>`)
-		match := r.FindStringSubmatch(rawData)
+
+		// Try multiple patterns to find the release date
+		// Pattern 1: Look for date in grey noline link (with or without closing span)
+		r1 := regexp.MustCompile(`<a class="grey noline"[^>]*>(.*?)</a>`)
+		match := r1.FindStringSubmatch(rawData)
+		var stringDate string
 		if match != nil {
-			stringDate := match[1]
-			searchResult.MovieSearchResults[i].ReleaseDate, _ = time.Parse("Jan 02, 2006", stringDate)
+			stringDate = strings.TrimSpace(match[1])
+		}
+
+		// Pattern 2: Look for date pattern anywhere (handles cases where HTML structure differs)
+		if stringDate == "" {
+			// Match abbreviated month: "Feb 03, 2009" or full month: "February 3, 2009"
+			match = dateRegex.FindStringSubmatch(rawData)
+			if match != nil {
+				// Reconstruct date string in standard format
+				month := match[1]
+				day := match[2]
+				year := match[3]
+				// Convert full month names to abbreviations
+				monthMap := map[string]string{
+					"January": "Jan", "February": "Feb", "March": "Mar", "April": "Apr",
+					"May": "May", "June": "Jun", "July": "Jul", "August": "Aug",
+					"September": "Sep", "October": "Oct", "November": "Nov", "December": "Dec",
+				}
+				if abbr, ok := monthMap[month]; ok {
+					month = abbr
+				}
+				// Pad day with zero if needed
+				if len(day) == 1 {
+					day = "0" + day
+				}
+				stringDate = fmt.Sprintf("%s %s, %s", month, day, year)
+			}
+		}
+
+		if stringDate != "" {
+			var parseErr error
+			searchResult.MovieSearchResults[i].ReleaseDate, parseErr = time.Parse("Jan 02, 2006", stringDate)
+			if parseErr != nil {
+				// Try alternative format for full month names
+				searchResult.MovieSearchResults[i].ReleaseDate, parseErr = time.Parse("January 2, 2006", stringDate)
+				if parseErr != nil {
+					fmt.Printf("scrapeMovieTitles: Error parsing date '%s': %v\n", stringDate, parseErr)
+				}
+			}
 		}
 		if searchResult.MovieSearchResults[i].ReleaseDate.After(dateAdded) {
 			searchResult.MovieSearchResults[i].NewRelease = true
@@ -216,11 +260,52 @@ func scrapeTVTitles(searchResult *types.SearchResult, region string, ch chan<- t
 		}
 		// Find the release date
 		searchResult.TVSearchResults[i].ReleaseDate = time.Time{} // default to zero time
-		r := regexp.MustCompile(`<a class="grey noline" alt=".*">(.*?)</a></span>`)
-		match := r.FindStringSubmatch(rawData)
+
+		// Try multiple patterns to find the release date
+		// Pattern 1: Look for date in grey noline link (with or without closing span)
+		r1 := regexp.MustCompile(`<a class="grey noline"[^>]*>(.*?)</a>`)
+		match := r1.FindStringSubmatch(rawData)
+		var stringDate string
 		if match != nil {
-			stringDate := match[1]
-			searchResult.TVSearchResults[i].ReleaseDate, _ = time.Parse("Jan 02, 2006", stringDate)
+			stringDate = strings.TrimSpace(match[1])
+		}
+
+		// Pattern 2: Look for date pattern anywhere (handles cases where HTML structure differs)
+		if stringDate == "" {
+			// Match abbreviated month: "Feb 03, 2009" or full month: "February 3, 2009"
+			match = dateRegex.FindStringSubmatch(rawData)
+			if match != nil {
+				// Reconstruct date string in standard format
+				month := match[1]
+				day := match[2]
+				year := match[3]
+				// Convert full month names to abbreviations
+				monthMap := map[string]string{
+					"January": "Jan", "February": "Feb", "March": "Mar", "April": "Apr",
+					"May": "May", "June": "Jun", "July": "Jul", "August": "Aug",
+					"September": "Sep", "October": "Oct", "November": "Nov", "December": "Dec",
+				}
+				if abbr, ok := monthMap[month]; ok {
+					month = abbr
+				}
+				// Pad day with zero if needed
+				if len(day) == 1 {
+					day = "0" + day
+				}
+				stringDate = fmt.Sprintf("%s %s, %s", month, day, year)
+			}
+		}
+
+		if stringDate != "" {
+			var parseErr error
+			searchResult.TVSearchResults[i].ReleaseDate, parseErr = time.Parse("Jan 02, 2006", stringDate)
+			if parseErr != nil {
+				// Try alternative format for full month names
+				searchResult.TVSearchResults[i].ReleaseDate, parseErr = time.Parse("January 2, 2006", stringDate)
+				if parseErr != nil {
+					fmt.Printf("scrapeTVTitles: Error parsing date '%s': %v\n", stringDate, parseErr)
+				}
+			}
 		}
 		if searchResult.TVSearchResults[i].ReleaseDate.After(dateAdded) {
 			searchResult.TVSearchResults[i].NewRelease = true
@@ -340,7 +425,9 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 					decipheredTitle, number, boxSet, boxSetTitle := decipherTVName(foundTitle)
 					// split year
 					splitYear := strings.Split(year, "-")
-					year = strings.Trim(splitYear[0], " ")
+					if len(splitYear) > 0 {
+						year = strings.Trim(splitYear[0], " ")
+					}
 					tvResult := types.TVSearchResult{
 						URL: returnURL, Format: []string{format}, FirstAiredYear: year, FoundTitle: decipheredTitle, UITitle: decipheredTitle}
 					tvResult.Seasons = append(tvResult.Seasons, types.TVSeasonResult{

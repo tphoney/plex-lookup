@@ -1,8 +1,8 @@
 package web
 
 import (
+	"context"
 	"embed"
-
 	"fmt"
 	"html/template"
 	"net"
@@ -90,7 +90,7 @@ func settingsSaveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetOutboundIP() net.IP {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
+	conn, err := (&net.Dialer{}).DialContext(context.Background(), "udp", "8.8.8.8:80")
 	if err != nil {
 		fmt.Println("Failed to get local IP address")
 		return nil

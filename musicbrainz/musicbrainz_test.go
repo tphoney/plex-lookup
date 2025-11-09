@@ -56,6 +56,14 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 				t.Errorf("SearchMusicBrainzArtist() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			if len(gotArtist.MusicSearchResults) == 0 {
+				t.Errorf("SearchMusicBrainzArtist() returned no music search results")
+				return
+			}
+			if len(tt.wantArtist.MusicSearchResults) == 0 {
+				t.Errorf("Expected artist has no music search results")
+				return
+			}
 			if gotArtist.MusicSearchResults[0].Name != tt.wantArtist.MusicSearchResults[0].Name {
 				t.Errorf("SearchMusicBrainzArtist() Name = %v, want %v", gotArtist, tt.wantArtist)
 			}

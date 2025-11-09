@@ -33,7 +33,11 @@ func TestFindMovieDetails(t *testing.T) {
 	}
 
 	if len(processed) != 3 {
-		t.Errorf("Expected 3 movies, but got %d", len(processed))
+		t.Fatalf("Expected 3 movies, but got %d", len(processed))
+	}
+
+	if len(expected) == 0 {
+		t.Fatalf("Expected slice is empty")
 	}
 
 	if processed[0].Title != expected[0].Title {
@@ -71,15 +75,15 @@ func TestGetPlexTV(t *testing.T) {
 	result := AllTV(plexIP, plexToken, plexTVLibraryID)
 
 	if len(result) == 0 {
-		t.Errorf("Expected at least one TV show, but got %d", len(result))
+		t.Fatalf("Expected at least one TV show, but got %d", len(result))
 	}
 
 	if len(result[0].Seasons) == 0 {
-		t.Errorf("Expected at least one season, but got %d", len(result[0].Seasons))
+		t.Fatalf("Expected at least one season, but got %d", len(result[0].Seasons))
 	}
 
 	if len(result[0].Seasons[0].Episodes) == 0 {
-		t.Errorf("Expected at least one episode, but got %d", len(result[0].Seasons[0].Episodes))
+		t.Fatalf("Expected at least one episode, but got %d", len(result[0].Seasons[0].Episodes))
 	}
 }
 
@@ -90,11 +94,11 @@ func TestDebugGetPlexTVSeasons(t *testing.T) {
 	result := getPlexTVSeasons(plexIP, plexToken, "5383")
 
 	if len(result) == 0 {
-		t.Errorf("Expected at least one TV show, but got %d", len(result))
+		t.Fatalf("Expected at least one TV show, but got %d", len(result))
 	}
 
 	if len(result[0].Episodes) == 0 {
-		t.Errorf("Expected at least one episode, but got %d", len(result[0].Episodes))
+		t.Fatalf("Expected at least one episode, but got %d", len(result[0].Episodes))
 	}
 }
 
@@ -105,15 +109,12 @@ func TestGetPlexMusic(t *testing.T) {
 	result := AllMusicArtists(plexIP, plexToken, plexMusicLibraryID)
 
 	if len(result) == 0 {
-		t.Errorf("Expected at least one album, but got %d", len(result))
+		t.Fatalf("Expected at least one album, but got %d", len(result))
 	}
 
-	if len(result) == 0 {
-		t.Errorf("Expected at least one artist, but got %d", len(result))
-	}
 	// first artist should have at least one album
 	if len(result[0].Albums) == 0 {
-		t.Errorf("Expected at least one album, but got %d", len(result[0].Albums))
+		t.Fatalf("Expected at least one album, but got %d", len(result[0].Albums))
 	}
 }
 

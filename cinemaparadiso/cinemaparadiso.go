@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -167,6 +168,7 @@ func searchTVShow(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.Sear
 	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)
 	result.PlexTVShow = *plexTVShow
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
+	// Use GET for TV searches - POST seems to filter results differently
 	rawData, err := makeRequest(result.SearchURL, http.MethodGet, "")
 	if err != nil {
 		fmt.Println("searchTVShow: Error making web request:", err)
@@ -182,8 +184,9 @@ func searchTVShow(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.Sear
 		if result.TVSearchResults[i].BestMatch {
 			seasonInfo, _ := findTVSeasonInfo(result.TVSearchResults[i].URL)
 			if len(seasonInfo) == 0 {
-				// we have no season information, likely because it has not been released properly
+				// we have no season information, likely because it has not been released properly, and it cannot be a best match
 				seasonInfo = append(seasonInfo, types.TVSeasonResult{Number: 1, Format: "DVD", URL: result.TVSearchResults[i].URL})
+				result.TVSearchResults[i].BestMatch = false
 			}
 			result.TVSearchResults[i].Seasons = seasonInfo
 		}
@@ -204,16 +207,28 @@ func findTVSeasonInfo(seriesURL string) (tvSeasons []types.TVSeasonResult, err e
 
 func findTVSeasonsInResponse(response string) (tvSeasons []types.TVSeasonResult) {
 	// look for the series in the response
-	r := regexp.MustCompile(`<li data-filmId="(\d*)">`)
+	// Match list items with data-filmid (case-insensitive attribute name) and capture the id and the inner text
+	// Example: <li data-filmid="1832">Series 1<span class="arrow"></span></li>
+	r := regexp.MustCompile(`(?i)<li\s+data-filmid="(\d+)">([^<]*)`)
 	match := r.FindAllStringSubmatch(response, -1)
-	for i, m := range match {
-		tvSeasons = append(tvSeasons, types.TVSeasonResult{Number: i, URL: m[1]})
+	for _, m := range match {
+		id := m[1]
+		label := strings.TrimSpace(m[2])
+		// Only include entries with "Series <number>" (case-insensitive)
+		sr := regexp.MustCompile(`(?i)^Series\s+(\d+)$`)
+		sMatch := sr.FindStringSubmatch(label)
+		if sMatch == nil {
+			// skip non-series entries like General info or Specials
+			continue
+		}
+		num, err := strconv.Atoi(sMatch[1])
+		if err != nil {
+			continue
+		}
+		tvSeasons = append(tvSeasons, types.TVSeasonResult{Number: num, URL: id})
 	}
-	// remove the first entry as it is general information
 	scrapedTVSeasonResults := make([]types.TVSeasonResult, 0, len(tvSeasons))
 	if len(tvSeasons) > 0 {
-		tvSeasons = tvSeasons[1:]
-
 		for i := range tvSeasons {
 			detailedSeasonResults, err := makeSeasonRequest(&tvSeasons[i])
 			if err != nil {
@@ -277,24 +292,70 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 			// Extract the movie entry
 			movieEntry := response[0:endIndex]
 
-			// Find the URL of the movie
-			urlStartIndex := strings.Index(movieEntry, "href=\"") + len("href=\"")
-			urlEndIndex := strings.Index(movieEntry[urlStartIndex:], "\"") + urlStartIndex
+			// Find the URL of the movie/TV show
+			// For TV shows with h4 tags, the URL might be in the h4 link or the image link
+			urlStartIndex := strings.Index(movieEntry, "href=\"")
+			if urlStartIndex == -1 {
+				response = response[endIndex:]
+				continue
+			}
+			urlStartIndex += len("href=\"")
+			urlEndIndex := strings.Index(movieEntry[urlStartIndex:], "\"")
+			if urlEndIndex == -1 {
+				response = response[endIndex:]
+				continue
+			}
+			urlEndIndex += urlStartIndex
 			returnURL := movieEntry[urlStartIndex:urlEndIndex]
+			// Make sure URL is absolute
+			if !strings.HasPrefix(returnURL, "http") {
+				returnURL = "https://www.cinemaparadiso.co.uk" + returnURL
+			}
 
 			// Find the formats of the movies
 			formats := extractDiscFormats(movieEntry)
 
-			// Find the title of the movie
-			r := regexp.MustCompile(`<a.*?>(.*?)\s*\((.*?)\)</a>`)
+			// Find the title of the movie/TV show
+			// For movies: <a>Title (Year)</a>
+			// For TV shows: <a>Title</a> or <a>Title (Year)</a> or <h4><a>Title</a></h4>
+			var r *regexp.Regexp
+			if movie {
+				r = regexp.MustCompile(`<a.*?>(.*?)\s*\((.*?)\)</a>`)
+			} else {
+				// For TV shows, try both patterns: with year and without year, and handle h4 tags
+				// Check for year pattern first (more specific), then h4 with year, then h4 without year
+				r = regexp.MustCompile(`<a[^>]*>(.*?)\s*\((.*?)\)</a>|<h4><a[^>]*>(.*?)\s*\((.*?)\)</a></h4>|<h4><a[^>]*>(.*?)</a></h4>`)
+			}
 
 			// Find the first match
 			match := r.FindStringSubmatch(movieEntry)
 
 			if match != nil {
 				// Extract and print title and year
-				foundTitle := match[1]
-				year := match[2]
+				var foundTitle, year string
+				if movie {
+					foundTitle = match[1]
+					year = match[2]
+				} else {
+					// For TV shows, check which pattern matched
+					if match[1] != "" {
+						// Matched <a>Title (Year)</a> pattern
+						foundTitle = strings.TrimSpace(match[1])
+						year = match[2]
+					} else if match[3] != "" {
+						// Matched <h4><a>Title (Year)</a></h4> pattern
+						foundTitle = strings.TrimSpace(match[3])
+						year = match[4]
+					} else if match[5] != "" {
+						// Matched <h4><a>Title</a></h4> pattern (no year)
+						foundTitle = strings.TrimSpace(match[5])
+						year = "" // No year available
+					} else {
+						// No match, skip
+						response = response[endIndex:]
+						continue
+					}
+				}
 				splitYear := strings.Split(year, "-")
 				year = strings.Trim(splitYear[0], " ")
 				if movie {
@@ -324,6 +385,9 @@ func makeRequest(urlEncodedTitle, method, content string) (rawResponse string, e
 		req, err = http.NewRequestWithContext(context.Background(), http.MethodPost, urlEncodedTitle, bytes.NewBuffer([]byte(content)))
 		if strings.Contains(content, "form-search-field") {
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded") // Assuming form data
+		} else {
+			// this is to look up individual tv series/seasons
+			req.Header.Set("Content-Type", "text/plain;charset=UTF-8")
 		}
 	case http.MethodGet:
 		req, err = http.NewRequestWithContext(context.Background(), http.MethodGet, urlEncodedTitle, http.NoBody)

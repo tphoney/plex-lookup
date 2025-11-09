@@ -14,6 +14,7 @@ var (
 )
 
 func TestExtractDiscFormats(t *testing.T) {
+	t.Parallel()
 	movieEntry := `<ul class="media-types"><li><span class="cpi-dvd cp-tab" title="DVD" data-json={"action":"media-format","filmId":0,"mediaTypeId":1}></span></li><li><span class="cpi-blu-ray cp-tab" title=" Blu-ray" data-json={"action":"media-format","filmId":0,"mediaTypeId":3}></span></li><li><span class="cpi-4-k cp-tab" title=" 4K Blu-ray" data-json={"action":"media-format","filmId":0,"mediaTypeId":14}></span></li></ul>`
 
 	expectedFormats := []string{types.DiskDVD, types.DiskBluray, types.Disk4K}
@@ -31,6 +32,7 @@ func TestExtractDiscFormats(t *testing.T) {
 }
 
 func TestFindTitlesInResponse(t *testing.T) {
+	t.Parallel()
 	// read response from testdata/cats.html
 	rawdata, err := os.ReadFile("testdata/cats.html")
 	if err != nil {
@@ -40,7 +42,7 @@ func TestFindTitlesInResponse(t *testing.T) {
 	searchResult, _ := findTitlesInResponse(string(rawdata), true)
 
 	if len(searchResult) != 21 {
-		t.Errorf("Expected 21 search result, but got %d", len(searchResult))
+		t.Fatalf("Expected 21 search result, but got %d", len(searchResult))
 	}
 
 	if searchResult[0].FoundTitle != "Cats" {
@@ -59,6 +61,7 @@ func TestFindTitlesInResponse(t *testing.T) {
 }
 
 func TestFindTVSeriesInResponse(t *testing.T) {
+	t.Parallel()
 	if plexIP == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
@@ -70,7 +73,7 @@ func TestFindTVSeriesInResponse(t *testing.T) {
 	tvSeries := findTVSeasonsInResponse(string(rawdata))
 
 	if len(tvSeries) != 20 {
-		t.Errorf("Expected 20 tv series, but got %d", len(tvSeries))
+		t.Fatalf("Expected 20 tv series, but got %d", len(tvSeries))
 	}
 	// check the first tv series
 	if tvSeries[1].Number != 1 {
@@ -85,6 +88,9 @@ func TestFindTVSeriesInResponse(t *testing.T) {
 	}
 	if tvSeries[0].Format != types.DiskDVD {
 		t.Errorf("Expected dvd, but got %s", tvSeries[0].Format)
+	}
+	if len(tvSeries) < 2 {
+		t.Fatalf("Expected at least 2 tv series, but got %d", len(tvSeries))
 	}
 	if tvSeries[1].Number != 1 {
 		t.Errorf("Expected number 1, but got %d", tvSeries[0].Number)
@@ -105,31 +111,96 @@ func TestSearchCinemaParadisoTV(t *testing.T) {
 	if plexIP == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
-	show := types.PlexTVShow{
-		// Title:             "Friends",
-		// FirstEpisodeAired: time.Date(1994, time.September, 22, 0, 0, 0, 0, time.UTC),
-		// LastEpisodeAired:  time.Date(2004, time.May, 6, 0, 0, 0, 0, time.UTC),
-		// Title:             "Stargate Origins",
-		// FirstEpisodeAired: time.Date(2018, time.February, 15, 0, 0, 0, 0, time.UTC),
-		// LastEpisodeAired:  time.Date(2018, time.March, 8, 0, 0, 0, 0, time.UTC),
-		Title:             "Once Upon a Time in Wonderland",
-		FirstEpisodeAired: time.Date(2013, time.October, 10, 0, 0, 0, 0, time.UTC),
-		LastEpisodeAired:  time.Date(2014, time.April, 3, 0, 0, 0, 0, time.UTC),
-	}
-	ch := make(chan types.SearchResult, 1)
-	searchTVShow(&show, ch)
-	got := <-ch
+	t.Parallel()
 
-	if len(got.TVSearchResults) == 0 {
-		t.Errorf("Expected search results, but got none")
+	tests := []struct {
+		name                    string
+		show                    types.PlexTVShow
+		numberOfSeasonsExpected int
+		expectFound             bool
+	}{
+		{
+			name: "Friends",
+			show: types.PlexTVShow{
+				Title:             "Friends",
+				FirstEpisodeAired: time.Date(1994, time.September, 22, 0, 0, 0, 0, time.UTC),
+				LastEpisodeAired:  time.Date(2004, time.May, 6, 0, 0, 0, 0, time.UTC),
+			},
+			numberOfSeasonsExpected: 30,
+			expectFound:             true,
+		},
+		{
+			name: "Wellington Paranormal",
+			show: types.PlexTVShow{
+				Title:             "Wellington Paranormal",
+				FirstEpisodeAired: time.Date(2018, time.July, 11, 0, 0, 0, 0, time.UTC),
+				LastEpisodeAired:  time.Date(2022, time.June, 28, 0, 0, 0, 0, time.UTC),
+			},
+			numberOfSeasonsExpected: 8, // 4 series × 2 formats (DVD, Blu-ray) = 8 season results
+			expectFound:             true,
+		},
+		{
+			name: "Girls",
+			show: types.PlexTVShow{
+				Title:             "Girls",
+				FirstEpisodeAired: time.Date(2012, time.April, 15, 0, 0, 0, 0, time.UTC),
+				LastEpisodeAired:  time.Date(2017, time.April, 16, 0, 0, 0, 0, time.UTC),
+			},
+			numberOfSeasonsExpected: 12, // 6 series × 2 formats (DVD, Blu-ray) = 12 season results
+			expectFound:             true,
+		},
+		// {
+		// 	name: "OnceUponATimeInWonderland",
+		// 	show: types.PlexTVShow{
+		// 		Title:             "Once Upon a Time in Wonderland",
+		// 		FirstEpisodeAired: time.Date(2013, time.October, 10, 0, 0, 0, 0, time.UTC),
+		// 		LastEpisodeAired:  time.Date(2014, time.April, 3, 0, 0, 0, 0, time.UTC),
+		// 	},
+		// 	numberOfSeasonsExpected: 0, // Cinema Paradiso does not have this series
+		// },
 	}
 
-	if got.SearchURL == "" {
-		t.Errorf("Expected searchurl, but got none")
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ch := make(chan types.SearchResult, 1)
+			searchTVShow(&tc.show, ch)
+			got := <-ch
+
+			if got.SearchURL == "" {
+				t.Errorf("%s: expected searchurl, but got none", tc.name)
+			}
+
+			if tc.expectFound {
+				if len(got.TVSearchResults) == 0 {
+					t.Errorf("%s: expected search results, but got none", tc.name)
+					return
+				}
+				// Find the best match or use the first result
+				var bestMatch *types.TVSearchResult
+				for i := range got.TVSearchResults {
+					if got.TVSearchResults[i].BestMatch {
+						bestMatch = &got.TVSearchResults[i]
+						break
+					}
+				}
+				if bestMatch == nil {
+					// No best match found, use first result
+					bestMatch = &got.TVSearchResults[0]
+					t.Errorf("%s: expected best match, but none found. FoundTitle: %s, FirstAiredYear: %s", tc.name, bestMatch.FoundTitle, bestMatch.FirstAiredYear)
+					return
+				}
+				if len(bestMatch.Seasons) != tc.numberOfSeasonsExpected {
+					t.Errorf("%s: expected %d seasons, but got %d", tc.name, tc.numberOfSeasonsExpected, len(bestMatch.Seasons))
+				}
+			} else if len(got.TVSearchResults) != 0 {
+				t.Errorf("%s: expected no search results, but got %d", tc.name, len(got.TVSearchResults))
+			}
+		})
 	}
 }
 
 func TestSearchCinemaParadisoMovies(t *testing.T) {
+	t.Parallel()
 	if plexIP == "" || plexToken == "" {
 		t.Skip("ACCEPTANCE TEST: PLEX environment variables not set")
 	}
@@ -150,6 +221,7 @@ func TestSearchCinemaParadisoMovies(t *testing.T) {
 	}
 }
 func TestScrapeMovieTitlesParallel(t *testing.T) {
+	t.Parallel()
 	searchResults := []types.SearchResult{
 		{
 			PlexMovie: types.PlexMovie{

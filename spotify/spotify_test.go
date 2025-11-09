@@ -51,7 +51,7 @@ func TestSearchSpotifyArtist(t *testing.T) {
 
 	got := <-ch
 	if len(got.MusicSearchResults) != 1 {
-		t.Errorf("SearchSpotifyArtist() returned %d results, expected 1", len(got.MusicSearchResults))
+		t.Fatalf("SearchSpotifyArtist() returned %d results, expected 1", len(got.MusicSearchResults))
 	}
 
 	expectedArtist := types.MusicArtistSearchResult{
@@ -120,6 +120,9 @@ func TestSearchSpotifyAlbums(t *testing.T) {
 			searchSpotifyAlbum(tt.args.m, token, ch)
 			got := <-ch
 
+			if len(got.MusicSearchResults) == 0 {
+				t.Fatalf("SearchSpotifyAlbums() returned no music search results")
+			}
 			if len(got.MusicSearchResults[0].FoundAlbums) != tt.albumCount {
 				t.Errorf("SearchSpotifyAlbums() = %v, want %v", len(got.MusicSearchResults[0].FoundAlbums), tt.albumCount)
 			}

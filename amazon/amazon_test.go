@@ -27,7 +27,7 @@ func TestFindMoviesInResponse(t *testing.T) {
 	searchResult, _ := findTitlesInResponse(string(rawdata), true)
 
 	if len(searchResult) != 19 {
-		t.Errorf("Expected 2 search result, but got %d", len(searchResult))
+		t.Fatalf("Expected 2 search result, but got %d", len(searchResult))
 	}
 
 	if searchResult[0].FoundTitle != "Cats" {
@@ -91,9 +91,12 @@ func TestScrapeTitlesParallel(t *testing.T) {
 	}, amazonRegion, false)
 
 	if len(result) == 0 {
-		t.Errorf("Expected search results, but got none")
+		t.Fatalf("Expected search results, but got none")
 	}
 	// check the debug output, we may be rate limited.
+	if len(result[0].MovieSearchResults) == 0 {
+		t.Fatalf("Expected movie search results, but got none")
+	}
 	if result[0].MovieSearchResults[0].ReleaseDate.Year() == 1 {
 		t.Errorf("Expected a sensible release date year but got: %+v", result[0].MovieSearchResults[0].ReleaseDate)
 	}

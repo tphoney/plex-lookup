@@ -25,6 +25,9 @@ const (
 var (
 	numberMoviesProcessed int = 0
 	numberTVProcessed     int = 0
+	// Regex to match date patterns with abbreviated or full month names
+	// Note: May appears in both abbreviated and full month lists, but we don't need it twice
+	dateRegex = regexp.MustCompile(`(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})`)
 	//nolint: mnd
 	seasonNumberToInt = map[string]int{
 		"one":       1,
@@ -200,8 +203,7 @@ func scrapeMovieTitles(searchResult *types.SearchResult, region string, ch chan<
 		// Pattern 2: Look for date pattern anywhere (handles cases where HTML structure differs)
 		if stringDate == "" {
 			// Match abbreviated month: "Feb 03, 2009" or full month: "February 3, 2009"
-			r2 := regexp.MustCompile(`(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})`)
-			match = r2.FindStringSubmatch(rawData)
+			match = dateRegex.FindStringSubmatch(rawData)
 			if match != nil {
 				// Reconstruct date string in standard format
 				month := match[1]
@@ -271,8 +273,7 @@ func scrapeTVTitles(searchResult *types.SearchResult, region string, ch chan<- t
 		// Pattern 2: Look for date pattern anywhere (handles cases where HTML structure differs)
 		if stringDate == "" {
 			// Match abbreviated month: "Feb 03, 2009" or full month: "February 3, 2009"
-			r2 := regexp.MustCompile(`(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})`)
-			match = r2.FindStringSubmatch(rawData)
+			match = dateRegex.FindStringSubmatch(rawData)
 			if match != nil {
 				// Reconstruct date string in standard format
 				month := match[1]
@@ -424,7 +425,9 @@ func findTitlesInResponse(response string, movie bool) (movieResults []types.Mov
 					decipheredTitle, number, boxSet, boxSetTitle := decipherTVName(foundTitle)
 					// split year
 					splitYear := strings.Split(year, "-")
-					year = strings.Trim(splitYear[0], " ")
+					if len(splitYear) > 0 {
+						year = strings.Trim(splitYear[0], " ")
+					}
 					tvResult := types.TVSearchResult{
 						URL: returnURL, Format: []string{format}, FirstAiredYear: year, FoundTitle: decipheredTitle, UITitle: decipheredTitle}
 					tvResult.Seasons = append(tvResult.Seasons, types.TVSeasonResult{

@@ -42,7 +42,7 @@ func TestFindTitlesInResponse(t *testing.T) {
 	searchResult, _ := findTitlesInResponse(string(rawdata), true)
 
 	if len(searchResult) != 21 {
-		t.Errorf("Expected 21 search result, but got %d", len(searchResult))
+		t.Fatalf("Expected 21 search result, but got %d", len(searchResult))
 	}
 
 	if searchResult[0].FoundTitle != "Cats" {
@@ -73,7 +73,7 @@ func TestFindTVSeriesInResponse(t *testing.T) {
 	tvSeries := findTVSeasonsInResponse(string(rawdata))
 
 	if len(tvSeries) != 20 {
-		t.Errorf("Expected 20 tv series, but got %d", len(tvSeries))
+		t.Fatalf("Expected 20 tv series, but got %d", len(tvSeries))
 	}
 	// check the first tv series
 	if tvSeries[1].Number != 1 {
@@ -88,6 +88,9 @@ func TestFindTVSeriesInResponse(t *testing.T) {
 	}
 	if tvSeries[0].Format != types.DiskDVD {
 		t.Errorf("Expected dvd, but got %s", tvSeries[0].Format)
+	}
+	if len(tvSeries) < 2 {
+		t.Fatalf("Expected at least 2 tv series, but got %d", len(tvSeries))
 	}
 	if tvSeries[1].Number != 1 {
 		t.Errorf("Expected number 1, but got %d", tvSeries[0].Number)
@@ -158,7 +161,6 @@ func TestSearchCinemaParadisoTV(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ch := make(chan types.SearchResult, 1)
 			searchTVShow(&tc.show, ch)
@@ -190,10 +192,8 @@ func TestSearchCinemaParadisoTV(t *testing.T) {
 				if len(bestMatch.Seasons) != tc.numberOfSeasonsExpected {
 					t.Errorf("%s: expected %d seasons, but got %d", tc.name, tc.numberOfSeasonsExpected, len(bestMatch.Seasons))
 				}
-			} else {
-				if len(got.TVSearchResults) != 0 {
-					t.Errorf("%s: expected no search results, but got %d", tc.name, len(got.TVSearchResults))
-				}
+			} else if len(got.TVSearchResults) != 0 {
+				t.Errorf("%s: expected no search results, but got %d", tc.name, len(got.TVSearchResults))
 			}
 		})
 	}

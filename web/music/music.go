@@ -28,7 +28,7 @@ var (
 	totalArtists             int  = 0
 
 	plexMusic            []types.PlexMusicArtist
-	artistsSearchResults []types.SearchResult
+	artistsSearchResults []types.MusicSearchResponse
 	spotifyToken         string
 	lookup               string
 )
@@ -101,7 +101,7 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		plexMusic = plex.GetArtistsFromPlaylist(c.Config.PlexIP, c.Config.PlexToken, playlist)
 	}
 
-	var searchResult types.SearchResult
+	var searchResult types.MusicSearchResponse
 	artistsJobRunning = true
 	numberOfArtistsProcessed = 0
 	totalArtists = len(plexMusic) - 1
@@ -194,7 +194,7 @@ func renderAccordian(s []string) string {
 	return retval
 }
 
-func sanitizeAlbumTitles(artistsSearchResults []types.SearchResult) []types.SearchResult {
+func sanitizeAlbumTitles(artistsSearchResults []types.MusicSearchResponse) []types.MusicSearchResponse {
 	for i := range artistsSearchResults {
 		if len(artistsSearchResults[i].MusicSearchResults) > 0 {
 			for j := range artistsSearchResults[i].MusicSearchResults[0].FoundAlbums {
@@ -206,14 +206,14 @@ func sanitizeAlbumTitles(artistsSearchResults []types.SearchResult) []types.Sear
 	return artistsSearchResults
 }
 
-func filterMusicSearchResults(searchResults []types.SearchResult) []types.SearchResult {
+func filterMusicSearchResults(searchResults []types.MusicSearchResponse) []types.MusicSearchResponse {
 	searchResults = markOwnedAlbumsInSearchResult(searchResults)
 	searchResults = removeOlderSearchedAlbums(searchResults)
 	return searchResults
 }
 
-func removeOlderSearchedAlbums(searchResults []types.SearchResult) []types.SearchResult {
-	filteredResults := make([]types.SearchResult, 0)
+func removeOlderSearchedAlbums(searchResults []types.MusicSearchResponse) []types.MusicSearchResponse {
+	filteredResults := make([]types.MusicSearchResponse, 0)
 	for i := range searchResults {
 		if len(searchResults[i].MusicSearchResults) > 0 {
 			filteredAlbums := make([]types.MusicAlbumSearchResult, 0)
@@ -225,7 +225,7 @@ func removeOlderSearchedAlbums(searchResults []types.SearchResult) []types.Searc
 	return filteredResults
 }
 
-func markOwnedAlbumsInSearchResult(searchResults []types.SearchResult) []types.SearchResult {
+func markOwnedAlbumsInSearchResult(searchResults []types.MusicSearchResponse) []types.MusicSearchResponse {
 	for i := range searchResults {
 		var searchIDsToRemove []string
 		if len(searchResults[i].MusicSearchResults) > 0 {

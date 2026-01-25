@@ -14,13 +14,13 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 	tests := []struct {
 		name       string
 		args       *types.PlexMusicArtist
-		wantArtist types.SearchResult
+		wantArtist types.MusicSearchResponse
 		wantErr    bool
 	}{
 		{
 			name: "artist exists",
 			args: &types.PlexMusicArtist{Name: "The Beatles"},
-			wantArtist: types.SearchResult{
+			wantArtist: types.MusicSearchResponse{
 				SearchURL: "https://musicbrainz.org/artist/b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
 				MusicSearchResults: []types.MusicArtistSearchResult{
 
@@ -36,7 +36,7 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 		{
 			name: "artist has special characters",
 			args: &types.PlexMusicArtist{Name: "AC/DC"},
-			wantArtist: types.SearchResult{
+			wantArtist: types.MusicSearchResponse{
 				SearchURL: "https://musicbrainz.org/artist/66c662b6-6e2f-4930-8610-912e24c63ed1",
 				MusicSearchResults: []types.MusicArtistSearchResult{
 					{

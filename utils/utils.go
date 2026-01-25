@@ -1,15 +1,37 @@
 package utils
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/rainycape/unidecode"
+
 	"github.com/tphoney/plex-lookup/types"
 )
+
+// MarkBestMatchTVResponse marks best matches for TVSearchResponse (new type)
+func MarkBestMatchTVResponse(search *types.TVSearchResponse) types.TVSearchResponse {
+	firstEpisodeBoundry := search.FirstEpisodeAired.Year() - 1
+	lastEpisodeBoundry := search.LastEpisodeAired.Year() + 1
+	for i := range search.TVSearchResults {
+		resultYear := YearToDate(search.TVSearchResults[i].FirstAiredYear)
+		// If year is empty, match on title only (skip year check)
+		if search.TVSearchResults[i].FirstAiredYear == "" {
+			if matchTitleNoYear(search.Title, search.TVSearchResults[i].FoundTitle) {
+				search.TVSearchResults[i].BestMatch = true
+			}
+		} else {
+			// Original logic for shows with years
+			if matchTitle(search.Title, search.TVSearchResults[i].FoundTitle,
+				resultYear.Year(), firstEpisodeBoundry, lastEpisodeBoundry) {
+				search.TVSearchResults[i].BestMatch = true
+			}
+		}
+	}
+	return *search
+}
 
 // MarkBestMatchMovieResponse marks best matches for MovieSearchResponse (new type)
 func MarkBestMatchMovieResponse(search *types.MovieSearchResponse) types.MovieSearchResponse {
@@ -31,38 +53,8 @@ func MarkBestMatchMovieResponse(search *types.MovieSearchResponse) types.MovieSe
 	return *search
 }
 
-func MarkBestMatchTV(search *types.SearchResult) types.SearchResult {
-	firstEpisodeBoundry := search.FirstEpisodeAired.Year() - 1
-	lastEpisodeBoundry := search.LastEpisodeAired.Year() + 1
-	fmt.Printf("[DEBUG] MarkBestMatchTV: PlexTitle='%s', FirstAired=%d, LastAired=%d\n", search.Title, search.FirstEpisodeAired.Year(), search.LastEpisodeAired.Year())
-	for i := range search.TVSearchResults {
-		resultYear := YearToDate(search.TVSearchResults[i].FirstAiredYear)
-		fmt.Printf("[DEBUG]   Candidate: FoundTitle='%s', FirstAiredYear='%s', ParsedYear=%d\n", search.TVSearchResults[i].FoundTitle, search.TVSearchResults[i].FirstAiredYear, resultYear.Year())
-		// If year is empty, match on title only (skip year check)
-		if search.TVSearchResults[i].FirstAiredYear == "" {
-			if matchTitleNoYear(search.Title, search.TVSearchResults[i].FoundTitle) {
-				fmt.Printf("[DEBUG]     matchTitleNoYear: MATCHED\n")
-				search.TVSearchResults[i].BestMatch = true
-			} else {
-				fmt.Printf("[DEBUG]     matchTitleNoYear: NOT MATCHED\n")
-			}
-		} else {
-			// Original logic for shows with years
-			if matchTitle(search.Title, search.TVSearchResults[i].FoundTitle,
-				resultYear.Year(), firstEpisodeBoundry, lastEpisodeBoundry) {
-				fmt.Printf("[DEBUG]     matchTitle: MATCHED (bounds %d-%d)\n", firstEpisodeBoundry, lastEpisodeBoundry)
-				search.TVSearchResults[i].BestMatch = true
-			} else {
-				fmt.Printf("[DEBUG]     matchTitle: NOT MATCHED (bounds %d-%d)\n", firstEpisodeBoundry, lastEpisodeBoundry)
-			}
-		}
-	}
-	return *search
-}
-
 func matchTitleNoYear(plexTitle, foundTitle string) bool {
-	origPlexTitle := plexTitle
-	origFoundTitle := foundTitle
+	// ...existing code...
 	plexTitle = strings.ToLower(plexTitle)
 	foundTitle = strings.ToLower(foundTitle)
 	remove := []string{"the"}
@@ -77,13 +69,11 @@ func matchTitleNoYear(plexTitle, foundTitle string) bool {
 	plexTitle = strings.TrimSpace(plexTitle)
 	foundTitle = strings.TrimSpace(foundTitle)
 	matched := strings.EqualFold(plexTitle, foundTitle)
-	fmt.Printf("[DEBUG]     matchTitleNoYear: '%s' vs '%s' => '%s' vs '%s' => %v\n", origPlexTitle, origFoundTitle, plexTitle, foundTitle, matched)
 	return matched
 }
 
 func matchTitle(plexTitle, foundTitle string, foundYear, lowerBound, upperBound int) bool {
-	origPlexTitle := plexTitle
-	origFoundTitle := foundTitle
+	// ...existing code...
 	plexTitle = strings.ToLower(plexTitle)
 	foundTitle = strings.ToLower(foundTitle)
 	remove := []string{"the"}
@@ -99,7 +89,6 @@ func matchTitle(plexTitle, foundTitle string, foundYear, lowerBound, upperBound 
 	foundTitle = strings.TrimSpace(foundTitle)
 	matched := strings.EqualFold(plexTitle, foundTitle) &&
 		foundYear >= lowerBound && foundYear <= upperBound
-	fmt.Printf("[DEBUG]     matchTitle: '%s' vs '%s' => '%s' vs '%s', year=%d, bounds=%d-%d => %v\n", origPlexTitle, origFoundTitle, plexTitle, foundTitle, foundYear, lowerBound, upperBound, matched)
 	return matched
 }
 

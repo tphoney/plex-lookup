@@ -21,7 +21,7 @@ var (
 	tvJobRunning        bool = false
 	totalTV             int  = 0
 	plexTV              []types.PlexTVShow
-	tvSearchResults     []types.SearchResult
+	tvSearchResults     []types.TVSearchResponse
 	lookup              string
 	filters             types.MovieLookupFilters
 )
@@ -111,11 +111,11 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 		// reset variables
 		numberOfTVProcessed = 0
 		totalTV = 0
-		tvSearchResults = []types.SearchResult{}
+		tvSearchResults = []types.TVSearchResponse{}
 	}
 }
 
-func renderTVTable(searchResults []types.SearchResult) (tableRows string) {
+func renderTVTable(searchResults []types.TVSearchResponse) (tableRows string) {
 	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="int"><strong>DVD</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>`
 	for i := range searchResults {
 		// build up plex season / resolution row

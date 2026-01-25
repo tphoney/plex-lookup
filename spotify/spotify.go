@@ -102,9 +102,9 @@ type SimilarArtistsResponse struct {
 	}
 }
 
-func GetArtistsInParallel(plexArtists []types.PlexMusicArtist, token string) []types.SearchResult {
+func GetArtistsInParallel(plexArtists []types.PlexMusicArtist, token string) []types.MusicSearchResponse {
 	numberOfArtistsProcessed = 0
-	ch := make(chan *types.SearchResult, len(plexArtists))
+	ch := make(chan *types.MusicSearchResponse, len(plexArtists))
 	semaphore := make(chan struct{}, spotifyThreads)
 	for i := range len(plexArtists) {
 		go func(i int) {
@@ -114,7 +114,7 @@ func GetArtistsInParallel(plexArtists []types.PlexMusicArtist, token string) []t
 		}(i)
 	}
 	// gather results
-	artistsSearchResults := make([]types.SearchResult, 0, len(plexArtists))
+	artistsSearchResults := make([]types.MusicSearchResponse, 0, len(plexArtists))
 	for range len(plexArtists) {
 		result := <-ch
 		artistsSearchResults = append(artistsSearchResults, *result)
@@ -125,9 +125,9 @@ func GetArtistsInParallel(plexArtists []types.PlexMusicArtist, token string) []t
 	return artistsSearchResults
 }
 
-func GetAlbumsInParallel(artistsSearchResults []types.SearchResult, token string) []types.SearchResult {
+func GetAlbumsInParallel(artistsSearchResults []types.MusicSearchResponse, token string) []types.MusicSearchResponse {
 	numberOfArtistsProcessed = 0
-	ch := make(chan *types.SearchResult, len(artistsSearchResults))
+	ch := make(chan *types.MusicSearchResponse, len(artistsSearchResults))
 	semaphore := make(chan struct{}, spotifyThreads)
 	for i := range artistsSearchResults {
 		go func(i int) {
@@ -137,7 +137,7 @@ func GetAlbumsInParallel(artistsSearchResults []types.SearchResult, token string
 		}(i)
 	}
 	// gather results
-	enrichedArtistSearchResults := make([]types.SearchResult, 0)
+	enrichedArtistSearchResults := make([]types.MusicSearchResponse, 0)
 	for range artistsSearchResults {
 		result := <-ch
 		enrichedArtistSearchResults = append(enrichedArtistSearchResults, *result)
@@ -152,11 +152,11 @@ func GetJobProgress() int {
 	return numberOfArtistsProcessed
 }
 
-func searchSpotifyArtist(plexArtist *types.PlexMusicArtist, token string, ch chan<- *types.SearchResult) {
+func searchSpotifyArtist(plexArtist *types.PlexMusicArtist, token string, ch chan<- *types.MusicSearchResponse) {
 	// context with a timeout of 30 seconds
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(lookupTimeout))
 	defer cancel()
-	searchResults := types.SearchResult{}
+	searchResults := types.MusicSearchResponse{}
 	searchResults.PlexMusicArtist = *plexArtist
 	urlEncodedArtist := url.QueryEscape(plexArtist.Name)
 	artistURL := fmt.Sprintf("%s/search?q=%s&type=artist&limit=10", spotifyAPIURL, urlEncodedArtist)
@@ -188,7 +188,7 @@ func searchSpotifyArtist(plexArtist *types.PlexMusicArtist, token string, ch cha
 	ch <- &searchResults
 }
 
-func searchSpotifyAlbum(m *types.SearchResult, token string, ch chan<- *types.SearchResult) {
+func searchSpotifyAlbum(m *types.MusicSearchResponse, token string, ch chan<- *types.MusicSearchResponse) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(lookupTimeout))
 	defer cancel()
 	// get oauth token

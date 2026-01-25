@@ -72,8 +72,8 @@ func TestFindTVSeriesInResponse(t *testing.T) {
 
 	tvSeries := findTVSeasonsInResponse(string(rawdata))
 
-	if len(tvSeries) != 20 {
-		t.Fatalf("Expected 20 tv series, but got %d", len(tvSeries))
+	if len(tvSeries) != 30 {
+		t.Fatalf("Expected 30 tv series, but got %d", len(tvSeries))
 	}
 	// check the first tv series
 	if tvSeries[1].Number != 1 {
@@ -162,8 +162,8 @@ func TestSearchCinemaParadisoTV(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ch := make(chan types.SearchResult, 1)
-			searchTVShow(&tc.show, ch)
+			ch := make(chan types.TVSearchResponse, 1)
+			searchTVShowResponse(&tc.show, ch)
 			got := <-ch
 
 			if got.SearchURL == "" {

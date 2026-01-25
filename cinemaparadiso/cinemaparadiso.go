@@ -74,19 +74,19 @@ func ScrapeMoviesParallel(searchResults []types.MovieSearchResponse) []types.Mov
 }
 
 // nolint: dupl, nolintlint
-func TVInParallel(plexTVShows []types.PlexTVShow) (searchResults []types.SearchResult) {
-	ch := make(chan types.SearchResult, len(plexTVShows))
+func TVInParallel(plexTVShows []types.PlexTVShow) (searchResults []types.TVSearchResponse) {
+	ch := make(chan types.TVSearchResponse, len(plexTVShows))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 
 	for i := range plexTVShows {
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			searchTVShow(&plexTVShows[i], ch)
+			searchTVShowResponse(&plexTVShows[i], ch)
 		}(i)
 	}
 
-	searchResults = make([]types.SearchResult, 0, len(plexTVShows))
+	searchResults = make([]types.TVSearchResponse, 0, len(plexTVShows))
 	for range plexTVShows {
 		result := <-ch
 		searchResults = append(searchResults, result)
@@ -163,8 +163,8 @@ func scrapeMovieTitleResponse(result *types.MovieSearchResponse, movieSearchResu
 	movieSearchResult <- *result
 }
 
-func searchTVShow(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.SearchResult) {
-	result := types.SearchResult{}
+func searchTVShowResponse(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.TVSearchResponse) {
+	result := types.TVSearchResponse{}
 	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)
 	result.PlexTVShow = *plexTVShow
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
@@ -178,7 +178,7 @@ func searchTVShow(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.Sear
 
 	_, tvFound := findTitlesInResponse(rawData, false)
 	result.TVSearchResults = tvFound
-	result = utils.MarkBestMatchTV(&result)
+	result = utils.MarkBestMatchTVResponse(&result)
 	// now we can get the season information for each best match
 	for i := range result.TVSearchResults {
 		if result.TVSearchResults[i].BestMatch {

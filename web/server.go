@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"html"
 	"html/template"
 	"net"
 	"net/http"
@@ -26,23 +27,26 @@ var (
 	//go:embed static/*
 	staticFS embed.FS
 
-	port       string = "9090"
-	config     *types.Configuration
-	jobTracker *JobTracker
+	port            string = "9090"
+	config          *types.Configuration
+	jobTracker      *JobTracker
+	cleanupCtx      context.Context
+	cleanupCancel   context.CancelFunc
+	cleanupShutdown sync.WaitGroup
 )
 
 const (
-	jobStatusRunning  = "running"
-	jobStatusComplete = "complete"
-	jobStatusCanceled = "canceled"
-	cleanupInterval   = 5 * time.Minute
+	jobStatusRunning   = "running"
+	jobStatusComplete  = "complete"
+	jobStatusCancelled = "cancelled"
+	cleanupInterval    = 5 * time.Minute
 )
 
 // JobProgress represents the state of a running or completed job.
 type JobProgress struct {
 	ID         string
 	Type       string // "music", "movies", "tv"
-	Status     string // "running", "complete", "canceled"
+	Status     string // "running", "complete", "cancelled"
 	Current    int
 	Total      int
 	Phase      string // e.g., "Searching artists", "Fetching albums"
@@ -136,7 +140,7 @@ func (jt *JobTracker) CancelJob(jobID string) bool {
 	defer jt.mu.Unlock()
 
 	if job, exists := jt.jobs[jobID]; exists && job.Status == jobStatusRunning {
-		job.Status = jobStatusCanceled
+		job.Status = jobStatusCancelled
 		if job.CancelFunc != nil {
 			job.CancelFunc()
 		}
@@ -164,14 +168,22 @@ func (jt *JobTracker) CleanupOldJobs() {
 func StartServer(startingConfig *types.Configuration) {
 	config = startingConfig
 	jobTracker = NewJobTracker()
+	cleanupCtx, cleanupCancel = context.WithCancel(context.Background())
 
 	// Start cleanup goroutine
+	cleanupShutdown.Add(1)
 	go func() {
+		defer cleanupShutdown.Done()
 		ticker := time.NewTicker(cleanupInterval)
 		defer ticker.Stop()
-		for range ticker.C {
-			jobTracker.CleanupOldJobs()
-			fmt.Println("Cleaned up old jobs")
+		for {
+			select {
+			case <-ticker.C:
+				jobTracker.CleanupOldJobs()
+				fmt.Println("Cleaned up old jobs")
+			case <-cleanupCtx.Done():
+				return
+			}
 		}
 	}()
 
@@ -250,6 +262,14 @@ func GetOutboundIP() net.IP {
 	return localAddr.IP
 }
 
+// StopCleanup stops the cleanup goroutine and waits for it to finish.
+func StopCleanup() {
+	if cleanupCancel != nil {
+		cleanupCancel()
+		cleanupShutdown.Wait()
+	}
+}
+
 // GetJobTracker returns the global job tracker instance.
 func GetJobTracker() *JobTracker {
 	return jobTracker
@@ -276,18 +296,19 @@ func progressHandler(w http.ResponseWriter, r *http.Request) {
 			phaseText = fmt.Sprintf("<p>%s</p>", job.Phase)
 		}
 		jobIDEscaped := url.PathEscape(jobID)
+		jobIDAttr := html.EscapeString(jobIDEscaped)
 		fmt.Fprintf(w,
-			`<div hx-get="/progress/%s" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
+			`<div hx-get="/progress/%s" hx-trigger="every 250ms" class="container" id="progress" hx-swap="outerHTML">
 			%s<progress value="%d" max="%d"></progress>
 			<button hx-post="/cancel/%s" hx-swap="outerHTML" hx-target="#progress">Cancel</button>
 			</div>`,
-			jobIDEscaped, phaseText, job.Current, job.Total, jobIDEscaped)
+			jobIDAttr, phaseText, job.Current, job.Total, jobIDAttr)
 		return
 	}
 
-	// If job is canceled
-	if job.Status == "canceled" {
-		fmt.Fprint(w, `<div class="container" id="progress"><p>Job canceled</p></div>`)
+	// If job is cancelled
+	if job.Status == jobStatusCancelled {
+		fmt.Fprint(w, `<div class="container" id="progress"><p>Job cancelled</p></div>`)
 		return
 	}
 
@@ -296,14 +317,20 @@ func progressHandler(w http.ResponseWriter, r *http.Request) {
 	case "music":
 		if results, ok := job.Results.(string); ok {
 			fmt.Fprintf(w, `<div id="progress">%s</div>`, results)
+		} else {
+			fmt.Fprint(w, `<div class="container" id="progress"><p>Error: Unable to display results</p></div>`)
 		}
 	case "movies":
 		if results, ok := job.Results.(string); ok {
 			fmt.Fprintf(w, `<div id="progress">%s</div>`, results)
+		} else {
+			fmt.Fprint(w, `<div class="container" id="progress"><p>Error: Unable to display results</p></div>`)
 		}
 	case "tv":
 		if results, ok := job.Results.(string); ok {
 			fmt.Fprintf(w, `<div id="progress">%s</div>`, results)
+		} else {
+			fmt.Fprint(w, `<div class="container" id="progress"><p>Error: Unable to display results</p></div>`)
 		}
 	}
 }
@@ -317,7 +344,7 @@ func cancelHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if jobTracker.CancelJob(jobID) {
-		fmt.Fprint(w, `<div class="container" id="progress"><p>Job canceled successfully</p></div>`)
+		fmt.Fprint(w, `<div class="container" id="progress"><p>Job cancelled successfully</p></div>`)
 	} else {
 		fmt.Fprint(w, `<div class="container" id="progress"><p>Job not found or already complete</p></div>`)
 	}

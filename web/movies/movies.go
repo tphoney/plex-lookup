@@ -79,7 +79,7 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	jobID, ctx := tracker.CreateJob("movies", totalMovies)
 
 	// write initial progress bar
-	fmt.Fprintf(w, `<div hx-get="/progress/%s" hx-trigger="every 100ms" class="container" id="progress">
+	fmt.Fprintf(w, `<div hx-get="/progress/%s" hx-trigger="every 250ms" class="container" id="progress">
 	<progress value="0" max="%d"></progress></div>`, jobID, totalMovies)
 
 	go func() {

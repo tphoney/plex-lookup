@@ -77,7 +77,7 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	totalTV := len(plexTV)
 	jobID, ctx := tracker.CreateJob("tv", totalTV)
 
-	fmt.Fprintf(w, `<div hx-get="/progress/%s" hx-trigger="every 100ms" class="container" id="progress">
+	fmt.Fprintf(w, `<div hx-get="/progress/%s" hx-trigger="every 250ms" class="container" id="progress">
 		<progress value="0" max="%d"></progress></div>`, jobID, totalTV)
 
 	go func() {

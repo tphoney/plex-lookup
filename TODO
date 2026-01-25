@@ -2,7 +2,6 @@
 
 ## Wants
 
-- maketv searches better for cinema paradiso
 - make the app multi user, so they can create a user and have their own settings
 - ask the vscode agent about authentication authorisation and user management
 - Refactor HTTP Requests into a Generic, Robust Helper

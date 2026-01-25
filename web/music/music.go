@@ -27,7 +27,6 @@ var (
 )
 
 const (
-	spotifyString         = "spotify"
 	lookupTypeMusicBrainz = "musicbrainz"
 	lookupTypeSpotify     = "spotify"
 	minArtistsForEstimate = 50
@@ -75,7 +74,7 @@ func (c MusicConfig) validateLookupConfig(w http.ResponseWriter, r *http.Request
 			return false
 		}
 	}
-	if lookup == spotifyString {
+	if lookup == lookupTypeSpotify {
 		if c.Config.SpotifyClientID == "" || c.Config.SpotifyClientSecret == "" {
 			fmt.Fprintf(w, `<div class="container"><b>Spotify Client ID or Secret is not set</b>. Please set in <a href="/settings">settings.</a></div>`)
 			return false
@@ -126,7 +125,7 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	jobID, ctx := tracker.CreateJob("music", totalArtists)
 
 	// Return initial progress bar
-	fmt.Fprintf(w, `<div hx-get="/progress/%s" hx-trigger="every 100ms" class="container" id="progress">
+	fmt.Fprintf(w, `<div hx-get="/progress/%s" hx-trigger="every 250ms" class="container" id="progress">
 		<progress value="0" max="%d"></progress></div>`, jobID, totalArtists)
 
 	// Start processing in goroutine
@@ -156,7 +155,7 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 			// Search spotify
 			artistsSearchResults = spotify.GetArtistsInParallel(ctx, progressFunc, plexMusic, spotifyToken)
 			artistsSearchResults = spotify.GetAlbumsInParallel(ctx, progressFunc, artistsSearchResults, spotifyToken)
-			// sanitize album titles
+			// sanitise album titles
 			artistsSearchResults = sanitizeAlbumTitles(artistsSearchResults)
 		}
 

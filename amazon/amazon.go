@@ -83,7 +83,6 @@ var (
 //nolint:dupl // Cannot be unified with TVInParallel due to different generic types (PlexMovie vs PlexTVShow)
 func MoviesInParallel(ctx context.Context, progressFunc func(int), plexMovies []types.PlexMovie, language, region string) (searchResults []types.MovieSearchResponse) {
 	numberMoviesProcessed.Store(0)
-	processed := 0
 	mapper := iter.Mapper[types.PlexMovie, types.MovieSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
@@ -95,10 +94,9 @@ func MoviesInParallel(ctx context.Context, progressFunc func(int), plexMovies []
 		default:
 		}
 		result := searchMovieValue(m, language, region)
-		numberMoviesProcessed.Add(1)
-		processed++
+		current := int(numberMoviesProcessed.Add(1))
 		if progressFunc != nil {
-			progressFunc(processed)
+			progressFunc(current)
 		}
 		return result
 	})
@@ -112,7 +110,6 @@ func MoviesInParallel(ctx context.Context, progressFunc func(int), plexMovies []
 //nolint:dupl // Cannot be unified with MoviesInParallel due to different generic types (PlexTVShow vs PlexMovie)
 func TVInParallel(ctx context.Context, progressFunc func(int), plexTVShows []types.PlexTVShow, language, region string) (searchResults []types.TVSearchResponse) {
 	numberTVProcessed.Store(0)
-	processed := 0
 	mapper := iter.Mapper[types.PlexTVShow, types.TVSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
@@ -124,10 +121,9 @@ func TVInParallel(ctx context.Context, progressFunc func(int), plexTVShows []typ
 		default:
 		}
 		result := searchTVValue(tv, language, region)
-		numberTVProcessed.Add(1)
-		processed++
+		current := int(numberTVProcessed.Add(1))
 		if progressFunc != nil {
-			progressFunc(processed)
+			progressFunc(current)
 		}
 		return result
 	})

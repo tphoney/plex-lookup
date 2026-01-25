@@ -32,7 +32,6 @@ var (
 // nolint: dupl, nolintlint
 func MoviesInParallel(ctx context.Context, progressFunc func(int), plexMovies []types.PlexMovie) (searchResults []types.MovieSearchResponse) {
 	numberMoviesProcessed.Store(0)
-	processed := 0
 	mapper := iter.Mapper[types.PlexMovie, types.MovieSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
@@ -44,10 +43,9 @@ func MoviesInParallel(ctx context.Context, progressFunc func(int), plexMovies []
 		default:
 		}
 		result := searchCinemaParadisoMovieResponse(pm)
-		numberMoviesProcessed.Add(1)
-		processed++
+		current := int(numberMoviesProcessed.Add(1))
 		if progressFunc != nil {
-			progressFunc(processed)
+			progressFunc(current)
 		}
 		return result
 	})
@@ -78,7 +76,6 @@ func ScrapeMoviesParallel(ctx context.Context, searchResults []types.MovieSearch
 // nolint: dupl, nolintlint
 func TVInParallel(ctx context.Context, progressFunc func(int), plexTVShows []types.PlexTVShow) (searchResults []types.TVSearchResponse) {
 	numberTVProcessed.Store(0)
-	processed := 0
 	mapper := iter.Mapper[types.PlexTVShow, types.TVSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
@@ -90,10 +87,9 @@ func TVInParallel(ctx context.Context, progressFunc func(int), plexTVShows []typ
 		default:
 		}
 		result := searchTVShowResponseValue(tv)
-		numberTVProcessed.Add(1)
-		processed++
+		current := int(numberTVProcessed.Add(1))
 		if progressFunc != nil {
-			progressFunc(processed)
+			progressFunc(current)
 		}
 		return result
 	})

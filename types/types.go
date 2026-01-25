@@ -18,17 +18,31 @@ const (
 	StringTrue         = "true"
 )
 
-type SearchResult struct {
-	PlexMovie
+// TVSearchResponse is the new dedicated struct for TV search results.
+type TVSearchResponse struct {
 	PlexTVShow
+	SearchURL       string
+	TVSearchResults []TVSearchResult
+	Matches4k       int
+	MatchesBluray   int
+	MatchesDVD      int
+}
+
+// MusicSearchResponse is the new dedicated struct for music search results.
+type MusicSearchResponse struct {
 	PlexMusicArtist
+	SearchURL          string
+	MusicSearchResults []MusicArtistSearchResult
+}
+
+// MovieSearchResponse is the new dedicated struct for movie search results.
+type MovieSearchResponse struct {
+	PlexMovie
 	SearchURL          string
 	Matches4k          int
 	MatchesBluray      int
 	MatchesDVD         int
 	MovieSearchResults []MovieSearchResult
-	TVSearchResults    []TVSearchResult
-	MusicSearchResults []MusicArtistSearchResult
 }
 
 type Configuration struct {

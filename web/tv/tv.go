@@ -21,7 +21,7 @@ var (
 	tvJobRunning        bool = false
 	totalTV             int  = 0
 	plexTV              []types.PlexTVShow
-	tvSearchResults     []types.SearchResult
+	tvSearchResults     []types.TVSearchResponse
 	lookup              string
 	filters             types.MovieLookupFilters
 )
@@ -87,7 +87,7 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 			tvSearchResults = cinemaparadiso.TVInParallel(plexTV)
 		} else {
 			tvSearchResults = amazon.TVInParallel(plexTV, filters.AudioLanguage, c.Config.AmazonRegion)
-			tvSearchResults = amazon.ScrapeTitlesParallel(tvSearchResults, c.Config.AmazonRegion, true)
+			tvSearchResults = amazon.ScrapeTitlesParallel(tvSearchResults, c.Config.AmazonRegion)
 		}
 		tvJobRunning = false
 		fmt.Printf("\nProcessed %d TV Shows in %v\n", totalTV, time.Since(startTime))
@@ -111,11 +111,11 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 		// reset variables
 		numberOfTVProcessed = 0
 		totalTV = 0
-		tvSearchResults = []types.SearchResult{}
+		tvSearchResults = []types.TVSearchResponse{}
 	}
 }
 
-func renderTVTable(searchResults []types.SearchResult) (tableRows string) {
+func renderTVTable(searchResults []types.TVSearchResponse) (tableRows string) {
 	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="int"><strong>DVD</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th><strong>Disc</strong></th></tr></thead><tbody>`
 	for i := range searchResults {
 		// build up plex season / resolution row
@@ -127,7 +127,7 @@ func renderTVTable(searchResults []types.SearchResult) (tableRows string) {
 		plexSeasonsString = plexSeasonsString[:len(plexSeasonsString)-1] // remove trailing comma
 		tableRows += fmt.Sprintf(
 			`<tr><td><a href=%q target="_blank">%s [%v]:<br>%s</a></td><td>%d</td><td>%d</td><td>%d</td>`,
-			searchResults[i].SearchURL, searchResults[i].PlexTVShow.Title, searchResults[i].PlexTVShow.Year, plexSeasonsString,
+			searchResults[i].SearchURL, searchResults[i].Title, searchResults[i].Year, plexSeasonsString,
 			searchResults[i].MatchesDVD, searchResults[i].MatchesBluray, searchResults[i].Matches4k)
 		if (searchResults[i].MatchesDVD + searchResults[i].MatchesBluray + searchResults[i].Matches4k) > 0 {
 			tableRows += "<td>"

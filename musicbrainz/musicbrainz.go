@@ -20,7 +20,7 @@ const (
 	lookupTimeout = 2
 )
 
-func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist, musicBrainzURL string) (artist types.SearchResult, err error) {
+func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist, musicBrainzURL string) (artist types.MusicSearchResponse, err error) {
 	artist.PlexMusicArtist = *plexArtist
 	client, err := gomusicbrainz.NewWS2Client(
 		musicBrainzURL, agent, agentVersion, "")

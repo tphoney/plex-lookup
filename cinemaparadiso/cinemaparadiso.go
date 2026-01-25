@@ -28,20 +28,20 @@ var (
 )
 
 // nolint: dupl, nolintlint
-func MoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.SearchResult) {
+func MoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.MovieSearchResponse) {
 	numberMoviesProcessed = 0
-	ch := make(chan types.SearchResult, len(plexMovies))
+	ch := make(chan types.MovieSearchResponse, len(plexMovies))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 
 	for i := range plexMovies {
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			searchCinemaParadisoMovie(&plexMovies[i], ch)
+			searchCinemaParadisoMovieResponse(&plexMovies[i], ch)
 		}(i)
 	}
 
-	searchResults = make([]types.SearchResult, 0, len(plexMovies))
+	searchResults = make([]types.MovieSearchResponse, 0, len(plexMovies))
 	for range plexMovies {
 		result := <-ch
 		searchResults = append(searchResults, result)
@@ -51,19 +51,19 @@ func MoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.Searc
 	return searchResults
 }
 
-func ScrapeMoviesParallel(searchResults []types.SearchResult) []types.SearchResult {
+func ScrapeMoviesParallel(searchResults []types.MovieSearchResponse) []types.MovieSearchResponse {
 	numberMoviesProcessed = 0
-	ch := make(chan types.SearchResult, len(searchResults))
+	ch := make(chan types.MovieSearchResponse, len(searchResults))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 
 	for i := range searchResults {
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			scrapeMovieTitle(&searchResults[i], ch)
+			scrapeMovieTitleResponse(&searchResults[i], ch)
 		}(i)
 	}
-	detailedSearchResults := make([]types.SearchResult, 0, len(searchResults))
+	detailedSearchResults := make([]types.MovieSearchResponse, 0, len(searchResults))
 	for range searchResults {
 		result := <-ch
 		detailedSearchResults = append(detailedSearchResults, result)
@@ -74,19 +74,19 @@ func ScrapeMoviesParallel(searchResults []types.SearchResult) []types.SearchResu
 }
 
 // nolint: dupl, nolintlint
-func TVInParallel(plexTVShows []types.PlexTVShow) (searchResults []types.SearchResult) {
-	ch := make(chan types.SearchResult, len(plexTVShows))
+func TVInParallel(plexTVShows []types.PlexTVShow) (searchResults []types.TVSearchResponse) {
+	ch := make(chan types.TVSearchResponse, len(plexTVShows))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 
 	for i := range plexTVShows {
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			searchTVShow(&plexTVShows[i], ch)
+			searchTVShowResponse(&plexTVShows[i], ch)
 		}(i)
 	}
 
-	searchResults = make([]types.SearchResult, 0, len(plexTVShows))
+	searchResults = make([]types.TVSearchResponse, 0, len(plexTVShows))
 	for range plexTVShows {
 		result := <-ch
 		searchResults = append(searchResults, result)
@@ -104,8 +104,8 @@ func GetTVJobProgress() int {
 	return numberTVProcessed
 }
 
-func searchCinemaParadisoMovie(plexMovie *types.PlexMovie, movieSearchResult chan<- types.SearchResult) {
-	result := types.SearchResult{}
+func searchCinemaParadisoMovieResponse(plexMovie *types.PlexMovie, movieSearchResult chan<- types.MovieSearchResponse) {
+	result := types.MovieSearchResponse{}
 	result.PlexMovie = *plexMovie
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
@@ -118,11 +118,11 @@ func searchCinemaParadisoMovie(plexMovie *types.PlexMovie, movieSearchResult cha
 
 	moviesFound, _ := findTitlesInResponse(rawData, true)
 	result.MovieSearchResults = moviesFound
-	result = utils.MarkBestMatchMovie(&result)
+	result = utils.MarkBestMatchMovieResponse(&result)
 	movieSearchResult <- result
 }
 
-func scrapeMovieTitle(result *types.SearchResult, movieSearchResult chan<- types.SearchResult) {
+func scrapeMovieTitleResponse(result *types.MovieSearchResponse, movieSearchResult chan<- types.MovieSearchResponse) {
 	// now we can get the season information for each best match
 	for i := range result.MovieSearchResults {
 		if !result.MovieSearchResults[i].BestMatch {
@@ -156,15 +156,15 @@ func scrapeMovieTitle(result *types.SearchResult, movieSearchResult chan<- types
 			result.MovieSearchResults[i].ReleaseDate = time.Time{}
 		}
 		// check if the release date is after the date the movie was added to plexs
-		if result.MovieSearchResults[i].ReleaseDate.After(result.PlexMovie.DateAdded) {
+		if result.MovieSearchResults[i].ReleaseDate.After(result.DateAdded) {
 			result.MovieSearchResults[i].NewRelease = true
 		}
 	}
 	movieSearchResult <- *result
 }
 
-func searchTVShow(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.SearchResult) {
-	result := types.SearchResult{}
+func searchTVShowResponse(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.TVSearchResponse) {
+	result := types.TVSearchResponse{}
 	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)
 	result.PlexTVShow = *plexTVShow
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
@@ -178,7 +178,7 @@ func searchTVShow(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.Sear
 
 	_, tvFound := findTitlesInResponse(rawData, false)
 	result.TVSearchResults = tvFound
-	result = utils.MarkBestMatchTV(&result)
+	result = utils.MarkBestMatchTVResponse(&result)
 	// now we can get the season information for each best match
 	for i := range result.TVSearchResults {
 		if result.TVSearchResults[i].BestMatch {
@@ -189,6 +189,22 @@ func searchTVShow(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.Sear
 				result.TVSearchResults[i].BestMatch = false
 			}
 			result.TVSearchResults[i].Seasons = seasonInfo
+		}
+	}
+	// Count disc formats for UI rendering
+	result.MatchesDVD = 0
+	result.MatchesBluray = 0
+	result.Matches4k = 0
+	for i := range result.TVSearchResults {
+		for _, season := range result.TVSearchResults[i].Seasons {
+			switch strings.ToLower(season.Format) {
+			case "dvd":
+				result.MatchesDVD++
+			case "blu-ray":
+				result.MatchesBluray++
+			case "4k":
+				result.Matches4k++
+			}
 		}
 	}
 	tvSearchResult <- result

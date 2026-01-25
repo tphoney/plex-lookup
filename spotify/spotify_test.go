@@ -46,7 +46,7 @@ func TestSearchSpotifyArtist(t *testing.T) {
 	}
 
 	plexArtist := &types.PlexMusicArtist{Name: "The Beatles"}
-	ch := make(chan *types.SearchResult, 1)
+	ch := make(chan *types.MusicSearchResponse, 1)
 	searchSpotifyArtist(plexArtist, token, ch)
 
 	got := <-ch
@@ -83,7 +83,7 @@ func TestSearchSpotifyArtistDebug(t *testing.T) {
 
 	plexArtist := &types.PlexMusicArtist{Name: "Angel Olsen"}
 
-	ch := make(chan *types.SearchResult, 1)
+	ch := make(chan *types.MusicSearchResponse, 1)
 	searchSpotifyArtist(plexArtist, token, ch)
 
 	got := <-ch
@@ -99,7 +99,7 @@ func TestSearchSpotifyAlbums(t *testing.T) {
 		t.Errorf("GetSpotifyToken() returned an error: %s", err)
 	}
 	type args struct {
-		m *types.SearchResult
+		m *types.MusicSearchResponse
 	}
 	tests := []struct {
 		name       string
@@ -109,14 +109,14 @@ func TestSearchSpotifyAlbums(t *testing.T) {
 	}{
 		{
 			name:       "albums exist",
-			args:       args{m: &types.SearchResult{MusicSearchResults: []types.MusicArtistSearchResult{{ID: "711MCceyCBcFnzjGY4Q7Un"}}}},
+			args:       args{m: &types.MusicSearchResponse{MusicSearchResults: []types.MusicArtistSearchResult{{ID: "711MCceyCBcFnzjGY4Q7Un"}}}},
 			albumCount: 21,
 			wantErr:    false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ch := make(chan *types.SearchResult, 1)
+			ch := make(chan *types.MusicSearchResponse, 1)
 			searchSpotifyAlbum(tt.args.m, token, ch)
 			got := <-ch
 
@@ -139,7 +139,7 @@ func TestSearchSpotifyAlbumsDebug(t *testing.T) {
 		t.Errorf("GetSpotifyToken() returned an error: %s", err)
 	}
 
-	want := types.SearchResult{
+	want := types.MusicSearchResponse{
 		MusicSearchResults: []types.MusicArtistSearchResult{
 			{
 				Name: "",
@@ -148,7 +148,8 @@ func TestSearchSpotifyAlbumsDebug(t *testing.T) {
 			},
 		},
 	}
-	ch := make(chan *types.SearchResult, 1)
+
+	ch := make(chan *types.MusicSearchResponse, 1)
 	searchSpotifyAlbum(&want, token, ch)
 	got := <-ch
 

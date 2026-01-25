@@ -6,6 +6,33 @@
 - make the app multi user, so they can create a user and have their own settings
   - ask the vscode agent about authentication authorisation and user management
 
+1. Replace Manual Concurrency with sourcegraph/conc/iter
+What: Refactor your parallel search and scrape functions (e.g., MoviesInParallel, ScrapeMoviesParallel, TVInParallel) to use conc/iter for safer, simpler, and more readable concurrency.
+Why: Reduces boilerplate, eliminates manual channel/semaphore management, and makes the code easier to maintain and reason about.
+Viability: High. conc/iter is designed for this use case and will integrate well.
+2. Implement Robust, Per-Job Progress Tracking
+What: Replace global progress counters with a thread-safe, per-job progress tracker (e.g., using a map of job IDs to progress structs, protected by a mutex or using sync.Map). Expose this via an endpoint (e.g., /progress/{jobID}) for UI or API polling.
+Why: Enables accurate, concurrent progress reporting for multiple jobs/users, and is a best practice for web services.
+Viability: High. This is a common pattern and will work well with the new concurrency model.
+3. Refactor HTTP Requests into a Generic, Robust Helper
+What: Create a reusable HTTP helper that handles retries, 500 errors, and rate limiting (429), and reuses a single http.Client instance.
+Why: Centralizes error handling, reduces code duplication, and improves reliability.
+Viability: High. This can be done incrementally and will benefit all network code.
+4. Split SearchResult into Domain-Specific Structs
+What: Refactor the monolithic SearchResult into separate, focused structs for movies, TV, and music.
+Why: Improves type safety, clarity, and maintainability. Reduces confusion and potential bugs.
+Viability: High, but this is the most invasive change and should be done after the above improvements to minimize merge conflicts and ease migration.
+Recommended Order
+Replace concurrency with conc/iter
+(Makes the codebase easier to refactor for progress tracking and other changes.)
+Implement per-job progress tracking
+(Easier to do once concurrency is simplified and thread-safe.)
+Refactor HTTP requests into a generic helper
+(Can be done in parallel with the above, but best after concurrency/progress changes.)
+Split SearchResult into domain-specific structs
+(Do this last, as it’s the most disruptive and benefits from a cleaner, more maintainable codebase.)
+Summary Table:
+
 ## In Progress
 
 ## Features

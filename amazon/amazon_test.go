@@ -74,31 +74,27 @@ func TestSearchAmazonTV(t *testing.T) {
 }
 
 func TestScrapeTitlesParallel(t *testing.T) {
-	result := ScrapeTitlesParallel([]types.SearchResult{
+	result := ScrapeTitlesParallel([]types.TVSearchResponse{
 		{
-			PlexMovie: types.PlexMovie{
-				Title: "napoleon dynamite",
-				Year:  "2001",
+			PlexTVShow: types.PlexTVShow{
+				Title: "Some TV Show",
+				Year:  "2020",
 			},
-			MovieSearchResults: []types.MovieSearchResult{
+			TVSearchResults: []types.TVSearchResult{
 				{
-					FoundTitle: "Napoleon Dynamite",
-					URL:        "https://www.blu-ray.com/movies/Napoleon-Dynamite-Blu-ray/2535/",
+					FoundTitle: "Some TV Show",
+					URL:        "https://www.example.com/tv/some-tv-show",
 					BestMatch:  true,
 				},
 			},
 		},
-	}, amazonRegion, false)
+	}, amazonRegion)
 
 	if len(result) == 0 {
 		t.Fatalf("Expected search results, but got none")
 	}
-	// check the debug output, we may be rate limited.
-	if len(result[0].MovieSearchResults) == 0 {
-		t.Fatalf("Expected movie search results, but got none")
-	}
-	if result[0].MovieSearchResults[0].ReleaseDate.Year() == 1 {
-		t.Errorf("Expected a sensible release date year but got: %+v", result[0].MovieSearchResults[0].ReleaseDate)
+	if len(result[0].TVSearchResults) == 0 {
+		t.Fatalf("Expected TV search results, but got none")
 	}
 	fmt.Println(result)
 }

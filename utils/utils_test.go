@@ -26,7 +26,7 @@ func TestYearToDate(t *testing.T) {
 }
 func TestMarkBestMatchMovie(t *testing.T) {
 	// Test case 1: Matching title and year within 1 year
-	search := types.SearchResult{
+	search := types.MovieSearchResponse{
 		PlexMovie: types.PlexMovie{
 			Title: "Movie Title",
 			Year:  "2022",
@@ -45,7 +45,7 @@ func TestMarkBestMatchMovie(t *testing.T) {
 			BestMatch:  true,
 		},
 	}
-	result := MarkBestMatchMovie(&search)
+	result := MarkBestMatchMovieResponse(&search)
 	if len(result.MovieSearchResults) != len(expectedResults) {
 		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.MovieSearchResults))
 	} else {
@@ -57,7 +57,7 @@ func TestMarkBestMatchMovie(t *testing.T) {
 	}
 
 	// Test case 2: Non-matching title
-	search = types.SearchResult{
+	search = types.MovieSearchResponse{
 		PlexMovie: types.PlexMovie{
 			Title: "Movie Title",
 			Year:  "2022",
@@ -75,7 +75,7 @@ func TestMarkBestMatchMovie(t *testing.T) {
 			Year:       "2022",
 		},
 	}
-	result = MarkBestMatchMovie(&search)
+	result = MarkBestMatchMovieResponse(&search)
 	if len(result.MovieSearchResults) != len(expectedResults) {
 		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.MovieSearchResults))
 	} else {
@@ -87,7 +87,7 @@ func TestMarkBestMatchMovie(t *testing.T) {
 	}
 
 	// Test case 3: Non-matching year
-	search = types.SearchResult{
+	search = types.MovieSearchResponse{
 		PlexMovie: types.PlexMovie{
 			Title: "Movie Title",
 			Year:  "2022",
@@ -105,7 +105,7 @@ func TestMarkBestMatchMovie(t *testing.T) {
 			Year:       "2024",
 		},
 	}
-	result = MarkBestMatchMovie(&search)
+	result = MarkBestMatchMovieResponse(&search)
 	if len(result.MovieSearchResults) != len(expectedResults) {
 		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.MovieSearchResults))
 	} else {

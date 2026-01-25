@@ -1,6 +1,9 @@
 package types
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 const (
 	DiskBluray         = "Blu-ray"
@@ -190,4 +193,11 @@ type PlexPlaylist struct {
 	Title     string
 	Type      string
 	RatingKey string
+}
+
+// JobTracker interface for managing background job progress and cancellation.
+type JobTracker interface {
+	CreateJob(jobType string, total int) (string, context.Context)
+	UpdateProgress(jobID string, current int, phase string)
+	MarkComplete(jobID string, results any)
 }

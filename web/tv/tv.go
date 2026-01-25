@@ -16,18 +16,11 @@ import (
 var (
 	//go:embed tv.html
 	tvPage string
-
-	numberOfTVProcessed int  = 0
-	tvJobRunning        bool = false
-	totalTV             int  = 0
-	plexTV              []types.PlexTVShow
-	tvSearchResults     []types.TVSearchResponse
-	lookup              string
-	filters             types.MovieLookupFilters
 )
 
 type TVConfig struct {
-	Config *types.Configuration
+	Config     *types.Configuration
+	JobTracker types.JobTracker
 }
 
 func TVHandler(w http.ResponseWriter, _ *http.Request) {
@@ -59,60 +52,56 @@ func (c TVConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
+	tracker := c.JobTracker
+	if tracker == nil {
+		http.Error(w, "Job tracker not available", http.StatusInternalServerError)
+		return
+	}
+
 	playlist := r.FormValue("playlist")
-	lookup = r.FormValue("lookup")
+	lookup := r.FormValue("lookup")
 	// lookup filters
-	filters.AudioLanguage = r.FormValue("language")
-	filters.NewerVersion = r.FormValue("newerVersion") == types.StringTrue
+	filters := types.MovieLookupFilters{
+		AudioLanguage: r.FormValue("language"),
+		NewerVersion:  r.FormValue("newerVersion") == types.StringTrue,
+	}
+
 	// get TV shows from plex
+	var plexTV []types.PlexTVShow
 	if playlist == "all" {
 		plexTV = plex.AllTV(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexTVLibraryID)
 	} else {
 		plexTV = plex.GetTVFromPlaylist(c.Config.PlexIP, c.Config.PlexToken, playlist)
 	}
-	//nolint: gocritic
-	// plexTV = plexTV[:20]
-	//lint: gocritic
 
-	tvJobRunning = true
-	numberOfTVProcessed = 0
-	totalTV = len(plexTV) - 1
+	totalTV := len(plexTV)
+	jobID, ctx := tracker.CreateJob("tv", totalTV)
 
-	fmt.Fprintf(w, `<div hx-get="/tvprogress" hx-trigger="every 100ms" class="container" id="progress">
-		<progress value="%d" max= "%d"/></div>`, numberOfTVProcessed, totalTV)
+	fmt.Fprintf(w, `<div hx-get="/progress/%s" hx-trigger="every 100ms" class="container" id="progress">
+		<progress value="0" max="%d"></progress></div>`, jobID, totalTV)
 
 	go func() {
 		startTime := time.Now()
-		if lookup == "cinemaParadiso" {
-			tvSearchResults = cinemaparadiso.TVInParallel(plexTV)
-		} else {
-			tvSearchResults = amazon.TVInParallel(plexTV, filters.AudioLanguage, c.Config.AmazonRegion)
-			tvSearchResults = amazon.ScrapeTitlesParallel(tvSearchResults, c.Config.AmazonRegion)
+		var tvSearchResults []types.TVSearchResponse
+
+		progressFunc := func(current int) {
+			tracker.UpdateProgress(jobID, current, "Processing TV shows")
 		}
-		tvJobRunning = false
+
+		if lookup == "cinemaParadiso" {
+			tvSearchResults = cinemaparadiso.TVInParallel(ctx, progressFunc, plexTV)
+		} else {
+			tvSearchResults = amazon.TVInParallel(ctx, progressFunc, plexTV, filters.AudioLanguage, c.Config.AmazonRegion)
+			tvSearchResults = amazon.ScrapeTitlesParallel(ctx, tvSearchResults, c.Config.AmazonRegion)
+		}
+
+		resultsHTML := fmt.Sprintf(`<table class="table-sortable">%s</tbody></table>
+		<script>document.querySelector('.table-sortable').tsortable()</script>`,
+			renderTVTable(tvSearchResults))
+
+		tracker.MarkComplete(jobID, resultsHTML)
 		fmt.Printf("\nProcessed %d TV Shows in %v\n", totalTV, time.Since(startTime))
 	}()
-}
-
-func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
-	if lookup == "cinemaParadiso" {
-		numberOfTVProcessed = cinemaparadiso.GetTVJobProgress()
-	} else {
-		numberOfTVProcessed = amazon.GetTVJobProgress()
-	}
-	if tvJobRunning {
-		fmt.Fprintf(w, `<div hx-get="/tvprogress" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
-		<progress value="%d" max= "%d"/></div>`, numberOfTVProcessed, totalTV)
-	} else {
-		fmt.Fprintf(w,
-			`<table class="table-sortable">%s</tbody></table>
-		</script><script>document.querySelector('.table-sortable').tsortable()</script>`,
-			renderTVTable(tvSearchResults))
-		// reset variables
-		numberOfTVProcessed = 0
-		totalTV = 0
-		tvSearchResults = []types.TVSearchResponse{}
-	}
 }
 
 func renderTVTable(searchResults []types.TVSearchResponse) (tableRows string) {

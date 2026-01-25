@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/tphoney/plex-lookup/amazon"
@@ -24,7 +25,7 @@ func performAmazonLookup() {
 	if libraryType == types.PlexMovieType {
 		plexMovies := initializePlexMovies()
 		// lets search movies in amazon
-		searchResults := amazon.MoviesInParallel(plexMovies, "", amazonRegion)
+		searchResults := amazon.MoviesInParallel(context.Background(), nil, plexMovies, "", amazonRegion)
 		for i := range searchResults {
 			for _, individualResult := range searchResults[i].MovieSearchResults {
 				if individualResult.BestMatch && (individualResult.Format == types.DiskBluray || individualResult.Format == types.Disk4K) {

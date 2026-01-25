@@ -5,10 +5,6 @@
 - maketv searches better for cinema paradiso
 - make the app multi user, so they can create a user and have their own settings
 - ask the vscode agent about authentication authorisation and user management
-- Implement Robust, Per-Job Progress Tracking
-  What: Replace global progress counters with a thread-safe, per-job progress tracker (e.g., using a map of job IDs to progress structs, protected by a mutex or using sync.Map). Expose this via an endpoint (e.g., /progress/{jobID}) for UI or API polling.
-  Why: Enables accurate, concurrent progress reporting for multiple jobs/users, and is a best practice for web services.
-Viability: High. This is a common pattern and will work well with the new concurrency model.
 - Refactor HTTP Requests into a Generic, Robust Helper
   What: Create a reusable HTTP helper that handles retries, 500 errors, and rate limiting (429), and reuses a single http.Client instance.
   Why: Centralizes error handling, reduces code duplication, and improves reliability.
@@ -25,6 +21,7 @@ Viability: High. This is a common pattern and will work well with the new concur
 
 ## Done
 
+- Implement Robust, Per-Job Progress Tracking
 - Replace Manual Concurrency with sourcegraph/conc/iter
 - split SearchResult into Domain-Specific Structs
 - cinema paradiso tv search is really broken for all series

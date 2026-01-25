@@ -23,22 +23,19 @@ var (
 	//go:embed music.html
 	musicPage string
 
-	numberOfArtistsProcessed int  = 0
-	artistsJobRunning        bool = false
-	totalArtists             int  = 0
-
-	plexMusic            []types.PlexMusicArtist
-	artistsSearchResults []types.MusicSearchResponse
-	spotifyToken         string
-	lookup               string
+	spotifyToken string
 )
 
 const (
-	spotifyString string = "spotify"
+	spotifyString         = "spotify"
+	lookupTypeMusicBrainz = "musicbrainz"
+	lookupTypeSpotify     = "spotify"
+	minArtistsForEstimate = 50
 )
 
 type MusicConfig struct {
-	Config *types.Configuration
+	Config     *types.Configuration
+	JobTracker types.JobTracker
 }
 
 func MusicHandler(w http.ResponseWriter, _ *http.Request) {
@@ -70,96 +67,110 @@ func (c MusicConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprint(w, playlistHTML)
 }
 
-func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
-	playlist := r.FormValue("playlist")
-	lookup = r.FormValue("lookup")
-	if lookup == "musicbrainz" {
+// validateLookupConfig checks if the lookup service is properly configured.
+func (c MusicConfig) validateLookupConfig(w http.ResponseWriter, r *http.Request, lookup string) bool {
+	if lookup == lookupTypeMusicBrainz {
 		if c.Config.MusicBrainzURL == "" {
 			fmt.Fprintf(w, `<div class="container"><b>MusicBrainz URL is not set</b>. Please set in <a href="/settings">settings.</a></div>`)
-			return
+			return false
 		}
 	}
 	if lookup == spotifyString {
 		if c.Config.SpotifyClientID == "" || c.Config.SpotifyClientSecret == "" {
 			fmt.Fprintf(w, `<div class="container"><b>Spotify Client ID or Secret is not set</b>. Please set in <a href="/settings">settings.</a></div>`)
-			return
+			return false
 		}
 		if spotifyToken == "" {
 			var err error
 			spotifyToken, err = spotify.SpotifyOAuthToken(r.Context(), c.Config.SpotifyClientID, c.Config.SpotifyClientSecret)
 			if err != nil {
 				fmt.Fprintf(w, `<div class="alert alert-danger" role="alert">Failed to get Spotify OAuth token<br>%s</div>`, err.Error())
-				return
+				return false
 			}
 		}
 	}
+	return true
+}
 
-	// only get the artists from plex once
+func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
+	tracker := c.JobTracker
+	if tracker == nil {
+		http.Error(w, "Job tracker not available", http.StatusInternalServerError)
+		return
+	}
+
+	playlist := r.FormValue("playlist")
+	lookup := r.FormValue("lookup")
+	if !c.validateLookupConfig(w, r, lookup) {
+		return
+	}
+
+	// Get artists from plex
+	var plexMusic []types.PlexMusicArtist
 	if playlist == "all" {
 		plexMusic = plex.AllMusicArtists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexMusicLibraryID)
 	} else {
 		plexMusic = plex.GetArtistsFromPlaylist(c.Config.PlexIP, c.Config.PlexToken, playlist)
 	}
 
-	var searchResult types.MusicSearchResponse
-	artistsJobRunning = true
-	numberOfArtistsProcessed = 0
-	totalArtists = len(plexMusic) - 1
-
-	fmt.Fprintf(w, `<div hx-get="/musicprogress" hx-trigger="every 100ms" hx-boost="true" class="container" id="progress">
-		<progress value="%d" max= "%d"/></div>`, numberOfArtistsProcessed, totalArtists)
-	startTime := time.Now()
-
-	switch lookup {
-	case "musicbrainz":
-		// limit the number of artists to 50 for nonlocal musicbrainz instances
-		if strings.Contains(c.Config.MusicBrainzURL, "musicbrainz.org") {
-			plexMusic = plexMusic[:50]
-			totalArtists = len(plexMusic) - 1
+	// Limit for non-local musicbrainz
+	totalArtists := len(plexMusic)
+	if lookup == lookupTypeMusicBrainz && strings.Contains(c.Config.MusicBrainzURL, "musicbrainz.org") {
+		if len(plexMusic) > minArtistsForEstimate {
+			plexMusic = plexMusic[:minArtistsForEstimate]
+			totalArtists = minArtistsForEstimate
 		}
-		go func() {
+	}
+
+	// Create job
+	jobID, ctx := tracker.CreateJob("music", totalArtists)
+
+	// Return initial progress bar
+	fmt.Fprintf(w, `<div hx-get="/progress/%s" hx-trigger="every 100ms" class="container" id="progress">
+		<progress value="0" max="%d"></progress></div>`, jobID, totalArtists)
+
+	// Start processing in goroutine
+	go func() {
+		startTime := time.Now()
+		var artistsSearchResults []types.MusicSearchResponse
+
+		progressFunc := func(current int, phase string) {
+			tracker.UpdateProgress(jobID, current, phase)
+		}
+
+		switch lookup {
+		case "musicbrainz":
 			for i := range plexMusic {
+				// Check cancellation
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
 				fmt.Print(".")
-				searchResult, _ = musicbrainz.SearchMusicBrainzArtist(&plexMusic[i], c.Config.MusicBrainzURL)
+				searchResult, _ := musicbrainz.SearchMusicBrainzArtist(ctx, &plexMusic[i], c.Config.MusicBrainzURL)
 				artistsSearchResults = append(artistsSearchResults, searchResult)
-				numberOfArtistsProcessed = i
+				progressFunc(i+1, "Searching MusicBrainz")
 			}
-			artistsJobRunning = false
-		}()
-	default:
-		// search spotify
-		go func() {
-			artistsSearchResults = spotify.GetArtistsInParallel(plexMusic, spotifyToken)
-			artistsSearchResults = spotify.GetAlbumsInParallel(artistsSearchResults, spotifyToken)
+		default:
+			// Search spotify
+			artistsSearchResults = spotify.GetArtistsInParallel(ctx, progressFunc, plexMusic, spotifyToken)
+			artistsSearchResults = spotify.GetAlbumsInParallel(ctx, progressFunc, artistsSearchResults, spotifyToken)
 			// sanitize album titles
 			artistsSearchResults = sanitizeAlbumTitles(artistsSearchResults)
-			artistsJobRunning = false
-		}()
-	}
+		}
 
-	fmt.Printf("Processed %d artists in %v\n", len(plexMusic), time.Since(startTime))
+		// Generate results table HTML
+		tableHTML := renderArtistAlbumsTable(artistsSearchResults)
+		resultsHTML := fmt.Sprintf(`<table class="table-sortable" hx-boost="true">%s</tbody></table>
+		<script>document.querySelector('.table-sortable').tsortable()</script>`, tableHTML)
+
+		tracker.MarkComplete(jobID, resultsHTML)
+		fmt.Printf("\nProcessed %d artists in %v\n", len(plexMusic), time.Since(startTime))
+	}()
 }
 
-func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
-	if lookup == spotifyString {
-		numberOfArtistsProcessed = spotify.GetJobProgress()
-	}
-	if artistsJobRunning {
-		fmt.Fprintf(w, `<div hx-get="/musicprogress" hx-trigger="every 100ms" class="container" hx-boost="true" id="progress" hx-swap="outerHTML">
-		<progress value="%d" max= "%d"/></div>`, numberOfArtistsProcessed, totalArtists)
-	} else {
-		tableContents := renderArtistAlbumsTable()
-		fmt.Fprintf(w,
-			`<table class="table-sortable" hx-boost="true">%s</tbody></table>
-		</script><script>document.querySelector('.table-sortable').tsortable()</script>`,
-			tableContents)
-		// reset variables
-		numberOfArtistsProcessed = 0
-		totalArtists = 0
-	}
-}
-
-func renderArtistAlbumsTable() (tableRows string) {
+func renderArtistAlbumsTable(artistsSearchResults []types.MusicSearchResponse) (tableRows string) {
 	searchResults := filterMusicSearchResults(artistsSearchResults)
 	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Artist</strong></th><th data-sort="int">First album</th><th data-sort="int">Last album</th><th data-sort="int"><strong>Owned Albums</strong></th><th data-sort="int"><strong>Wanted Albums</strong></th></tr></thead><tbody>`
 	for i := range searchResults {

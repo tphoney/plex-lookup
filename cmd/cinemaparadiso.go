@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/tphoney/plex-lookup/cinemaparadiso"
@@ -24,7 +25,7 @@ func performCinemaParadisoLookup() {
 	if libraryType == types.PlexMovieType {
 		plexMovies := initializePlexMovies()
 		// lets search movies in cinemaparadiso
-		searchResults := cinemaparadiso.MoviesInParallel(plexMovies)
+		searchResults := cinemaparadiso.MoviesInParallel(context.Background(), nil, plexMovies)
 		// if hit, and contains any format that isnt dvd, print the movie
 		for i := range searchResults {
 			for _, individualResult := range searchResults[i].MovieSearchResults {

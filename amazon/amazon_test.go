@@ -1,6 +1,7 @@
 package amazon
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -43,7 +44,7 @@ func TestFindMoviesInResponse(t *testing.T) {
 }
 
 func TestSearchAmazon(t *testing.T) {
-	result := MoviesInParallel([]types.PlexMovie{{Title: "napoleon dynamite", Year: "2004"}}, "", amazonRegion)
+	result := MoviesInParallel(context.Background(), nil, []types.PlexMovie{{Title: "napoleon dynamite", Year: "2004"}}, "", amazonRegion)
 	if len(result) == 0 {
 		t.Errorf("Expected search results, but got none")
 	}
@@ -66,7 +67,7 @@ func TestSearchAmazonTV(t *testing.T) {
 		Title: "Star Trek: Enterprise",
 		Year:  "2001",
 	}
-	result := TVInParallel([]types.PlexTVShow{show}, "", amazonRegion)
+	result := TVInParallel(t.Context(), nil, []types.PlexTVShow{show}, "", amazonRegion)
 
 	if len(result) == 0 {
 		t.Errorf("Expected search results, but got none")
@@ -74,7 +75,7 @@ func TestSearchAmazonTV(t *testing.T) {
 }
 
 func TestScrapeTitlesParallel(t *testing.T) {
-	result := ScrapeTitlesParallel([]types.TVSearchResponse{
+	result := ScrapeTitlesParallel(t.Context(), []types.TVSearchResponse{
 		{
 			PlexTVShow: types.PlexTVShow{
 				Title: "Some TV Show",

@@ -1,6 +1,7 @@
 package musicbrainz
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -20,7 +21,14 @@ const (
 	lookupTimeout = 2
 )
 
-func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist, musicBrainzURL string) (artist types.MusicSearchResponse, err error) {
+func SearchMusicBrainzArtist(ctx context.Context, plexArtist *types.PlexMusicArtist, musicBrainzURL string) (artist types.MusicSearchResponse, err error) {
+	// Check for cancellation
+	select {
+	case <-ctx.Done():
+		return artist, ctx.Err()
+	default:
+	}
+
 	artist.PlexMusicArtist = *plexArtist
 	client, err := gomusicbrainz.NewWS2Client(
 		musicBrainzURL, agent, agentVersion, "")
@@ -58,7 +66,7 @@ func SearchMusicBrainzArtist(plexArtist *types.PlexMusicArtist, musicBrainzURL s
 		if err.Error() == "EOF" {
 			fmt.Printf("!")
 			time.Sleep(lookupTimeout * time.Second)
-			return SearchMusicBrainzArtist(plexArtist, musicBrainzURL)
+			return SearchMusicBrainzArtist(ctx, plexArtist, musicBrainzURL)
 		}
 	}
 

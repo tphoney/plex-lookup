@@ -30,26 +30,43 @@ var (
 )
 
 // nolint: dupl, nolintlint
-func MoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.MovieSearchResponse) {
+func MoviesInParallel(ctx context.Context, progressFunc func(int), plexMovies []types.PlexMovie) (searchResults []types.MovieSearchResponse) {
 	numberMoviesProcessed.Store(0)
+	processed := 0
 	mapper := iter.Mapper[types.PlexMovie, types.MovieSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
 	searchResults = mapper.Map(plexMovies, func(pm *types.PlexMovie) types.MovieSearchResponse {
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			return types.MovieSearchResponse{}
+		default:
+		}
 		result := searchCinemaParadisoMovieResponse(pm)
 		numberMoviesProcessed.Add(1)
+		processed++
+		if progressFunc != nil {
+			progressFunc(processed)
+		}
 		return result
 	})
 	numberMoviesProcessed.Store(0) // job is done
 	return searchResults
 }
 
-func ScrapeMoviesParallel(searchResults []types.MovieSearchResponse) []types.MovieSearchResponse {
+func ScrapeMoviesParallel(ctx context.Context, searchResults []types.MovieSearchResponse) []types.MovieSearchResponse {
 	numberMoviesProcessed.Store(0)
 	mapper := iter.Mapper[types.MovieSearchResponse, types.MovieSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
 	detailedSearchResults := mapper.Map(searchResults, func(result *types.MovieSearchResponse) types.MovieSearchResponse {
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			return types.MovieSearchResponse{}
+		default:
+		}
 		res := scrapeMovieTitleResponseValue(result)
 		numberMoviesProcessed.Add(1)
 		return res
@@ -59,14 +76,25 @@ func ScrapeMoviesParallel(searchResults []types.MovieSearchResponse) []types.Mov
 }
 
 // nolint: dupl, nolintlint
-func TVInParallel(plexTVShows []types.PlexTVShow) (searchResults []types.TVSearchResponse) {
+func TVInParallel(ctx context.Context, progressFunc func(int), plexTVShows []types.PlexTVShow) (searchResults []types.TVSearchResponse) {
 	numberTVProcessed.Store(0)
+	processed := 0
 	mapper := iter.Mapper[types.PlexTVShow, types.TVSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
 	searchResults = mapper.Map(plexTVShows, func(tv *types.PlexTVShow) types.TVSearchResponse {
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			return types.TVSearchResponse{}
+		default:
+		}
 		result := searchTVShowResponseValue(tv)
 		numberTVProcessed.Add(1)
+		processed++
+		if progressFunc != nil {
+			progressFunc(processed)
+		}
 		return result
 	})
 	numberTVProcessed.Store(0) // job is done

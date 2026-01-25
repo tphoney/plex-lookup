@@ -11,8 +11,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	"github.com/sourcegraph/conc/iter"
 	"github.com/tphoney/plex-lookup/types"
 	"github.com/tphoney/plex-lookup/utils"
 )
@@ -23,175 +25,79 @@ const (
 )
 
 var (
-	numberMoviesProcessed int = 0
-	numberTVProcessed     int = 0
+	numberMoviesProcessed atomic.Int32
+	numberTVProcessed     atomic.Int32
 )
 
 // nolint: dupl, nolintlint
 func MoviesInParallel(plexMovies []types.PlexMovie) (searchResults []types.MovieSearchResponse) {
-	numberMoviesProcessed = 0
-	ch := make(chan types.MovieSearchResponse, len(plexMovies))
-	semaphore := make(chan struct{}, types.ConcurrencyLimit)
-
-	for i := range plexMovies {
-		go func(i int) {
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-			searchCinemaParadisoMovieResponse(&plexMovies[i], ch)
-		}(i)
+	numberMoviesProcessed.Store(0)
+	mapper := iter.Mapper[types.PlexMovie, types.MovieSearchResponse]{
+		MaxGoroutines: types.ConcurrencyLimit,
 	}
-
-	searchResults = make([]types.MovieSearchResponse, 0, len(plexMovies))
-	for range plexMovies {
-		result := <-ch
-		searchResults = append(searchResults, result)
-		numberMoviesProcessed++
-	}
-	numberMoviesProcessed = 0 // job is done
+	searchResults = mapper.Map(plexMovies, func(pm *types.PlexMovie) types.MovieSearchResponse {
+		result := searchCinemaParadisoMovieResponse(pm)
+		numberMoviesProcessed.Add(1)
+		return result
+	})
+	numberMoviesProcessed.Store(0) // job is done
 	return searchResults
 }
 
 func ScrapeMoviesParallel(searchResults []types.MovieSearchResponse) []types.MovieSearchResponse {
-	numberMoviesProcessed = 0
-	ch := make(chan types.MovieSearchResponse, len(searchResults))
-	semaphore := make(chan struct{}, types.ConcurrencyLimit)
-
-	for i := range searchResults {
-		go func(i int) {
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-			scrapeMovieTitleResponse(&searchResults[i], ch)
-		}(i)
+	numberMoviesProcessed.Store(0)
+	mapper := iter.Mapper[types.MovieSearchResponse, types.MovieSearchResponse]{
+		MaxGoroutines: types.ConcurrencyLimit,
 	}
-	detailedSearchResults := make([]types.MovieSearchResponse, 0, len(searchResults))
-	for range searchResults {
-		result := <-ch
-		detailedSearchResults = append(detailedSearchResults, result)
-		numberMoviesProcessed++
-	}
-	numberMoviesProcessed = 0 // job is done
+	detailedSearchResults := mapper.Map(searchResults, func(result *types.MovieSearchResponse) types.MovieSearchResponse {
+		res := scrapeMovieTitleResponseValue(result)
+		numberMoviesProcessed.Add(1)
+		return res
+	})
+	numberMoviesProcessed.Store(0) // job is done
 	return detailedSearchResults
 }
 
 // nolint: dupl, nolintlint
 func TVInParallel(plexTVShows []types.PlexTVShow) (searchResults []types.TVSearchResponse) {
-	ch := make(chan types.TVSearchResponse, len(plexTVShows))
-	semaphore := make(chan struct{}, types.ConcurrencyLimit)
-
-	for i := range plexTVShows {
-		go func(i int) {
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-			searchTVShowResponse(&plexTVShows[i], ch)
-		}(i)
+	numberTVProcessed.Store(0)
+	mapper := iter.Mapper[types.PlexTVShow, types.TVSearchResponse]{
+		MaxGoroutines: types.ConcurrencyLimit,
 	}
-
-	searchResults = make([]types.TVSearchResponse, 0, len(plexTVShows))
-	for range plexTVShows {
-		result := <-ch
-		searchResults = append(searchResults, result)
-		numberTVProcessed++
-	}
-	numberTVProcessed = 0 // job is done
+	searchResults = mapper.Map(plexTVShows, func(tv *types.PlexTVShow) types.TVSearchResponse {
+		result := searchTVShowResponseValue(tv)
+		numberTVProcessed.Add(1)
+		return result
+	})
+	numberTVProcessed.Store(0) // job is done
 	return searchResults
 }
 
-func GetMovieJobProgress() int {
-	return numberMoviesProcessed
-}
-
-func GetTVJobProgress() int {
-	return numberTVProcessed
-}
-
-func searchCinemaParadisoMovieResponse(plexMovie *types.PlexMovie, movieSearchResult chan<- types.MovieSearchResponse) {
-	result := types.MovieSearchResponse{}
-	result.PlexMovie = *plexMovie
-	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
-	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
-	rawData, err := makeRequest(result.SearchURL, http.MethodPost, fmt.Sprintf("form-search-field=%s", urlEncodedTitle))
-	if err != nil {
-		fmt.Println("searchCinemaParadisoMovie:", err)
-		movieSearchResult <- result
-		return
-	}
-
-	moviesFound, _ := findTitlesInResponse(rawData, true)
-	result.MovieSearchResults = moviesFound
-	result = utils.MarkBestMatchMovieResponse(&result)
-	movieSearchResult <- result
-}
-
-func scrapeMovieTitleResponse(result *types.MovieSearchResponse, movieSearchResult chan<- types.MovieSearchResponse) {
-	// now we can get the season information for each best match
-	for i := range result.MovieSearchResults {
-		if !result.MovieSearchResults[i].BestMatch {
-			continue
-		}
-		rawData, err := makeRequest(result.MovieSearchResults[i].URL, http.MethodGet, "")
-		if err != nil {
-			fmt.Println("scrapeMovieTitle:", err)
-			movieSearchResult <- *result
-			return
-		}
-		// search for the release date <dt>Release Date:</dt><dd>29/07/2013</dd>
-		r := regexp.MustCompile(`<section id="format-(.*?)".*?Release Date:<\/dt><dd>(.*?)<\/dd>`)
-		// this will match multiple times for different formats eg DVD, Blu-ray, 4K
-		match := r.FindAllStringSubmatch(rawData, -1)
-		discReleases := make(map[string]time.Time)
-		for i := range match {
-			switch match[i][1] {
-			case "1":
-				discReleases[types.DiskDVD], _ = time.Parse("02/01/2006", match[i][2])
-			case "3":
-				discReleases[types.DiskBluray], _ = time.Parse("02/01/2006", match[i][2])
-			case "14":
-				discReleases[types.Disk4K], _ = time.Parse("02/01/2006", match[i][2])
-			}
-		}
-		_, ok := discReleases[result.MovieSearchResults[i].Format]
-		if ok {
-			result.MovieSearchResults[i].ReleaseDate = discReleases[result.MovieSearchResults[i].Format]
-		} else {
-			result.MovieSearchResults[i].ReleaseDate = time.Time{}
-		}
-		// check if the release date is after the date the movie was added to plexs
-		if result.MovieSearchResults[i].ReleaseDate.After(result.DateAdded) {
-			result.MovieSearchResults[i].NewRelease = true
-		}
-	}
-	movieSearchResult <- *result
-}
-
-func searchTVShowResponse(plexTVShow *types.PlexTVShow, tvSearchResult chan<- types.TVSearchResponse) {
+// searchTVShowResponseValue is a value-returning version for use with iter.Map
+func searchTVShowResponseValue(plexTVShow *types.PlexTVShow) types.TVSearchResponse {
 	result := types.TVSearchResponse{}
 	urlEncodedTitle := url.QueryEscape(plexTVShow.Title)
 	result.PlexTVShow = *plexTVShow
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
-	// Use GET for TV searches - POST seems to filter results differently
 	rawData, err := makeRequest(result.SearchURL, http.MethodGet, "")
 	if err != nil {
 		fmt.Println("searchTVShow: Error making web request:", err)
-		tvSearchResult <- result
-		return
+		return result
 	}
 
 	_, tvFound := findTitlesInResponse(rawData, false)
 	result.TVSearchResults = tvFound
 	result = utils.MarkBestMatchTVResponse(&result)
-	// now we can get the season information for each best match
 	for i := range result.TVSearchResults {
 		if result.TVSearchResults[i].BestMatch {
 			seasonInfo, _ := findTVSeasonInfo(result.TVSearchResults[i].URL)
 			if len(seasonInfo) == 0 {
-				// we have no season information, likely because it has not been released properly, and it cannot be a best match
 				seasonInfo = append(seasonInfo, types.TVSeasonResult{Number: 1, Format: "DVD", URL: result.TVSearchResults[i].URL})
 				result.TVSearchResults[i].BestMatch = false
 			}
 			result.TVSearchResults[i].Seasons = seasonInfo
 		}
 	}
-	// Count disc formats for UI rendering
 	result.MatchesDVD = 0
 	result.MatchesBluray = 0
 	result.Matches4k = 0
@@ -207,7 +113,71 @@ func searchTVShowResponse(plexTVShow *types.PlexTVShow, tvSearchResult chan<- ty
 			}
 		}
 	}
-	tvSearchResult <- result
+	return result
+}
+
+func GetMovieJobProgress() int {
+	return int(numberMoviesProcessed.Load())
+}
+
+func GetTVJobProgress() int {
+	return int(numberTVProcessed.Load())
+}
+
+func searchCinemaParadisoMovieResponse(plexMovie *types.PlexMovie) types.MovieSearchResponse {
+	result := types.MovieSearchResponse{}
+	result.PlexMovie = *plexMovie
+	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
+	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
+	rawData, err := makeRequest(result.SearchURL, http.MethodPost, fmt.Sprintf("form-search-field=%s", urlEncodedTitle))
+	if err != nil {
+		fmt.Println("searchCinemaParadisoMovie:", err)
+		return result
+	}
+
+	moviesFound, _ := findTitlesInResponse(rawData, true)
+	result.MovieSearchResults = moviesFound
+	result = utils.MarkBestMatchMovieResponse(&result)
+	return result
+}
+
+// scrapeMovieTitleResponseValue is a value-returning version for use with iter.Map
+func scrapeMovieTitleResponseValue(result *types.MovieSearchResponse) types.MovieSearchResponse {
+	// Copy to avoid mutating input
+	res := *result
+	for i := range res.MovieSearchResults {
+		if !res.MovieSearchResults[i].BestMatch {
+			continue
+		}
+		rawData, err := makeRequest(res.MovieSearchResults[i].URL, http.MethodGet, "")
+		if err != nil {
+			fmt.Println("scrapeMovieTitle:", err)
+			return res
+		}
+		r := regexp.MustCompile(`<section id="format-(.*?)".*?Release Date:<\/dt><dd>(.*?)<\/dd>`)
+		match := r.FindAllStringSubmatch(rawData, -1)
+		discReleases := make(map[string]time.Time)
+		for i := range match {
+			switch match[i][1] {
+			case "1":
+				discReleases[types.DiskDVD], _ = time.Parse("02/01/2006", match[i][2])
+			case "3":
+				discReleases[types.DiskBluray], _ = time.Parse("02/01/2006", match[i][2])
+			case "14":
+				discReleases[types.Disk4K], _ = time.Parse("02/01/2006", match[i][2])
+			}
+		}
+		_, ok := discReleases[res.MovieSearchResults[i].Format]
+		if ok {
+			res.MovieSearchResults[i].ReleaseDate = discReleases[res.MovieSearchResults[i].Format]
+		} else {
+			res.MovieSearchResults[i].ReleaseDate = time.Time{}
+		}
+		if res.MovieSearchResults[i].ReleaseDate.After(res.DateAdded) {
+			res.MovieSearchResults[i].NewRelease = true
+		}
+	}
+	return res
 }
 
 func findTVSeasonInfo(seriesURL string) (tvSeasons []types.TVSeasonResult, err error) {

@@ -29,8 +29,8 @@ func performCinemaParadisoLookup() {
 		for i := range searchResults {
 			for _, individualResult := range searchResults[i].MovieSearchResults {
 				if individualResult.BestMatch && (individualResult.Format == types.DiskBluray || individualResult.Format == types.Disk4K) {
-					fmt.Printf("%s - %s (%s): %s\n", searchResults[i].PlexMovie.Title, individualResult.Format,
-						searchResults[i].PlexMovie.Year, individualResult.URL)
+					fmt.Printf("%s - %s (%s): %s\n", searchResults[i].Title, individualResult.Format,
+						searchResults[i].Year, individualResult.URL)
 				}
 			}
 		}

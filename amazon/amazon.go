@@ -77,20 +77,20 @@ var (
 )
 
 // nolint: dupl, nolintlint
-func MoviesInParallel(plexMovies []types.PlexMovie, language, region string) (searchResults []types.SearchResult) {
+func MoviesInParallel(plexMovies []types.PlexMovie, language, region string) (searchResults []types.MovieSearchResponse) {
 	numberMoviesProcessed = 0
-	ch := make(chan types.SearchResult, len(plexMovies))
+	ch := make(chan types.MovieSearchResponse, len(plexMovies))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 
 	for i := range plexMovies {
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			searchMovie(&plexMovies[i], language, region, ch)
+			searchMovieResponse(&plexMovies[i], language, region, ch)
 		}(i)
 	}
 
-	searchResults = make([]types.SearchResult, 0, len(plexMovies))
+	searchResults = make([]types.MovieSearchResponse, 0, len(plexMovies))
 	for range plexMovies {
 		result := <-ch
 		searchResults = append(searchResults, result)
@@ -134,24 +134,18 @@ func GetTVJobProgress() int {
 	return numberTVProcessed
 }
 
-func ScrapeTitlesParallel(searchResults []types.SearchResult, region string, isTV bool) (scrapedResults []types.SearchResult) {
-	// are we tv or movie
-	if isTV {
-		numberTVProcessed = 0
-	} else {
-		numberMoviesProcessed = 0
-	}
+// ScrapeTitlesParallel now only handles TV. Use ScrapeMovieTitlesParallel for movies.
+//
+//nolint:dupl // TODO: refactor duplicate code
+func ScrapeTitlesParallel(searchResults []types.SearchResult, region string) (scrapedResults []types.SearchResult) {
+	numberTVProcessed = 0
 	ch := make(chan types.SearchResult, len(searchResults))
 	semaphore := make(chan struct{}, types.ConcurrencyLimit)
 	for i := range searchResults {
 		go func(i int) {
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
-			if isTV {
-				scrapeTVTitles(&searchResults[i], region, ch)
-			} else {
-				scrapeMovieTitles(&searchResults[i], region, ch)
-			}
+			scrapeTVTitles(&searchResults[i], region, ch)
 		}(i)
 	}
 
@@ -159,24 +153,42 @@ func ScrapeTitlesParallel(searchResults []types.SearchResult, region string, isT
 	for range searchResults {
 		result := <-ch
 		scrapedResults = append(scrapedResults, result)
-		if isTV {
-			numberTVProcessed++
-		} else {
-			numberMoviesProcessed++
-		}
+		numberTVProcessed++
 	}
-	if isTV {
-		numberTVProcessed = 0
-	} else {
-		numberMoviesProcessed = 0
+	numberTVProcessed = 0
+	fmt.Println("amazon TV titles scraped:", len(scrapedResults))
+	return scrapedResults
+}
+
+// ScrapeMovieTitlesParallel handles scraping movie titles for MovieSearchResponse.
+//
+//nolint:dupl // TODO: refactor duplicate code
+func ScrapeMovieTitlesParallel(searchResults []types.MovieSearchResponse, region string) (scrapedResults []types.MovieSearchResponse) {
+	numberMoviesProcessed = 0
+	ch := make(chan types.MovieSearchResponse, len(searchResults))
+	semaphore := make(chan struct{}, types.ConcurrencyLimit)
+	for i := range searchResults {
+		go func(i int) {
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+			scrapeMovieTitlesResponse(&searchResults[i], region, ch)
+		}(i)
 	}
-	fmt.Println("amazon titles scraped:", len(scrapedResults))
+
+	scrapedResults = make([]types.MovieSearchResponse, 0, len(searchResults))
+	for range searchResults {
+		result := <-ch
+		scrapedResults = append(scrapedResults, result)
+		numberMoviesProcessed++
+	}
+	numberMoviesProcessed = 0
+	fmt.Println("amazon movies scraped:", len(scrapedResults))
 	return scrapedResults
 }
 
 // nolint: dupl, nolintlint
-func scrapeMovieTitles(searchResult *types.SearchResult, region string, ch chan<- types.SearchResult) {
-	dateAdded := searchResult.PlexMovie.DateAdded
+func scrapeMovieTitlesResponse(searchResult *types.MovieSearchResponse, region string, ch chan<- types.MovieSearchResponse) {
+	dateAdded := searchResult.DateAdded
 	for i := range searchResult.MovieSearchResults {
 		// this is to limit the number of requests
 		if !searchResult.MovieSearchResults[i].BestMatch {
@@ -315,23 +327,23 @@ func scrapeTVTitles(searchResult *types.SearchResult, region string, ch chan<- t
 }
 
 // nolint: dupl, nolintlint
-func searchMovie(plexMovie *types.PlexMovie, language, region string, movieSearchResult chan<- types.SearchResult) {
-	result := types.SearchResult{}
+func searchMovieResponse(plexMovie *types.PlexMovie, language, region string, movieSearchResult chan<- types.MovieSearchResponse) {
+	result := types.MovieSearchResponse{}
 	result.PlexMovie = *plexMovie
 
 	urlEncodedTitle := url.QueryEscape(plexMovie.Title)
-	amazonURL := amazonURL + urlEncodedTitle
+	searchURL := amazonURL + urlEncodedTitle
 	// this searches for the movie in a language
 	switch language {
 	case LanguageGerman:
-		amazonURL += "&audio=" + language
+		searchURL += "&audio=" + language
 	default:
 		// do nothing
 	}
-	amazonURL += "&submit=Search&action=search"
+	searchURL += "&submit=Search&action=search"
 
-	result.SearchURL = amazonURL
-	rawData, err := makeRequest(amazonURL, region)
+	result.SearchURL = searchURL
+	rawData, err := makeRequest(searchURL, region)
 	if err != nil {
 		fmt.Println("searchMovie: Error making request:", err)
 		movieSearchResult <- result
@@ -340,7 +352,7 @@ func searchMovie(plexMovie *types.PlexMovie, language, region string, movieSearc
 
 	moviesFound, _ := findTitlesInResponse(rawData, true)
 	result.MovieSearchResults = moviesFound
-	result = utils.MarkBestMatchMovie(&result)
+	result = utils.MarkBestMatchMovieResponse(&result)
 	movieSearchResult <- result
 }
 

@@ -208,8 +208,8 @@ func TestSearchCinemaParadisoMovies(t *testing.T) {
 		Title: "Cats",
 		Year:  "1998",
 	}
-	ch := make(chan types.SearchResult, 1)
-	searchCinemaParadisoMovie(&movie, ch)
+	ch := make(chan types.MovieSearchResponse, 1)
+	searchCinemaParadisoMovieResponse(&movie, ch)
 	result := <-ch
 
 	if len(result.MovieSearchResults) == 0 {
@@ -222,7 +222,7 @@ func TestSearchCinemaParadisoMovies(t *testing.T) {
 }
 func TestScrapeMovieTitlesParallel(t *testing.T) {
 	t.Parallel()
-	searchResults := []types.SearchResult{
+	searchResults := []types.MovieSearchResponse{
 		{
 			PlexMovie: types.PlexMovie{
 				Title: "Elf",

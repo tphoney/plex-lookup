@@ -18,17 +18,27 @@ const (
 	StringTrue         = "true"
 )
 
+// SearchResult is the legacy catch-all struct. Will be split per domain.
 type SearchResult struct {
-	PlexMovie
 	PlexTVShow
 	PlexMusicArtist
+	SearchURL          string
+	TVSearchResults    []TVSearchResult
+	MusicSearchResults []MusicArtistSearchResult
+	Matches4k          int
+	MatchesBluray      int
+	MatchesDVD         int
+	// Movie-specific fields have been removed; use MovieSearchResponse for movies.
+}
+
+// MovieSearchResponse is the new dedicated struct for movie search results.
+type MovieSearchResponse struct {
+	PlexMovie
 	SearchURL          string
 	Matches4k          int
 	MatchesBluray      int
 	MatchesDVD         int
 	MovieSearchResults []MovieSearchResult
-	TVSearchResults    []TVSearchResult
-	MusicSearchResults []MusicArtistSearchResult
 }
 
 type Configuration struct {

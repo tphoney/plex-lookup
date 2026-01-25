@@ -20,7 +20,7 @@ var (
 	numberOfMoviesProcessed int  = 0
 	jobRunning              bool = false
 	totalMovies             int  = 0
-	searchResults           []types.SearchResult
+	searchResults           []types.MovieSearchResponse
 	plexMovies              []types.PlexMovie
 	lookup                  string
 	lookupFilters           types.MovieLookupFilters
@@ -92,7 +92,7 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 			searchResults = amazon.MoviesInParallel(plexMovies, lookupFilters.AudioLanguage, c.Config.AmazonRegion)
 			// if we are filtering by newer version, we need to search again
 			if lookupFilters.NewerVersion {
-				searchResults = amazon.ScrapeTitlesParallel(searchResults, c.Config.AmazonRegion, false)
+				searchResults = amazon.ScrapeMovieTitlesParallel(searchResults, c.Config.AmazonRegion)
 			}
 		}
 
@@ -121,11 +121,11 @@ func ProgressBarHTML(w http.ResponseWriter, _ *http.Request) {
 		// reset variables
 		numberOfMoviesProcessed = 0
 		totalMovies = 0
-		searchResults = []types.SearchResult{}
+		searchResults = []types.MovieSearchResponse{}
 	}
 }
 
-func renderTable(searchResults []types.SearchResult) (tableRows string) {
+func renderTable(searchResults []types.MovieSearchResponse) (tableRows string) {
 	tableRows = `<thead><tr><th data-sort="string"><strong>Plex Title</strong></th><th data-sort="string"><strong>Plex Audio</strong></th><th data-sort="string"><strong>Plex Resolution</strong></th><th data-sort="int"><strong>Blu-ray</strong></th><th data-sort="int"><strong>4K-ray</strong></th><th data-sort="string"><strong>New release</strong></th><th><strong>Available Discs</strong></th></tr></thead><tbody>`
 	for i := range searchResults {
 		newRelease := "no"
@@ -137,7 +137,7 @@ func renderTable(searchResults []types.SearchResult) (tableRows string) {
 		}
 		tableRows += fmt.Sprintf(
 			`<tr><td><a href=%q target="_blank">%s [%v]</a></td><td>%s</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td>`,
-			searchResults[i].SearchURL, searchResults[i].PlexMovie.Title, searchResults[i].PlexMovie.Year, searchResults[i].AudioLanguages,
+			searchResults[i].SearchURL, searchResults[i].Title, searchResults[i].Year, searchResults[i].AudioLanguages,
 			searchResults[i].Resolution, searchResults[i].MatchesBluray, searchResults[i].Matches4k, newRelease)
 		if searchResults[i].MatchesBluray+searchResults[i].Matches4k > 0 {
 			tableRows += "<td>"

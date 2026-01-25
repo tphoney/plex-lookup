@@ -87,7 +87,7 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 			tvSearchResults = cinemaparadiso.TVInParallel(plexTV)
 		} else {
 			tvSearchResults = amazon.TVInParallel(plexTV, filters.AudioLanguage, c.Config.AmazonRegion)
-			tvSearchResults = amazon.ScrapeTitlesParallel(tvSearchResults, c.Config.AmazonRegion, true)
+			tvSearchResults = amazon.ScrapeTitlesParallel(tvSearchResults, c.Config.AmazonRegion)
 		}
 		tvJobRunning = false
 		fmt.Printf("\nProcessed %d TV Shows in %v\n", totalTV, time.Since(startTime))
@@ -127,7 +127,7 @@ func renderTVTable(searchResults []types.SearchResult) (tableRows string) {
 		plexSeasonsString = plexSeasonsString[:len(plexSeasonsString)-1] // remove trailing comma
 		tableRows += fmt.Sprintf(
 			`<tr><td><a href=%q target="_blank">%s [%v]:<br>%s</a></td><td>%d</td><td>%d</td><td>%d</td>`,
-			searchResults[i].SearchURL, searchResults[i].PlexTVShow.Title, searchResults[i].PlexTVShow.Year, plexSeasonsString,
+			searchResults[i].SearchURL, searchResults[i].Title, searchResults[i].Year, plexSeasonsString,
 			searchResults[i].MatchesDVD, searchResults[i].MatchesBluray, searchResults[i].Matches4k)
 		if (searchResults[i].MatchesDVD + searchResults[i].MatchesBluray + searchResults[i].Matches4k) > 0 {
 			tableRows += "<td>"

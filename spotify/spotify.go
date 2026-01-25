@@ -9,19 +9,21 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	"github.com/sourcegraph/conc/iter"
 	"github.com/tphoney/plex-lookup/types"
 )
 
 const (
-	spotifyAPIURL  = "https://api.spotify.com/v1"
-	lookupTimeout  = 10
-	spotifyThreads = 2
+	spotifyAPIURL      = "https://api.spotify.com/v1"
+	lookupTimeout      = 10
+	spotifyConcurrency = 2
 )
 
 var (
-	numberOfArtistsProcessed int
+	numberOfArtistsProcessed atomic.Int32
 )
 
 type ArtistResponse struct {
@@ -103,57 +105,37 @@ type SimilarArtistsResponse struct {
 }
 
 func GetArtistsInParallel(plexArtists []types.PlexMusicArtist, token string) []types.MusicSearchResponse {
-	numberOfArtistsProcessed = 0
-	ch := make(chan *types.MusicSearchResponse, len(plexArtists))
-	semaphore := make(chan struct{}, spotifyThreads)
-	for i := range len(plexArtists) {
-		go func(i int) {
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-			searchSpotifyArtist(&plexArtists[i], token, ch)
-		}(i)
+	numberOfArtistsProcessed.Store(0)
+	mapper := iter.Mapper[types.PlexMusicArtist, types.MusicSearchResponse]{
+		MaxGoroutines: spotifyConcurrency,
 	}
-	// gather results
-	artistsSearchResults := make([]types.MusicSearchResponse, 0, len(plexArtists))
-	for range len(plexArtists) {
-		result := <-ch
-		artistsSearchResults = append(artistsSearchResults, *result)
+	artistsSearchResults := mapper.Map(plexArtists, func(artist *types.PlexMusicArtist) types.MusicSearchResponse {
+		result := searchSpotifyArtistValue(artist, token)
+		numberOfArtistsProcessed.Add(1)
 		fmt.Print(".")
-		numberOfArtistsProcessed++
-	}
-	numberOfArtistsProcessed = 0
+		return result
+	})
+	numberOfArtistsProcessed.Store(0)
 	return artistsSearchResults
 }
 
 func GetAlbumsInParallel(artistsSearchResults []types.MusicSearchResponse, token string) []types.MusicSearchResponse {
-	numberOfArtistsProcessed = 0
-	ch := make(chan *types.MusicSearchResponse, len(artistsSearchResults))
-	semaphore := make(chan struct{}, spotifyThreads)
-	for i := range artistsSearchResults {
-		go func(i int) {
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-			searchSpotifyAlbum(&artistsSearchResults[i], token, ch)
-		}(i)
+	numberOfArtistsProcessed.Store(0)
+	mapper := iter.Mapper[types.MusicSearchResponse, types.MusicSearchResponse]{
+		MaxGoroutines: spotifyConcurrency,
 	}
-	// gather results
-	enrichedArtistSearchResults := make([]types.MusicSearchResponse, 0)
-	for range artistsSearchResults {
-		result := <-ch
-		enrichedArtistSearchResults = append(enrichedArtistSearchResults, *result)
+	enrichedArtistSearchResults := mapper.Map(artistsSearchResults, func(result *types.MusicSearchResponse) types.MusicSearchResponse {
+		res := searchSpotifyAlbumValue(result, token)
+		numberOfArtistsProcessed.Add(1)
 		fmt.Print(".")
-		numberOfArtistsProcessed++
-	}
-	numberOfArtistsProcessed = 0
+		return res
+	})
+	numberOfArtistsProcessed.Store(0)
 	return enrichedArtistSearchResults
 }
 
-func GetJobProgress() int {
-	return numberOfArtistsProcessed
-}
-
-func searchSpotifyArtist(plexArtist *types.PlexMusicArtist, token string, ch chan<- *types.MusicSearchResponse) {
-	// context with a timeout of 30 seconds
+// searchSpotifyArtistValue is a value-returning version for use with iter.Map
+func searchSpotifyArtistValue(plexArtist *types.PlexMusicArtist, token string) types.MusicSearchResponse {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(lookupTimeout))
 	defer cancel()
 	searchResults := types.MusicSearchResponse{}
@@ -163,54 +145,46 @@ func searchSpotifyArtist(plexArtist *types.PlexMusicArtist, token string, ch cha
 	body, err := makeRequest(artistURL, token, ctx)
 	if err != nil {
 		fmt.Printf("lookupArtist: unable to read response from spotify: %s\n", err.Error())
-		ch <- &searchResults
-		return
+		return searchResults
 	}
 	var artistResponse ArtistResponse
 	jsonErr := json.Unmarshal(body, &artistResponse)
 	if jsonErr != nil {
 		fmt.Printf("lookupArtist: unable to parse response from spotify: %s\n", jsonErr.Error())
-		ch <- &searchResults
-		return
+		return searchResults
 	}
 	for i := range artistResponse.Artists.Items {
 		if artistStringMatcher(plexArtist.Name, artistResponse.Artists.Items[i].Name) {
-			// only get the first match
 			searchResults.MusicSearchResults = append(searchResults.MusicSearchResults, types.MusicArtistSearchResult{
 				Name: artistResponse.Artists.Items[i].Name,
 				ID:   artistResponse.Artists.Items[i].ID,
 				URL:  artistResponse.Artists.Items[i].ExternalUrls.Spotify,
 			})
-			// only get the first match
 			break
 		}
 	}
-	ch <- &searchResults
+	return searchResults
 }
 
-func searchSpotifyAlbum(m *types.MusicSearchResponse, token string, ch chan<- *types.MusicSearchResponse) {
+// searchSpotifyAlbumValue is a value-returning version for use with iter.Map
+func searchSpotifyAlbumValue(m *types.MusicSearchResponse, token string) types.MusicSearchResponse {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(lookupTimeout))
 	defer cancel()
-	// get oauth token
-	if len(m.MusicSearchResults) == 0 {
-		// no artist found for the plex artist
-		fmt.Printf("SearchSpotifyAlbums: no artist found for %v\n", m.PlexMusicArtist)
-		ch <- m
-		return
+	result := *m
+	if len(result.MusicSearchResults) == 0 {
+		fmt.Printf("SearchSpotifyAlbums: no artist found for %v\n", result.PlexMusicArtist)
+		return result
 	}
-	albumURL := fmt.Sprintf("%s/artists/%s/albums?include_groups=album&limit=50&", spotifyAPIURL, m.MusicSearchResults[0].ID)
+	albumURL := fmt.Sprintf("%s/artists/%s/albums?include_groups=album&limit=50&", spotifyAPIURL, result.MusicSearchResults[0].ID)
 	body, err := makeRequest(albumURL, token, ctx)
 	if err != nil {
 		fmt.Printf("lookupArtistAlbums: unable to parse response from spotify: %s\n", err.Error())
-		ch <- m
-		return
+		return result
 	}
 	var albumsResponse AlbumsResponse
 	_ = json.Unmarshal(body, &albumsResponse)
-
 	albums := make([]types.MusicAlbumSearchResult, 0)
 	for i := range albumsResponse.Items {
-		// convert "2022-06-03" to "2022"
 		year := strings.Split(albumsResponse.Items[i].ReleaseDate, "-")[0]
 		albums = append(albums, types.MusicAlbumSearchResult{
 			Title: albumsResponse.Items[i].Name,
@@ -219,9 +193,12 @@ func searchSpotifyAlbum(m *types.MusicSearchResponse, token string, ch chan<- *t
 			Year:  year,
 		})
 	}
+	result.MusicSearchResults[0].FoundAlbums = albums
+	return result
+}
 
-	m.MusicSearchResults[0].FoundAlbums = albums
-	ch <- m
+func GetJobProgress() int {
+	return int(numberOfArtistsProcessed.Load())
 }
 
 // function that gets an oauth token from spotify from the client id and secret

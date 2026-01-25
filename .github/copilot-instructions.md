@@ -1,4 +1,4 @@
-- Always run `(go env GOPATH)/bin/golangci-lint run -v` after making code changes to ensure code quality.
+- Always run `/usr/local/bin/golangci-lint run -v` after making code changes to ensure code quality.
 - Always run the full test suite with `go test -race ./...` after making code changes to ensure nothing is broken.
 - Use gofmt to format code before committing.
 - Always use British English for comments and documentation.

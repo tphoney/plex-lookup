@@ -162,9 +162,7 @@ func TestSearchCinemaParadisoTV(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			ch := make(chan types.TVSearchResponse, 1)
-			searchTVShowResponse(&tc.show, ch)
-			got := <-ch
+			got := searchTVShowResponseValue(&tc.show)
 
 			if got.SearchURL == "" {
 				t.Errorf("%s: expected searchurl, but got none", tc.name)
@@ -208,9 +206,7 @@ func TestSearchCinemaParadisoMovies(t *testing.T) {
 		Title: "Cats",
 		Year:  "1998",
 	}
-	ch := make(chan types.MovieSearchResponse, 1)
-	searchCinemaParadisoMovieResponse(&movie, ch)
-	result := <-ch
+	result := searchCinemaParadisoMovieResponse(&movie)
 
 	if len(result.MovieSearchResults) == 0 {
 		t.Errorf("Expected search results, but got none")

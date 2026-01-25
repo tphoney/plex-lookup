@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sourcegraph/conc/iter"
 	types "github.com/tphoney/plex-lookup/types"
 )
 
@@ -1036,23 +1037,39 @@ func AllMovies(ipAddress, libraryID, plexToken string) (movieList []types.PlexMo
 
 	movieList = extractMovies(response)
 	// we need to make an API request for each movie to get audio languages
-	ch := make(chan types.PlexMovie, len(movieList))
-	semaphore := make(chan struct{}, types.ConcurrencyLimit)
-
-	for i := range movieList {
-		semaphore <- struct{}{}
-		go func(i int) {
-			defer func() { <-semaphore }()
-			getMovieDetails(ipAddress, plexToken, &movieList[i], ch)
-		}(i)
-	}
-	detailedMovies := make([]types.PlexMovie, len(movieList))
-	// wait for all of the go routines to finish
-	for i := range movieList {
-		detailedMovies[i] = <-ch
-	}
+	detailedMovies := iter.Map(movieList, func(m *types.PlexMovie) types.PlexMovie {
+		return getMovieDetailsValue(ipAddress, plexToken, m)
+	})
 	fmt.Printf("Plex movies: %d.\n", len(detailedMovies))
 	return detailedMovies
+}
+
+// getMovieDetailsValue is a value-returning version for use with iter.Map
+func getMovieDetailsValue(ipAddress, plexToken string, movie *types.PlexMovie) types.PlexMovie {
+	url := fmt.Sprintf("http://%s:32400/library/metadata/%s", ipAddress, movie.RatingKey)
+	response, err := makePlexAPIRequest(url, plexToken)
+	if err != nil {
+		fmt.Println("getPlexMovieDetails: Error making request:", err)
+		return *movie
+	}
+	var container MovieDetailContainer
+	err = xml.Unmarshal([]byte(response), &container)
+	if err != nil {
+		fmt.Println("Error parsing XML:", err)
+		return *movie
+	}
+	languages := make(map[string]struct{})
+	for i := range container.Video.Media.Part.Stream {
+		if container.Video.Media.Part.Stream[i].StreamType == "2" {
+			languages[container.Video.Media.Part.Stream[i].Language] = struct{}{}
+		}
+	}
+	var langs []string
+	for lang := range languages {
+		langs = append(langs, lang)
+	}
+	movie.AudioLanguages = langs
+	return *movie
 }
 
 func extractMovies(xmlString string) (movieList []types.PlexMovie) {
@@ -1072,37 +1089,6 @@ func extractMovies(xmlString string) (movieList []types.PlexMovie) {
 			DateAdded:  parsePlexDate(container.Video[i].AddedAt)})
 	}
 	return movieList
-}
-
-func getMovieDetails(ipAddress, plexToken string, movie *types.PlexMovie, ch chan<- types.PlexMovie) {
-	url := fmt.Sprintf("http://%s:32400/library/metadata/%s", ipAddress, movie.RatingKey)
-
-	response, err := makePlexAPIRequest(url, plexToken)
-	if err != nil {
-		fmt.Println("getPlexMovieDetails: Error making request:", err)
-		ch <- *movie
-		return
-	}
-
-	var container MovieDetailContainer
-	err = xml.Unmarshal([]byte(response), &container)
-	if err != nil {
-		fmt.Println("Error parsing XML:", err)
-		ch <- *movie
-		return
-	}
-
-	languages := make(map[string]string)
-	for i := range container.Video.Media.Part.Stream {
-		if container.Video.Media.Part.Stream[i].StreamType == "2" {
-			languages[container.Video.Media.Part.Stream[i].Language] = container.Video.Media.Part.Stream[i].Language
-		}
-	}
-	// convert map to slice
-	for _, value := range languages {
-		movie.AudioLanguages = append(movie.AudioLanguages, value)
-	}
-	ch <- *movie
 }
 
 // =================================================================================================
@@ -1146,61 +1132,44 @@ func getPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []type
 	seasonList = extractTVSeasons(response)
 	// os.WriteFile("seasons.xml", body, 0644)
 	// now we need to get the episodes for each TV show
-	ch := make(chan types.PlexTVSeason, len(seasonList))
-	semaphore := make(chan struct{}, types.ConcurrencyLimit)
-	for i := range seasonList {
-		semaphore <- struct{}{}
-		go func(i int) {
-			defer func() { <-semaphore }()
-			getTVEpisodes(ipAddress, plexToken, &seasonList[i], ch)
-		}(i)
-	}
-
-	detailedSeasons := make([]types.PlexTVSeason, len(seasonList))
-	for i := range seasonList {
-		detailedSeasons[i] = <-ch
-	}
+	detailedSeasons := iter.Map(seasonList, func(s *types.PlexTVSeason) types.PlexTVSeason {
+		return getTVEpisodesValue(ipAddress, plexToken, s)
+	})
 	// remove seasons with no episodes
 	var filteredSeasons []types.PlexTVSeason
 	for i := range detailedSeasons {
 		if len(detailedSeasons[i].Episodes) < 1 {
 			continue
 		}
-		// lets add all of the resolutions for the episodes
 		var listOfResolutions []string
 		for j := range detailedSeasons[i].Episodes {
 			listOfResolutions = append(listOfResolutions, detailedSeasons[i].Episodes[j].Resolution)
 		}
-		// now we have all of the resolutions for the episodes
 		detailedSeasons[i].LowestResolution = findLowestResolution(listOfResolutions)
-		// get the dates for the season
 		detailedSeasons[i].LastEpisodeAdded = detailedSeasons[i].Episodes[len(detailedSeasons[i].Episodes)-1].DateAdded
 		detailedSeasons[i].LastEpisodeAired = detailedSeasons[i].Episodes[len(detailedSeasons[i].Episodes)-1].OriginallyAired
 		detailedSeasons[i].FirstEpisodeAired = detailedSeasons[i].Episodes[0].OriginallyAired
 		filteredSeasons = append(filteredSeasons, detailedSeasons[i])
 	}
-	// sort the seasons by season number
 	sort.Slice(filteredSeasons, func(i, j int) bool {
 		return filteredSeasons[i].Number < filteredSeasons[j].Number
 	})
 	return filteredSeasons
 }
 
-func getTVEpisodes(ipAddress, plexToken string, season *types.PlexTVSeason, ch chan<- types.PlexTVSeason) {
+// getTVEpisodesValue is a value-returning version for use with iter.Map
+func getTVEpisodesValue(ipAddress, plexToken string, season *types.PlexTVSeason) types.PlexTVSeason {
 	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, season.RatingKey)
-
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
 		fmt.Println("GetPlexTVEpisodes: Error making request:", err)
-		ch <- *season
-		return
+		return *season
 	}
-
 	showList := extractTVEpisodes(response)
 	if len(showList) > 0 {
 		season.Episodes = showList
 	}
-	ch <- *season
+	return *season
 }
 
 func extractTVShows(xmlString string) (showList []types.PlexTVShow) {
@@ -1458,25 +1427,12 @@ func extractMoviesFromPlaylist(xmlString, ipAddress, plexToken string) (movieLis
 			Year:       container.Video[i].Year,
 			DateAdded:  parsePlexDate(container.Video[i].AddedAt)})
 	}
-	// this is were we get the movie details
-	ch := make(chan types.PlexMovie, len(movieList))
-	semaphore := make(chan struct{}, types.ConcurrencyLimit)
-
-	for i := range movieList {
-		semaphore <- struct{}{}
-		go func(i int) {
-			defer func() { <-semaphore }()
-			getMovieDetails(ipAddress, plexToken, &movieList[i], ch)
-		}(i)
-	}
-	detailedMovies := make([]types.PlexMovie, len(movieList))
-	// wait for all of the go routines to finish
-	for i := range movieList {
-		detailedMovies[i] = <-ch
-	}
+	// get movie details concurrently using iter.Map
+	detailedMovies := iter.Map(movieList, func(m *types.PlexMovie) types.PlexMovie {
+		return getMovieDetailsValue(ipAddress, plexToken, m)
+	})
 	fmt.Printf("Plex movies: %d.\n", len(detailedMovies))
-
-	return movieList, nil
+	return detailedMovies, nil
 }
 
 func extractTVFromPlaylist(xmlString string) (playlistItems []types.PlexTVShow, err error) {

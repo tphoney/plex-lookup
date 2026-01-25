@@ -46,10 +46,8 @@ func TestSearchSpotifyArtist(t *testing.T) {
 	}
 
 	plexArtist := &types.PlexMusicArtist{Name: "The Beatles"}
-	ch := make(chan *types.MusicSearchResponse, 1)
-	searchSpotifyArtist(plexArtist, token, ch)
+	got := searchSpotifyArtistValue(plexArtist, token)
 
-	got := <-ch
 	if len(got.MusicSearchResults) != 1 {
 		t.Fatalf("SearchSpotifyArtist() returned %d results, expected 1", len(got.MusicSearchResults))
 	}
@@ -83,10 +81,8 @@ func TestSearchSpotifyArtistDebug(t *testing.T) {
 
 	plexArtist := &types.PlexMusicArtist{Name: "Angel Olsen"}
 
-	ch := make(chan *types.MusicSearchResponse, 1)
-	searchSpotifyArtist(plexArtist, token, ch)
+	got := searchSpotifyArtistValue(plexArtist, token)
 
-	got := <-ch
 	t.Logf("SearchSpotifyArtist() = %+v", got)
 }
 
@@ -116,9 +112,7 @@ func TestSearchSpotifyAlbums(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ch := make(chan *types.MusicSearchResponse, 1)
-			searchSpotifyAlbum(tt.args.m, token, ch)
-			got := <-ch
+			got := searchSpotifyAlbumValue(tt.args.m, token)
 
 			if len(got.MusicSearchResults) == 0 {
 				t.Fatalf("SearchSpotifyAlbums() returned no music search results")
@@ -149,9 +143,7 @@ func TestSearchSpotifyAlbumsDebug(t *testing.T) {
 		},
 	}
 
-	ch := make(chan *types.MusicSearchResponse, 1)
-	searchSpotifyAlbum(&want, token, ch)
-	got := <-ch
+	got := searchSpotifyAlbumValue(&want, token)
 
 	t.Logf("SearchSpotifyAlbum() = %v", got.MusicSearchResults)
 }

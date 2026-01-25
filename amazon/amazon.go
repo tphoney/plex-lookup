@@ -11,8 +11,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	"github.com/sourcegraph/conc/iter"
 	"github.com/tphoney/plex-lookup/types"
 	"github.com/tphoney/plex-lookup/utils"
 )
@@ -23,8 +25,8 @@ const (
 )
 
 var (
-	numberMoviesProcessed int = 0
-	numberTVProcessed     int = 0
+	numberMoviesProcessed atomic.Int32
+	numberTVProcessed     atomic.Int32
 	// Regex to match date patterns with abbreviated or full month names
 	// Note: May appears in both abbreviated and full month lists, but we don't need it twice
 	dateRegex = regexp.MustCompile(`(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})`)
@@ -76,118 +78,125 @@ var (
 	}
 )
 
-// nolint: dupl, nolintlint
 func MoviesInParallel(plexMovies []types.PlexMovie, language, region string) (searchResults []types.MovieSearchResponse) {
-	numberMoviesProcessed = 0
-	ch := make(chan types.MovieSearchResponse, len(plexMovies))
-	semaphore := make(chan struct{}, types.ConcurrencyLimit)
-
-	for i := range plexMovies {
-		go func(i int) {
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-			searchMovieResponse(&plexMovies[i], language, region, ch)
-		}(i)
+	numberMoviesProcessed.Store(0)
+	mapper := iter.Mapper[types.PlexMovie, types.MovieSearchResponse]{
+		MaxGoroutines: types.ConcurrencyLimit,
 	}
-
-	searchResults = make([]types.MovieSearchResponse, 0, len(plexMovies))
-	for range plexMovies {
-		result := <-ch
-		searchResults = append(searchResults, result)
-		numberMoviesProcessed++
-	}
-	numberMoviesProcessed = 0 // job is done
+	searchResults = mapper.Map(plexMovies, func(m *types.PlexMovie) types.MovieSearchResponse {
+		result := searchMovieValue(m, language, region)
+		numberMoviesProcessed.Add(1)
+		return result
+	})
+	numberMoviesProcessed.Store(0) // job is done
 	fmt.Println("amazon movies found:", len(searchResults))
 	return searchResults
 }
 
-// nolint: dupl, nolintlint
 func TVInParallel(plexTVShows []types.PlexTVShow, language, region string) (searchResults []types.TVSearchResponse) {
-	numberMoviesProcessed = 0
-	ch := make(chan types.TVSearchResponse, len(plexTVShows))
-	semaphore := make(chan struct{}, types.ConcurrencyLimit)
-
-	for i := range plexTVShows {
-		go func(i int) {
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-			searchTVResponse(&plexTVShows[i], language, region, ch)
-		}(i)
+	numberTVProcessed.Store(0)
+	mapper := iter.Mapper[types.PlexTVShow, types.TVSearchResponse]{
+		MaxGoroutines: types.ConcurrencyLimit,
 	}
-
-	searchResults = make([]types.TVSearchResponse, 0, len(plexTVShows))
-	for range plexTVShows {
-		result := <-ch
-		searchResults = append(searchResults, result)
-		numberTVProcessed++
-	}
-	numberTVProcessed = 0 // job is done
+	searchResults = mapper.Map(plexTVShows, func(tv *types.PlexTVShow) types.TVSearchResponse {
+		result := searchTVValue(tv, language, region)
+		numberTVProcessed.Add(1)
+		return result
+	})
+	numberTVProcessed.Store(0) // job is done
 	fmt.Println("amazon TV shows found:", len(searchResults))
 	return searchResults
 }
 
 func GetMovieJobProgress() int {
-	return numberMoviesProcessed
+	return int(numberMoviesProcessed.Load())
 }
 
 func GetTVJobProgress() int {
-	return numberTVProcessed
+	return int(numberTVProcessed.Load())
 }
 
 // ScrapeTitlesParallel now only handles TV. Use ScrapeMovieTitlesParallel for movies.
-//
-//nolint:dupl // TODO: refactor duplicate code
 func ScrapeTitlesParallel(searchResults []types.TVSearchResponse, region string) (scrapedResults []types.TVSearchResponse) {
-	numberTVProcessed = 0
-	ch := make(chan types.TVSearchResponse, len(searchResults))
-	semaphore := make(chan struct{}, types.ConcurrencyLimit)
-	for i := range searchResults {
-		go func(i int) {
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-			scrapeTVTitlesResponse(&searchResults[i], region, ch)
-		}(i)
+	mapper := iter.Mapper[types.TVSearchResponse, types.TVSearchResponse]{
+		MaxGoroutines: types.ConcurrencyLimit,
 	}
-
-	scrapedResults = make([]types.TVSearchResponse, 0, len(searchResults))
-	for range searchResults {
-		result := <-ch
-		scrapedResults = append(scrapedResults, result)
-		numberTVProcessed++
-	}
-	numberTVProcessed = 0
+	scrapedResults = mapper.Map(searchResults, func(sr *types.TVSearchResponse) types.TVSearchResponse {
+		return scrapeTVTitlesValue(sr, region)
+	})
 	fmt.Println("amazon TV titles scraped:", len(scrapedResults))
 	return scrapedResults
 }
 
 // ScrapeMovieTitlesParallel handles scraping movie titles for MovieSearchResponse.
-//
-//nolint:dupl // TODO: refactor duplicate code
 func ScrapeMovieTitlesParallel(searchResults []types.MovieSearchResponse, region string) (scrapedResults []types.MovieSearchResponse) {
-	numberMoviesProcessed = 0
-	ch := make(chan types.MovieSearchResponse, len(searchResults))
-	semaphore := make(chan struct{}, types.ConcurrencyLimit)
-	for i := range searchResults {
-		go func(i int) {
-			semaphore <- struct{}{}
-			defer func() { <-semaphore }()
-			scrapeMovieTitlesResponse(&searchResults[i], region, ch)
-		}(i)
+	mapper := iter.Mapper[types.MovieSearchResponse, types.MovieSearchResponse]{
+		MaxGoroutines: types.ConcurrencyLimit,
 	}
-
-	scrapedResults = make([]types.MovieSearchResponse, 0, len(searchResults))
-	for range searchResults {
-		result := <-ch
-		scrapedResults = append(scrapedResults, result)
-		numberMoviesProcessed++
-	}
-	numberMoviesProcessed = 0
+	scrapedResults = mapper.Map(searchResults, func(sr *types.MovieSearchResponse) types.MovieSearchResponse {
+		return scrapeMovieTitlesValue(sr, region)
+	})
 	fmt.Println("amazon movies scraped:", len(scrapedResults))
 	return scrapedResults
 }
 
-// nolint: dupl, nolintlint
-func scrapeMovieTitlesResponse(searchResult *types.MovieSearchResponse, region string, ch chan<- types.MovieSearchResponse) {
+// scrapeMovieTitlesValue is a value-returning version for use with iter.Map
+// extractReleaseDate extracts and parses a release date from HTML content
+func extractReleaseDate(rawData string) (time.Time, error) {
+	// Try multiple patterns to find the release date
+	// Pattern 1: Look for date in grey noline link (with or without closing span)
+	r1 := regexp.MustCompile(`<a class="grey noline"[^>]*>(.*?)</a>`)
+	match := r1.FindStringSubmatch(rawData)
+	var stringDate string
+	if match != nil {
+		stringDate = strings.TrimSpace(match[1])
+	}
+
+	// Pattern 2: Look for date pattern anywhere (handles cases where HTML structure differs)
+	if stringDate == "" {
+		// Match abbreviated month: "Feb 03, 2009" or full month: "February 3, 2009"
+		match = dateRegex.FindStringSubmatch(rawData)
+		if match != nil {
+			// Reconstruct date string in standard format
+			month := match[1]
+			day := match[2]
+			year := match[3]
+			// Convert full month names to abbreviations
+			monthMap := map[string]string{
+				"January": "Jan", "February": "Feb", "March": "Mar", "April": "Apr",
+				"May": "May", "June": "Jun", "July": "Jul", "August": "Aug",
+				"September": "Sep", "October": "Oct", "November": "Nov", "December": "Dec",
+			}
+			if abbr, ok := monthMap[month]; ok {
+				month = abbr
+			}
+			// Pad day with zero if needed
+			if len(day) == 1 {
+				day = "0" + day
+			}
+			stringDate = fmt.Sprintf("%s %s, %s", month, day, year)
+		}
+	}
+
+	if stringDate == "" {
+		return time.Time{}, fmt.Errorf("no date found in HTML")
+	}
+
+	// Try parsing with abbreviated month format first
+	releaseDate, parseErr := time.Parse("Jan 02, 2006", stringDate)
+	if parseErr != nil {
+		// Try alternative format for full month names
+		releaseDate, parseErr = time.Parse("January 2, 2006", stringDate)
+		if parseErr != nil {
+			return time.Time{}, fmt.Errorf("error parsing date '%s': %w", stringDate, parseErr)
+		}
+	}
+
+	return releaseDate, nil
+}
+
+//nolint:dupl // Acceptable duplication - type-specific wrapper for movies
+func scrapeMovieTitlesValue(searchResult *types.MovieSearchResponse, region string) types.MovieSearchResponse {
 	dateAdded := searchResult.DateAdded
 	for i := range searchResult.MovieSearchResults {
 		// this is to limit the number of requests
@@ -197,67 +206,29 @@ func scrapeMovieTitlesResponse(searchResult *types.MovieSearchResponse, region s
 		rawData, err := makeRequest(searchResult.MovieSearchResults[i].URL, region)
 		if err != nil {
 			fmt.Println("scrapeTitle: Error making request:", err)
-			ch <- *searchResult
-			return
-		}
-		// Find the release date
-		searchResult.MovieSearchResults[i].ReleaseDate = time.Time{} // default to zero time
-
-		// Try multiple patterns to find the release date
-		// Pattern 1: Look for date in grey noline link (with or without closing span)
-		r1 := regexp.MustCompile(`<a class="grey noline"[^>]*>(.*?)</a>`)
-		match := r1.FindStringSubmatch(rawData)
-		var stringDate string
-		if match != nil {
-			stringDate = strings.TrimSpace(match[1])
+			return *searchResult
 		}
 
-		// Pattern 2: Look for date pattern anywhere (handles cases where HTML structure differs)
-		if stringDate == "" {
-			// Match abbreviated month: "Feb 03, 2009" or full month: "February 3, 2009"
-			match = dateRegex.FindStringSubmatch(rawData)
-			if match != nil {
-				// Reconstruct date string in standard format
-				month := match[1]
-				day := match[2]
-				year := match[3]
-				// Convert full month names to abbreviations
-				monthMap := map[string]string{
-					"January": "Jan", "February": "Feb", "March": "Mar", "April": "Apr",
-					"May": "May", "June": "Jun", "July": "Jul", "August": "Aug",
-					"September": "Sep", "October": "Oct", "November": "Nov", "December": "Dec",
-				}
-				if abbr, ok := monthMap[month]; ok {
-					month = abbr
-				}
-				// Pad day with zero if needed
-				if len(day) == 1 {
-					day = "0" + day
-				}
-				stringDate = fmt.Sprintf("%s %s, %s", month, day, year)
-			}
+		// Extract and parse the release date
+		releaseDate, err := extractReleaseDate(rawData)
+		if err != nil {
+			fmt.Printf("scrapeMovieTitles: %v\n", err)
+			searchResult.MovieSearchResults[i].ReleaseDate = time.Time{} // default to zero time
+		} else {
+			searchResult.MovieSearchResults[i].ReleaseDate = releaseDate
 		}
 
-		if stringDate != "" {
-			var parseErr error
-			searchResult.MovieSearchResults[i].ReleaseDate, parseErr = time.Parse("Jan 02, 2006", stringDate)
-			if parseErr != nil {
-				// Try alternative format for full month names
-				searchResult.MovieSearchResults[i].ReleaseDate, parseErr = time.Parse("January 2, 2006", stringDate)
-				if parseErr != nil {
-					fmt.Printf("scrapeMovieTitles: Error parsing date '%s': %v\n", stringDate, parseErr)
-				}
-			}
-		}
 		if searchResult.MovieSearchResults[i].ReleaseDate.After(dateAdded) {
 			searchResult.MovieSearchResults[i].NewRelease = true
 		}
 	}
-	ch <- *searchResult
+	return *searchResult
 }
 
-// nolint: dupl, nolintlint
-func scrapeTVTitlesResponse(searchResult *types.TVSearchResponse, region string, ch chan<- types.TVSearchResponse) {
+// scrapeTVTitlesValue is a value-returning version for use with iter.Map
+//
+//nolint:dupl // Acceptable duplication - type-specific wrapper for TV shows
+func scrapeTVTitlesValue(searchResult *types.TVSearchResponse, region string) types.TVSearchResponse {
 	dateAdded := searchResult.DateAdded
 	for i := range searchResult.TVSearchResults {
 		// this is to limit the number of requests
@@ -267,67 +238,27 @@ func scrapeTVTitlesResponse(searchResult *types.TVSearchResponse, region string,
 		rawData, err := makeRequest(searchResult.TVSearchResults[i].URL, region)
 		if err != nil {
 			fmt.Println("scrapeTitle: Error making request:", err)
-			ch <- *searchResult
-			return
-		}
-		// Find the release date
-		searchResult.TVSearchResults[i].ReleaseDate = time.Time{} // default to zero time
-
-		// Try multiple patterns to find the release date
-		// Pattern 1: Look for date in grey noline link (with or without closing span)
-		r1 := regexp.MustCompile(`<a class="grey noline"[^>]*>(.*?)</a>`)
-		match := r1.FindStringSubmatch(rawData)
-		var stringDate string
-		if match != nil {
-			stringDate = strings.TrimSpace(match[1])
+			return *searchResult
 		}
 
-		// Pattern 2: Look for date pattern anywhere (handles cases where HTML structure differs)
-		if stringDate == "" {
-			// Match abbreviated month: "Feb 03, 2009" or full month: "February 3, 2009"
-			match = dateRegex.FindStringSubmatch(rawData)
-			if match != nil {
-				// Reconstruct date string in standard format
-				month := match[1]
-				day := match[2]
-				year := match[3]
-				// Convert full month names to abbreviations
-				monthMap := map[string]string{
-					"January": "Jan", "February": "Feb", "March": "Mar", "April": "Apr",
-					"May": "May", "June": "Jun", "July": "Jul", "August": "Aug",
-					"September": "Sep", "October": "Oct", "November": "Nov", "December": "Dec",
-				}
-				if abbr, ok := monthMap[month]; ok {
-					month = abbr
-				}
-				// Pad day with zero if needed
-				if len(day) == 1 {
-					day = "0" + day
-				}
-				stringDate = fmt.Sprintf("%s %s, %s", month, day, year)
-			}
+		// Extract and parse the release date
+		releaseDate, err := extractReleaseDate(rawData)
+		if err != nil {
+			fmt.Printf("scrapeTVTitles: %v\n", err)
+			searchResult.TVSearchResults[i].ReleaseDate = time.Time{} // default to zero time
+		} else {
+			searchResult.TVSearchResults[i].ReleaseDate = releaseDate
 		}
 
-		if stringDate != "" {
-			var parseErr error
-			searchResult.TVSearchResults[i].ReleaseDate, parseErr = time.Parse("Jan 02, 2006", stringDate)
-			if parseErr != nil {
-				// Try alternative format for full month names
-				searchResult.TVSearchResults[i].ReleaseDate, parseErr = time.Parse("January 2, 2006", stringDate)
-				if parseErr != nil {
-					fmt.Printf("scrapeTVTitles: Error parsing date '%s': %v\n", stringDate, parseErr)
-				}
-			}
-		}
 		if searchResult.TVSearchResults[i].ReleaseDate.After(dateAdded) {
 			searchResult.TVSearchResults[i].NewRelease = true
 		}
 	}
-	ch <- *searchResult
+	return *searchResult
 }
 
-// nolint: dupl, nolintlint
-func searchMovieResponse(plexMovie *types.PlexMovie, language, region string, movieSearchResult chan<- types.MovieSearchResponse) {
+// searchMovieValue is a value-returning version for use with iter.Map
+func searchMovieValue(plexMovie *types.PlexMovie, language, region string) types.MovieSearchResponse {
 	result := types.MovieSearchResponse{}
 	result.PlexMovie = *plexMovie
 
@@ -346,18 +277,17 @@ func searchMovieResponse(plexMovie *types.PlexMovie, language, region string, mo
 	rawData, err := makeRequest(searchURL, region)
 	if err != nil {
 		fmt.Println("searchMovie: Error making request:", err)
-		movieSearchResult <- result
-		return
+		return result
 	}
 
 	moviesFound, _ := findTitlesInResponse(rawData, true)
 	result.MovieSearchResults = moviesFound
 	result = utils.MarkBestMatchMovieResponse(&result)
-	movieSearchResult <- result
+	return result
 }
 
-// nolint: dupl, nolintlint
-func searchTVResponse(plexTVShow *types.PlexTVShow, language, region string, tvSearchResult chan<- types.TVSearchResponse) {
+// searchTVValue is a value-returning version for use with iter.Map
+func searchTVValue(plexTVShow *types.PlexTVShow, language, region string) types.TVSearchResponse {
 	result := types.TVSearchResponse{}
 	result.PlexTVShow = *plexTVShow
 
@@ -375,8 +305,7 @@ func searchTVResponse(plexTVShow *types.PlexTVShow, language, region string, tvS
 	rawData, err := makeRequest(searchURL, region)
 	if err != nil {
 		fmt.Println("searchTV: Error making request:", err)
-		tvSearchResult <- result
-		return
+		return result
 	}
 
 	_, titlesFound := findTitlesInResponse(rawData, false)
@@ -407,7 +336,7 @@ func searchTVResponse(plexTVShow *types.PlexTVShow, language, region string, tvS
 	result.MatchesDVD = matchesDVD
 	result.MatchesBluray = matchesBluray
 	result.Matches4k = matches4k
-	tvSearchResult <- result
+	return result
 }
 
 func findTitlesInResponse(response string, movie bool) (movieResults []types.MovieSearchResult, tvResults []types.TVSearchResult) {

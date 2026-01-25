@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"net"
 	"net/http"
+	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -274,12 +275,13 @@ func progressHandler(w http.ResponseWriter, r *http.Request) {
 		if job.Phase != "" {
 			phaseText = fmt.Sprintf("<p>%s</p>", job.Phase)
 		}
+		jobIDEscaped := url.PathEscape(jobID)
 		fmt.Fprintf(w,
 			`<div hx-get="/progress/%s" hx-trigger="every 100ms" class="container" id="progress" hx-swap="outerHTML">
 			%s<progress value="%d" max="%d"></progress>
 			<button hx-post="/cancel/%s" hx-swap="outerHTML" hx-target="#progress">Cancel</button>
 			</div>`,
-			jobID, phaseText, job.Current, job.Total, jobID)
+			jobIDEscaped, phaseText, job.Current, job.Total, jobIDEscaped)
 		return
 	}
 

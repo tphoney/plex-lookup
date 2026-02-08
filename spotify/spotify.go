@@ -20,6 +20,8 @@ const (
 	spotifyAPIURL      = "https://api.spotify.com/v1"
 	lookupTimeout      = 10
 	spotifyConcurrency = 2
+	artistPhasePercent = 50 // Artists phase is 0-50%
+	albumsPhasePercent = 50 // Albums phase is 50-100%
 )
 
 var (
@@ -104,14 +106,25 @@ type SimilarArtistsResponse struct {
 	}
 }
 
-func GetArtistsInParallel(plexArtists []types.PlexMusicArtist, token string) []types.MusicSearchResponse {
+func GetArtistsInParallel(ctx context.Context, progressFunc func(int, string), plexArtists []types.PlexMusicArtist, token string) []types.MusicSearchResponse {
 	numberOfArtistsProcessed.Store(0)
 	mapper := iter.Mapper[types.PlexMusicArtist, types.MusicSearchResponse]{
 		MaxGoroutines: spotifyConcurrency,
 	}
+	totalArtists := len(plexArtists)
 	artistsSearchResults := mapper.Map(plexArtists, func(artist *types.PlexMusicArtist) types.MusicSearchResponse {
-		result := searchSpotifyArtistValue(artist, token)
-		numberOfArtistsProcessed.Add(1)
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			return types.MusicSearchResponse{}
+		default:
+		}
+		result := searchSpotifyArtistValue(ctx, artist, token)
+		current := int(numberOfArtistsProcessed.Add(1))
+		// Artists are 0-50% of total progress
+		if progressFunc != nil {
+			progressFunc(current*50/totalArtists, "Searching artists")
+		}
 		fmt.Print(".")
 		return result
 	})
@@ -119,14 +132,25 @@ func GetArtistsInParallel(plexArtists []types.PlexMusicArtist, token string) []t
 	return artistsSearchResults
 }
 
-func GetAlbumsInParallel(artistsSearchResults []types.MusicSearchResponse, token string) []types.MusicSearchResponse {
+func GetAlbumsInParallel(ctx context.Context, progressFunc func(int, string), artistsSearchResults []types.MusicSearchResponse, token string) []types.MusicSearchResponse {
 	numberOfArtistsProcessed.Store(0)
 	mapper := iter.Mapper[types.MusicSearchResponse, types.MusicSearchResponse]{
 		MaxGoroutines: spotifyConcurrency,
 	}
+	totalAlbums := len(artistsSearchResults)
 	enrichedArtistSearchResults := mapper.Map(artistsSearchResults, func(result *types.MusicSearchResponse) types.MusicSearchResponse {
-		res := searchSpotifyAlbumValue(result, token)
-		numberOfArtistsProcessed.Add(1)
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			return types.MusicSearchResponse{}
+		default:
+		}
+		res := searchSpotifyAlbumValue(ctx, result, token)
+		current := int(numberOfArtistsProcessed.Add(1))
+		// Albums are 50-100% of total progress
+		if progressFunc != nil {
+			progressFunc(artistPhasePercent+current*albumsPhasePercent/totalAlbums, "Fetching albums")
+		}
 		fmt.Print(".")
 		return res
 	})
@@ -135,9 +159,7 @@ func GetAlbumsInParallel(artistsSearchResults []types.MusicSearchResponse, token
 }
 
 // searchSpotifyArtistValue is a value-returning version for use with iter.Map
-func searchSpotifyArtistValue(plexArtist *types.PlexMusicArtist, token string) types.MusicSearchResponse {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(lookupTimeout))
-	defer cancel()
+func searchSpotifyArtistValue(ctx context.Context, plexArtist *types.PlexMusicArtist, token string) types.MusicSearchResponse {
 	searchResults := types.MusicSearchResponse{}
 	searchResults.PlexMusicArtist = *plexArtist
 	urlEncodedArtist := url.QueryEscape(plexArtist.Name)
@@ -167,9 +189,7 @@ func searchSpotifyArtistValue(plexArtist *types.PlexMusicArtist, token string) t
 }
 
 // searchSpotifyAlbumValue is a value-returning version for use with iter.Map
-func searchSpotifyAlbumValue(m *types.MusicSearchResponse, token string) types.MusicSearchResponse {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(lookupTimeout))
-	defer cancel()
+func searchSpotifyAlbumValue(ctx context.Context, m *types.MusicSearchResponse, token string) types.MusicSearchResponse {
 	result := *m
 	if len(result.MusicSearchResults) == 0 {
 		fmt.Printf("SearchSpotifyAlbums: no artist found for %v\n", result.PlexMusicArtist)

@@ -51,7 +51,7 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotArtist, err := SearchMusicBrainzArtist(tt.args, musicBrainzURL)
+			gotArtist, err := SearchMusicBrainzArtist(t.Context(), tt.args, musicBrainzURL)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("SearchMusicBrainzArtist() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -78,7 +78,7 @@ func TestSearchMusicBrainzArtist(t *testing.T) {
 // debug test for individual artists
 func TestSearchMusicBrainzArtistDebug(t *testing.T) {
 	artist := &types.PlexMusicArtist{Name: "Aaliyah"}
-	artistSearchResult, err := SearchMusicBrainzArtist(artist, musicBrainzURL)
+	artistSearchResult, err := SearchMusicBrainzArtist(t.Context(), artist, musicBrainzURL)
 	if err != nil {
 		t.Errorf("SearchMusicBrainzArtist() error = %v", err)
 	}

@@ -1,7 +1,6 @@
 package spotify
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -17,7 +16,7 @@ func TestGetArtistsInParallel(t *testing.T) {
 	if spotifyClientID == "" || spotifyClientSecret == "" {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
-	token, err := SpotifyOAuthToken(context.Background(), spotifyClientID, spotifyClientSecret)
+	token, err := SpotifyOAuthToken(t.Context(), spotifyClientID, spotifyClientSecret)
 	if err != nil {
 		t.Errorf("GetSpotifyToken() returned an error: %s", err)
 	}
@@ -29,7 +28,7 @@ func TestGetArtistsInParallel(t *testing.T) {
 		{Name: "The Kinks"},
 	}
 
-	got := GetArtistsInParallel(plexArtists, token)
+	got := GetArtistsInParallel(t.Context(), nil, plexArtists, token)
 
 	if len(got) != len(plexArtists) {
 		t.Errorf("GetSpotifyArtistsInParallel() returned %d results, expected %d", len(got), len(plexArtists))
@@ -40,13 +39,13 @@ func TestSearchSpotifyArtist(t *testing.T) {
 	if spotifyClientID == "" || spotifyClientSecret == "" {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
-	token, err := SpotifyOAuthToken(context.Background(), spotifyClientID, spotifyClientSecret)
+	token, err := SpotifyOAuthToken(t.Context(), spotifyClientID, spotifyClientSecret)
 	if err != nil {
 		t.Errorf("GetSpotifyToken() returned an error: %s", err)
 	}
 
 	plexArtist := &types.PlexMusicArtist{Name: "The Beatles"}
-	got := searchSpotifyArtistValue(plexArtist, token)
+	got := searchSpotifyArtistValue(t.Context(), plexArtist, token)
 
 	if len(got.MusicSearchResults) != 1 {
 		t.Fatalf("SearchSpotifyArtist() returned %d results, expected 1", len(got.MusicSearchResults))
@@ -74,14 +73,14 @@ func TestSearchSpotifyArtistDebug(t *testing.T) {
 	if spotifyClientID == "" || spotifyClientSecret == "" {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
-	token, err := SpotifyOAuthToken(context.Background(), spotifyClientID, spotifyClientSecret)
+	token, err := SpotifyOAuthToken(t.Context(), spotifyClientID, spotifyClientSecret)
 	if err != nil {
 		t.Errorf("GetSpotifyToken() returned an error: %s", err)
 	}
 
 	plexArtist := &types.PlexMusicArtist{Name: "Angel Olsen"}
 
-	got := searchSpotifyArtistValue(plexArtist, token)
+	got := searchSpotifyArtistValue(t.Context(), plexArtist, token)
 
 	t.Logf("SearchSpotifyArtist() = %+v", got)
 }
@@ -90,7 +89,7 @@ func TestSearchSpotifyAlbums(t *testing.T) {
 	if spotifyClientID == "" || spotifyClientSecret == "" {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
-	token, err := SpotifyOAuthToken(context.Background(), spotifyClientID, spotifyClientSecret)
+	token, err := SpotifyOAuthToken(t.Context(), spotifyClientID, spotifyClientSecret)
 	if err != nil {
 		t.Errorf("GetSpotifyToken() returned an error: %s", err)
 	}
@@ -112,7 +111,7 @@ func TestSearchSpotifyAlbums(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := searchSpotifyAlbumValue(tt.args.m, token)
+			got := searchSpotifyAlbumValue(t.Context(), tt.args.m, token)
 
 			if len(got.MusicSearchResults) == 0 {
 				t.Fatalf("SearchSpotifyAlbums() returned no music search results")
@@ -128,7 +127,7 @@ func TestSearchSpotifyAlbumsDebug(t *testing.T) {
 	if spotifyClientID == "" || spotifyClientSecret == "" {
 		t.Skip("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET not set")
 	}
-	token, err := SpotifyOAuthToken(context.Background(), spotifyClientID, spotifyClientSecret)
+	token, err := SpotifyOAuthToken(t.Context(), spotifyClientID, spotifyClientSecret)
 	if err != nil {
 		t.Errorf("GetSpotifyToken() returned an error: %s", err)
 	}
@@ -143,7 +142,7 @@ func TestSearchSpotifyAlbumsDebug(t *testing.T) {
 		},
 	}
 
-	got := searchSpotifyAlbumValue(&want, token)
+	got := searchSpotifyAlbumValue(t.Context(), &want, token)
 
 	t.Logf("SearchSpotifyAlbum() = %v", got.MusicSearchResults)
 }

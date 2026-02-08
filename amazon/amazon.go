@@ -78,14 +78,26 @@ var (
 	}
 )
 
-func MoviesInParallel(plexMovies []types.PlexMovie, language, region string) (searchResults []types.MovieSearchResponse) {
+// MoviesInParallel processes movies in parallel with progress tracking.
+//
+//nolint:dupl // Cannot be unified with TVInParallel due to different generic types (PlexMovie vs PlexTVShow)
+func MoviesInParallel(ctx context.Context, progressFunc func(int), plexMovies []types.PlexMovie, language, region string) (searchResults []types.MovieSearchResponse) {
 	numberMoviesProcessed.Store(0)
 	mapper := iter.Mapper[types.PlexMovie, types.MovieSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
 	searchResults = mapper.Map(plexMovies, func(m *types.PlexMovie) types.MovieSearchResponse {
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			return types.MovieSearchResponse{}
+		default:
+		}
 		result := searchMovieValue(m, language, region)
-		numberMoviesProcessed.Add(1)
+		current := int(numberMoviesProcessed.Add(1))
+		if progressFunc != nil {
+			progressFunc(current)
+		}
 		return result
 	})
 	numberMoviesProcessed.Store(0) // job is done
@@ -93,14 +105,26 @@ func MoviesInParallel(plexMovies []types.PlexMovie, language, region string) (se
 	return searchResults
 }
 
-func TVInParallel(plexTVShows []types.PlexTVShow, language, region string) (searchResults []types.TVSearchResponse) {
+// TVInParallel processes TV shows in parallel with progress tracking.
+//
+//nolint:dupl // Cannot be unified with MoviesInParallel due to different generic types (PlexTVShow vs PlexMovie)
+func TVInParallel(ctx context.Context, progressFunc func(int), plexTVShows []types.PlexTVShow, language, region string) (searchResults []types.TVSearchResponse) {
 	numberTVProcessed.Store(0)
 	mapper := iter.Mapper[types.PlexTVShow, types.TVSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
 	searchResults = mapper.Map(plexTVShows, func(tv *types.PlexTVShow) types.TVSearchResponse {
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			return types.TVSearchResponse{}
+		default:
+		}
 		result := searchTVValue(tv, language, region)
-		numberTVProcessed.Add(1)
+		current := int(numberTVProcessed.Add(1))
+		if progressFunc != nil {
+			progressFunc(current)
+		}
 		return result
 	})
 	numberTVProcessed.Store(0) // job is done
@@ -117,11 +141,17 @@ func GetTVJobProgress() int {
 }
 
 // ScrapeTitlesParallel now only handles TV. Use ScrapeMovieTitlesParallel for movies.
-func ScrapeTitlesParallel(searchResults []types.TVSearchResponse, region string) (scrapedResults []types.TVSearchResponse) {
+func ScrapeTitlesParallel(ctx context.Context, searchResults []types.TVSearchResponse, region string) (scrapedResults []types.TVSearchResponse) {
 	mapper := iter.Mapper[types.TVSearchResponse, types.TVSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
 	scrapedResults = mapper.Map(searchResults, func(sr *types.TVSearchResponse) types.TVSearchResponse {
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			return types.TVSearchResponse{}
+		default:
+		}
 		return scrapeTVTitlesValue(sr, region)
 	})
 	fmt.Println("amazon TV titles scraped:", len(scrapedResults))
@@ -129,11 +159,17 @@ func ScrapeTitlesParallel(searchResults []types.TVSearchResponse, region string)
 }
 
 // ScrapeMovieTitlesParallel handles scraping movie titles for MovieSearchResponse.
-func ScrapeMovieTitlesParallel(searchResults []types.MovieSearchResponse, region string) (scrapedResults []types.MovieSearchResponse) {
+func ScrapeMovieTitlesParallel(ctx context.Context, searchResults []types.MovieSearchResponse, region string) (scrapedResults []types.MovieSearchResponse) {
 	mapper := iter.Mapper[types.MovieSearchResponse, types.MovieSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
 	scrapedResults = mapper.Map(searchResults, func(sr *types.MovieSearchResponse) types.MovieSearchResponse {
+		// Check for cancellation
+		select {
+		case <-ctx.Done():
+			return types.MovieSearchResponse{}
+		default:
+		}
 		return scrapeMovieTitlesValue(sr, region)
 	})
 	fmt.Println("amazon movies scraped:", len(scrapedResults))

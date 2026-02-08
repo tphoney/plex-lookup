@@ -80,7 +80,7 @@ linters:
     lll:
       line-length: 140
     misspell:
-      locale: US
+      locale: UK
     nolintlint:
       require-explanation: false
       require-specific: false

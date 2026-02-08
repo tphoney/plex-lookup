@@ -235,7 +235,7 @@ func TestScrapeMovieTitlesParallel(t *testing.T) {
 		},
 	}
 
-	detailedSearchResults := ScrapeMoviesParallel(searchResults)
+	detailedSearchResults := ScrapeMoviesParallel(t.Context(), searchResults)
 
 	if len(detailedSearchResults) != len(searchResults) {
 		t.Errorf("Expected %d detailed search results, but got %d", len(searchResults), len(detailedSearchResults))

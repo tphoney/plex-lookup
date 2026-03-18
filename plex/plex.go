@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"slices"
 	"sort"
@@ -1031,7 +1032,7 @@ func AllMovies(ipAddress, libraryID, plexToken string) (movieList []types.PlexMo
 
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("GetPlexMovies: Error making request:", err)
+		slog.Error("GetPlexMovies: error making request", "error", err)
 		return movieList
 	}
 
@@ -1040,7 +1041,7 @@ func AllMovies(ipAddress, libraryID, plexToken string) (movieList []types.PlexMo
 	detailedMovies := iter.Map(movieList, func(m *types.PlexMovie) types.PlexMovie {
 		return getMovieDetailsValue(ipAddress, plexToken, m)
 	})
-	fmt.Printf("Plex movies: %d.\n", len(detailedMovies))
+	slog.Info("Plex movies fetched", "count", len(detailedMovies))
 	return detailedMovies
 }
 
@@ -1049,13 +1050,13 @@ func getMovieDetailsValue(ipAddress, plexToken string, movie *types.PlexMovie) t
 	url := fmt.Sprintf("http://%s:32400/library/metadata/%s", ipAddress, movie.RatingKey)
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("getPlexMovieDetails: Error making request:", err)
+		slog.Error("getPlexMovieDetails: error making request", "error", err)
 		return *movie
 	}
 	var container MovieDetailContainer
 	err = xml.Unmarshal([]byte(response), &container)
 	if err != nil {
-		fmt.Println("Error parsing XML:", err)
+		slog.Error("getPlexMovieDetails: error parsing XML", "error", err)
 		return *movie
 	}
 	languages := make(map[string]struct{})
@@ -1076,7 +1077,7 @@ func extractMovies(xmlString string) (movieList []types.PlexMovie) {
 	var container MovieContainer
 	err := xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
-		fmt.Println("Error parsing XML:", err)
+		slog.Error("extractMovies: error parsing XML", "error", err)
 		return
 	}
 
@@ -1097,7 +1098,7 @@ func AllTV(ipAddress, plexToken, libraryID string) (tvShowList []types.PlexTVSho
 
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("GetPlexTV: Error making request:", err)
+		slog.Error("AllTV: error making request", "error", err)
 		return tvShowList
 	}
 
@@ -1116,7 +1117,7 @@ func AllTV(ipAddress, plexToken, libraryID string) (tvShowList []types.PlexTVSho
 			filteredTVShows = append(filteredTVShows, tvShowList[i])
 		}
 	}
-	fmt.Printf("Plex TV shows: %d.\n", len(filteredTVShows))
+	slog.Info("Plex TV shows fetched", "count", len(filteredTVShows))
 	return filteredTVShows
 }
 
@@ -1125,7 +1126,7 @@ func getPlexTVSeasons(ipAddress, plexToken, ratingKey string) (seasonList []type
 
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("GetPlexTVSeasons: Error making request:", err)
+		slog.Error("getPlexTVSeasons: error making request", "error", err)
 		return seasonList
 	}
 
@@ -1162,7 +1163,7 @@ func getTVEpisodesValue(ipAddress, plexToken string, season *types.PlexTVSeason)
 	url := fmt.Sprintf("http://%s:32400/library/metadata/%s/children?", ipAddress, season.RatingKey)
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("GetPlexTVEpisodes: Error making request:", err)
+		slog.Error("getTVEpisodesValue: error making request", "error", err)
 		return *season
 	}
 	showList := extractTVEpisodes(response)
@@ -1176,7 +1177,7 @@ func extractTVShows(xmlString string) (showList []types.PlexTVShow) {
 	var container TVContainer
 	err := xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
-		fmt.Println("Error parsing XML:", err)
+		slog.Error("extractTVShows: error parsing XML", "error", err)
 		return
 	}
 
@@ -1192,7 +1193,7 @@ func extractTVSeasons(xmlString string) (seasonList []types.PlexTVSeason) {
 	var container SeasonContainer
 	err := xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
-		fmt.Println("Error parsing XML:", err)
+		slog.Error("extractTVSeasons: error parsing XML", "error", err)
 		return
 	}
 
@@ -1210,7 +1211,7 @@ func extractTVEpisodes(xmlString string) (episodeList []types.PlexTVEpisode) {
 	var container EpisodeContainer
 	err := xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
-		fmt.Println("Error parsing XML:", err)
+		slog.Error("extractTVEpisodes: error parsing XML", "error", err)
 		return
 	}
 
@@ -1234,14 +1235,14 @@ func AllMusicArtists(ipAddress, plexToken, libraryID string) (artists []types.Pl
 
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("GetPlexMusicArtists: Error making request:", err)
+		slog.Error("AllMusicArtists: error making request", "error", err)
 		return artists
 	}
 
 	artists, err = extractMusicArtists(response)
 
 	if err != nil {
-		fmt.Println("Error extracting plex artists:", err)
+		slog.Error("AllMusicArtists: error extracting artists", "error", err)
 		return artists
 	}
 	// now we need to get the albums for each artist
@@ -1249,7 +1250,7 @@ func AllMusicArtists(ipAddress, plexToken, libraryID string) (artists []types.Pl
 		artists[i].Albums = GetArtistMusicAlbums(ipAddress, plexToken, libraryID, artists[i].RatingKey)
 	}
 
-	fmt.Printf("Plex music artists: %d.\n", len(artists))
+	slog.Info("Plex music artists fetched", "count", len(artists))
 	return artists
 }
 
@@ -1258,7 +1259,7 @@ func GetArtistMusicAlbums(ipAddress, plexToken, libraryID, ratingKey string) (al
 
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("GetPlexMusicAlbums: Error making request:", err)
+		slog.Error("GetArtistMusicAlbums: error making request", "error", err)
 		return albums
 	}
 	albums, _ = extractMusicAlbums(response)
@@ -1270,7 +1271,7 @@ func extractMusicArtists(xmlString string) (artists []types.PlexMusicArtist, err
 	var container ArtistContainer
 	err = xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
-		fmt.Println("Error parsing XML:", err)
+		slog.Error("extractMusicArtists: error parsing XML", "error", err)
 		return artists, err
 	}
 
@@ -1287,7 +1288,7 @@ func extractMusicAlbums(xmlString string) (albums []types.PlexMusicAlbum, err er
 	var container AlbumContainer
 	err = xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
-		fmt.Println("Error parsing XML:", err)
+		slog.Error("extractMusicAlbums: error parsing XML", "error", err)
 		return albums, err
 	}
 
@@ -1307,7 +1308,7 @@ func GetPlexLibraries(ipAddress, plexToken string) (libraryList []types.PlexLibr
 
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("GetPlexLibraries: Error making request:", err)
+		slog.Error("GetPlexLibraries: error making request", "error", err)
 		return libraryList, err
 	}
 
@@ -1319,7 +1320,7 @@ func extractLibraries(xmlString string) (libraryList []types.PlexLibrary, err er
 	var container LibraryContainer
 	err = xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
-		fmt.Println("Error parsing XML:", err)
+		slog.Error("extractLibraries: error parsing XML", "error", err)
 		return libraryList, err
 	}
 
@@ -1338,12 +1339,12 @@ func GetPlaylists(ipAddress, plexToken, libraryID string) (playlists []types.Ple
 
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("GetPlaylists: Error making request:", err)
+		slog.Error("GetPlaylists: error making request", "error", err)
 		return playlists, err
 	}
 
 	playlists, err = extractPlaylists(response)
-	fmt.Printf("Plex playlists: %d. Duration: %v\n", len(playlists), time.Since(start))
+	slog.Info("Plex playlists fetched", "count", len(playlists), "duration", time.Since(start))
 	return playlists, err
 }
 
@@ -1351,7 +1352,7 @@ func extractPlaylists(xmlString string) (playlistList []types.PlexPlaylist, err 
 	var container PlaylistContainer
 	err = xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
-		fmt.Println("Error parsing XML:", err)
+		slog.Error("extractPlaylists: error parsing XML", "error", err)
 		return playlistList, err
 	}
 
@@ -1370,13 +1371,13 @@ func GetMoviesFromPlaylist(ipAddress, plexToken, ratingKey string) (playlistItem
 	url := fmt.Sprintf("http://%s:32400/playlists/%s/items", ipAddress, ratingKey)
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("GetMoviesromPlaylist: Error making request:", err)
+		slog.Error("GetMoviesFromPlaylist: error making request", "error", err)
 		return playlistItems
 	}
 
 	playlistItems, err = extractMoviesFromPlaylist(response, ipAddress, plexToken)
 	if err != nil {
-		fmt.Println("Error extracting playlist items:", err)
+		slog.Error("GetMoviesFromPlaylist: error extracting items", "error", err)
 	}
 	return playlistItems
 }
@@ -1385,13 +1386,13 @@ func GetTVFromPlaylist(ipAddress, plexToken, ratingKey string) (playlistItems []
 	url := fmt.Sprintf("http://%s:32400/playlists/%s/items", ipAddress, ratingKey)
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("getTVFromPlaylist: Error making request:", err)
+		slog.Error("GetTVFromPlaylist: error making request", "error", err)
 		return playlistItems
 	}
 
 	playlistItems, err = extractTVFromPlaylist(response)
 	if err != nil {
-		fmt.Println("Error extracting playlist items:", err)
+		slog.Error("GetTVFromPlaylist: error extracting items", "error", err)
 	}
 	return playlistItems
 }
@@ -1400,13 +1401,13 @@ func GetArtistsFromPlaylist(ipAddress, plexToken, ratingKey string) (playlistIte
 	url := fmt.Sprintf("http://%s:32400/playlists/%s/items", ipAddress, ratingKey)
 	response, err := makePlexAPIRequest(url, plexToken)
 	if err != nil {
-		fmt.Println("GetArtistsFromPlaylist: Error making request:", err)
+		slog.Error("GetArtistsFromPlaylist: error making request", "error", err)
 		return playlistItems
 	}
 
 	playlistItems, err = extractArtistsFromPlaylist(response)
 	if err != nil {
-		fmt.Println("Error extracting artists from playlist:", err)
+		slog.Error("GetArtistsFromPlaylist: error extracting items", "error", err)
 	}
 	return playlistItems
 }
@@ -1415,7 +1416,7 @@ func extractMoviesFromPlaylist(xmlString, ipAddress, plexToken string) (movieLis
 	var container MoviePlaylist
 	err = xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
-		fmt.Println("Error parsing XML:", err)
+		slog.Error("extractMoviesFromPlaylist: error parsing XML", "error", err)
 		return movieList, err
 	}
 
@@ -1431,7 +1432,7 @@ func extractMoviesFromPlaylist(xmlString, ipAddress, plexToken string) (movieLis
 	detailedMovies := iter.Map(movieList, func(m *types.PlexMovie) types.PlexMovie {
 		return getMovieDetailsValue(ipAddress, plexToken, m)
 	})
-	fmt.Printf("Plex movies: %d.\n", len(detailedMovies))
+	slog.Info("Plex playlist movies fetched", "count", len(detailedMovies))
 	return detailedMovies, nil
 }
 
@@ -1439,7 +1440,7 @@ func extractTVFromPlaylist(xmlString string) (playlistItems []types.PlexTVShow, 
 	var container TVPlaylist
 	err = xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
-		fmt.Println("Error parsing XML:", err)
+		slog.Error("extractTVFromPlaylist: error parsing XML", "error", err)
 		return playlistItems, err
 	}
 
@@ -1486,7 +1487,7 @@ func extractTVFromPlaylist(xmlString string) (playlistItems []types.PlexTVShow, 
 				}
 			}
 			if !seasonFound {
-				fmt.Println("Adding season:", season.Number, "to TV show:", foundTVShow.Title)
+				slog.Debug("Adding season to TV show", "season", season.Number, "show", foundTVShow.Title)
 				season.Episodes = append(season.Episodes, episode)
 				foundTVShow.Seasons = append(foundTVShow.Seasons, season)
 				// replace the TV show in the map with the updated TV show
@@ -1521,7 +1522,7 @@ func extractArtistsFromPlaylist(xmlString string) (playlistItems []types.PlexMus
 	var container MusicPlayList
 	err = xml.Unmarshal([]byte(xmlString), &container)
 	if err != nil {
-		fmt.Println("Error parsing XML:", err)
+		slog.Error("extractArtistsFromPlaylist: error parsing XML", "error", err)
 		return playlistItems, err
 	}
 
@@ -1565,7 +1566,7 @@ func extractArtistsFromPlaylist(xmlString string) (playlistItems []types.PlexMus
 func makePlexAPIRequest(inputURL, plexToken string) (response string, err error) {
 	req, err := http.NewRequestWithContext(context.Background(), "GET", inputURL, http.NoBody)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		slog.Error("makePlexAPIRequest: error creating request", "error", err)
 		return "", err
 	}
 
@@ -1574,7 +1575,7 @@ func makePlexAPIRequest(inputURL, plexToken string) (response string, err error)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Error sending request:", err)
+		slog.Error("makePlexAPIRequest: error sending request", "error", err)
 		return "", err
 	}
 
@@ -1582,7 +1583,7 @@ func makePlexAPIRequest(inputURL, plexToken string) (response string, err error)
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading response body:", err)
+		slog.Error("makePlexAPIRequest: error reading response body", "error", err)
 		return "", err
 	}
 	return string(body), nil

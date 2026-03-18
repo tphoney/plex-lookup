@@ -11,6 +11,8 @@ import (
 	"github.com/tphoney/plex-lookup/types"
 )
 
+const maxRequestBodySize int64 = 1 << 20
+
 var (
 	//go:embed settings.html
 	settingsPage string
@@ -30,6 +32,7 @@ func SettingsHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func ProcessPlexLibrariesHTML(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 	// Retrieve form fields (replace with proper values)
 	plexIP := r.FormValue("plexIP")
 	plexToken := r.FormValue("plexToken")

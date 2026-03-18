@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html"
 	"html/template"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -36,10 +37,11 @@ var (
 )
 
 const (
-	jobStatusRunning   = "running"
-	jobStatusComplete  = "complete"
-	jobStatusCancelled = "cancelled"
-	cleanupInterval    = 5 * time.Minute
+	jobStatusRunning         = "running"
+	jobStatusComplete        = "complete"
+	jobStatusCancelled       = "cancelled"
+	cleanupInterval          = 5 * time.Minute
+	maxRequestBodySize int64 = 1 << 20
 )
 
 // JobProgress represents the state of a running or completed job.
@@ -72,7 +74,7 @@ func NewJobTracker() *JobTracker {
 // CreateJob creates a new job and returns its ID and cancellable context.
 func (jt *JobTracker) CreateJob(jobType string, total int) (string, context.Context) {
 	id := fmt.Sprintf("%d", jt.jobCounter.Add(1))
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec // cancel stored in job.CancelFunc and called via CancelJob/CleanupOldJobs
 
 	job := &JobProgress{
 		ID:         id,
@@ -168,7 +170,7 @@ func (jt *JobTracker) CleanupOldJobs() {
 func StartServer(startingConfig *types.Configuration) {
 	config = startingConfig
 	jobTracker = NewJobTracker()
-	cleanupCtx, cleanupCancel = context.WithCancel(context.Background())
+	cleanupCtx, cleanupCancel = context.WithCancel(context.Background()) //nolint:gosec // cleanupCancel is called in StopServer
 
 	// Start cleanup goroutine
 	cleanupShutdown.Add(1)
@@ -180,7 +182,7 @@ func StartServer(startingConfig *types.Configuration) {
 			select {
 			case <-ticker.C:
 				jobTracker.CleanupOldJobs()
-				fmt.Println("Cleaned up old jobs")
+				slog.Debug("Cleaned up old jobs")
 			case <-cleanupCtx.Done():
 				return
 			}
@@ -189,7 +191,7 @@ func StartServer(startingConfig *types.Configuration) {
 
 	// find the local IP address
 	ipAddress := GetOutboundIP()
-	fmt.Printf("Starting server on http://%s:%s\n", ipAddress.String(), port)
+	slog.Info("Starting server", "url", fmt.Sprintf("http://%s:%s", ipAddress.String(), port))
 	mux := http.NewServeMux()
 
 	// serve static files
@@ -219,7 +221,7 @@ func StartServer(startingConfig *types.Configuration) {
 	mux.HandleFunc("/settings/save", settingsSaveHandler)
 	err := http.ListenAndServe(fmt.Sprintf(":%s", port), mux) //nolint: gosec
 	if err != nil {
-		fmt.Printf("Failed to start server on port %s: %s\n", port, err)
+		slog.Error("Failed to start server", "port", port, "error", err)
 		panic(err)
 	}
 }
@@ -234,7 +236,8 @@ func indexHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func settingsSaveHandler(w http.ResponseWriter, r *http.Request) {
-	oldConfig := config
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
+	oldConfig := *config
 	// Retrieve form fields (replace with proper values)
 	config.PlexIP = r.FormValue("plexIP")
 	config.PlexToken = r.FormValue("plexToken")
@@ -246,13 +249,23 @@ func settingsSaveHandler(w http.ResponseWriter, r *http.Request) {
 	config.SpotifyClientID = r.FormValue("spotifyClientID")
 	config.SpotifyClientSecret = r.FormValue("spotifyClientSecret")
 	fmt.Fprint(w, `<h2>Saved!</h2><a href="/">Back</a>`)
-	fmt.Printf("Saved Settings\nold\n%+v\nnew\n%+v\n", oldConfig, config)
+	slog.Info("Settings saved",
+		"plexIP_changed", oldConfig.PlexIP != config.PlexIP,
+		"plexToken_changed", oldConfig.PlexToken != config.PlexToken,
+		"plexMovieLibraryID", config.PlexMovieLibraryID,
+		"plexTVLibraryID", config.PlexTVLibraryID,
+		"plexMusicLibraryID", config.PlexMusicLibraryID,
+		"amazonRegion", config.AmazonRegion,
+		"musicBrainzURL", config.MusicBrainzURL,
+		"spotifyClientID_changed", oldConfig.SpotifyClientID != config.SpotifyClientID,
+		"spotifyClientSecret_changed", oldConfig.SpotifyClientSecret != config.SpotifyClientSecret,
+	)
 }
 
 func GetOutboundIP() net.IP {
 	conn, err := (&net.Dialer{}).DialContext(context.Background(), "udp", "8.8.8.8:80")
 	if err != nil {
-		fmt.Println("Failed to get local IP address")
+		slog.Warn("Failed to get local IP address", "error", err)
 		return nil
 	}
 	defer conn.Close()

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -46,14 +47,8 @@ func TestMarkBestMatchMovie(t *testing.T) {
 		},
 	}
 	result := MarkBestMatchMovieResponse(&search)
-	if len(result.MovieSearchResults) != len(expectedResults) {
-		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.MovieSearchResults))
-	} else {
-		for i := range result.MovieSearchResults {
-			if result.MovieSearchResults[i] != expectedResults[i] {
-				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result.MovieSearchResults[i])
-			}
-		}
+	if !reflect.DeepEqual(result.MovieSearchResults, expectedResults) {
+		t.Errorf("Expected search results %v, but got %v", expectedResults, result.MovieSearchResults)
 	}
 
 	// Test case 2: Non-matching title
@@ -76,14 +71,8 @@ func TestMarkBestMatchMovie(t *testing.T) {
 		},
 	}
 	result = MarkBestMatchMovieResponse(&search)
-	if len(result.MovieSearchResults) != len(expectedResults) {
-		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.MovieSearchResults))
-	} else {
-		for i := range result.MovieSearchResults {
-			if result.MovieSearchResults[i] != expectedResults[i] {
-				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result.MovieSearchResults[i])
-			}
-		}
+	if !reflect.DeepEqual(result.MovieSearchResults, expectedResults) {
+		t.Errorf("Expected search results %v, but got %v", expectedResults, result.MovieSearchResults)
 	}
 
 	// Test case 3: Non-matching year
@@ -106,14 +95,8 @@ func TestMarkBestMatchMovie(t *testing.T) {
 		},
 	}
 	result = MarkBestMatchMovieResponse(&search)
-	if len(result.MovieSearchResults) != len(expectedResults) {
-		t.Errorf("Expected %d search results, but got %d", len(expectedResults), len(result.MovieSearchResults))
-	} else {
-		for i := range result.MovieSearchResults {
-			if result.MovieSearchResults[i] != expectedResults[i] {
-				t.Errorf("Expected search result %v, but got %v", expectedResults[i], result.MovieSearchResults[i])
-			}
-		}
+	if !reflect.DeepEqual(result.MovieSearchResults, expectedResults) {
+		t.Errorf("Expected search results %v, but got %v", expectedResults, result.MovieSearchResults)
 	}
 }
 

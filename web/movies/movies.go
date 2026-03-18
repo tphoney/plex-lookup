@@ -4,7 +4,9 @@ import (
 	_ "embed"
 	"fmt"
 	"html/template"
+	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/tphoney/plex-lookup/amazon"
@@ -12,6 +14,8 @@ import (
 	"github.com/tphoney/plex-lookup/plex"
 	"github.com/tphoney/plex-lookup/types"
 )
+
+const maxRequestBodySize int64 = 1 << 20
 
 var (
 	//go:embed movies.html
@@ -39,7 +43,7 @@ func (c MoviesConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
 		 All: dont use a playlist. (SLOW, only use for small libraries)
 	 </label>`
 	playlists, _ := plex.GetPlaylists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexMovieLibraryID)
-	fmt.Println("Playlists:", len(playlists))
+	slog.Debug("Movie playlists fetched", "count", len(playlists))
 	for i := range playlists {
 		playlistHTML += fmt.Sprintf(
 			`<label for=%q>
@@ -59,6 +63,7 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 	playlist := r.FormValue("playlist")
 	lookup := r.FormValue("lookup")
 	// lookup filters
@@ -79,8 +84,10 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	jobID, ctx := tracker.CreateJob("movies", totalMovies)
 
 	// write initial progress bar
-	fmt.Fprintf(w, `<div hx-get="/progress/%s" hx-trigger="every 250ms" class="container" id="progress">
-	<progress value="0" max="%d"></progress></div>`, jobID, totalMovies)
+	jobIDInt, _ := strconv.Atoi(jobID)
+	fmt.Fprintf(w, //nolint:gosec // jobID is generated from an atomic counter
+		`<div hx-get="/progress/%d" hx-trigger="every 250ms" class="container" id="progress">
+	<progress value="0" max="%d"></progress></div>`, jobIDInt, totalMovies)
 
 	go func() {
 		startTime := time.Now()

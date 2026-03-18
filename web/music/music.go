@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"html/template"
+	"log/slog"
 	"net/http"
 	"slices"
 	"sort"
@@ -18,6 +19,8 @@ import (
 	"github.com/tphoney/plex-lookup/types"
 	"github.com/tphoney/plex-lookup/utils"
 )
+
+const maxRequestBodySize int64 = 1 << 20
 
 var (
 	//go:embed music.html
@@ -53,7 +56,7 @@ func (c MusicConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
 		 All: dont use a playlist. (SLOW, only use for small libraries)
 	 </label>`
 	playlists, _ := plex.GetPlaylists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexMusicLibraryID)
-	fmt.Println("Playlists:", len(playlists))
+	slog.Debug("Music playlists fetched", "count", len(playlists))
 	for i := range playlists {
 		playlistHTML += fmt.Sprintf(
 			`<label for=%q>
@@ -98,6 +101,7 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 	playlist := r.FormValue("playlist")
 	lookup := r.FormValue("lookup")
 	if !c.validateLookupConfig(w, r, lookup) {
@@ -125,8 +129,10 @@ func (c MusicConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	jobID, ctx := tracker.CreateJob("music", totalArtists)
 
 	// Return initial progress bar
-	fmt.Fprintf(w, `<div hx-get="/progress/%s" hx-trigger="every 250ms" class="container" id="progress">
-		<progress value="0" max="%d"></progress></div>`, jobID, totalArtists)
+	jobIDInt, _ := strconv.Atoi(jobID)
+	fmt.Fprintf(w, //nolint:gosec // jobID is generated from an atomic counter
+		`<div hx-get="/progress/%d" hx-trigger="every 250ms" class="container" id="progress">
+		<progress value="0" max="%d"></progress></div>`, jobIDInt, totalArtists)
 
 	// Start processing in goroutine
 	go func() {

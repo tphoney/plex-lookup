@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -105,7 +106,7 @@ func searchTVShowResponseValue(plexTVShow *types.PlexTVShow) types.TVSearchRespo
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
 	rawData, err := makeRequest(result.SearchURL, http.MethodGet, "")
 	if err != nil {
-		fmt.Println("searchTVShow: Error making web request:", err)
+		slog.Error("searchTVShow: error making web request", "error", err)
 		return result
 	}
 
@@ -155,7 +156,7 @@ func searchCinemaParadisoMovieResponse(plexMovie *types.PlexMovie) types.MovieSe
 	result.SearchURL = cinemaparadisoSearchURL + "?form-search-field=" + urlEncodedTitle
 	rawData, err := makeRequest(result.SearchURL, http.MethodPost, fmt.Sprintf("form-search-field=%s", urlEncodedTitle))
 	if err != nil {
-		fmt.Println("searchCinemaParadisoMovie:", err)
+		slog.Error("searchCinemaParadisoMovie: error making request", "error", err)
 		return result
 	}
 
@@ -175,7 +176,7 @@ func scrapeMovieTitleResponseValue(result *types.MovieSearchResponse) types.Movi
 		}
 		rawData, err := makeRequest(res.MovieSearchResults[i].URL, http.MethodGet, "")
 		if err != nil {
-			fmt.Println("scrapeMovieTitle:", err)
+			slog.Error("scrapeMovieTitle: error making request", "error", err)
 			return res
 		}
 		r := regexp.MustCompile(`<section id="format-(.*?)".*?Release Date:<\/dt><dd>(.*?)<\/dd>`)
@@ -208,7 +209,7 @@ func findTVSeasonInfo(seriesURL string) (tvSeasons []types.TVSeasonResult, err e
 	// make a request to the url
 	rawData, err := makeRequest(seriesURL, http.MethodGet, "")
 	if err != nil {
-		fmt.Println("findTVSeasonInfo: Error making web request:", err)
+		slog.Error("findTVSeasonInfo: error making web request", "error", err)
 		return tvSeasons, err
 	}
 	tvSeasons = findTVSeasonsInResponse(rawData)
@@ -242,7 +243,7 @@ func findTVSeasonsInResponse(response string) (tvSeasons []types.TVSeasonResult)
 		for i := range tvSeasons {
 			detailedSeasonResults, err := makeSeasonRequest(&tvSeasons[i])
 			if err != nil {
-				fmt.Println("findTVSeasonsInResponse: Error making season request:", err)
+				slog.Error("findTVSeasonsInResponse: error making season request", "error", err)
 				continue
 			}
 			scrapedTVSeasonResults = append(scrapedTVSeasonResults, detailedSeasonResults...)
@@ -404,25 +405,25 @@ func makeRequest(urlEncodedTitle, method, content string) (rawResponse string, e
 	}
 
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		slog.Error("cinemaparadiso makeRequest: error creating request", "error", err)
 		return rawResponse, err
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Error sending request:", err)
+		slog.Error("cinemaparadiso makeRequest: error sending request", "error", err)
 		return rawResponse, err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading response body:", err)
+		slog.Error("cinemaparadiso makeRequest: error reading response body", "error", err)
 		return rawResponse, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Error response code:", resp.StatusCode, urlEncodedTitle)
+		slog.Warn("CinemaParadiso: unexpected response code", "statusCode", resp.StatusCode, "url", urlEncodedTitle)
 	}
 	rawData := string(body)
 

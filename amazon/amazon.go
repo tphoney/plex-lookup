@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -101,7 +102,7 @@ func MoviesInParallel(ctx context.Context, progressFunc func(int), plexMovies []
 		return result
 	})
 	numberMoviesProcessed.Store(0) // job is done
-	fmt.Println("amazon movies found:", len(searchResults))
+	slog.Info("Amazon movies found", "count", len(searchResults))
 	return searchResults
 }
 
@@ -128,7 +129,7 @@ func TVInParallel(ctx context.Context, progressFunc func(int), plexTVShows []typ
 		return result
 	})
 	numberTVProcessed.Store(0) // job is done
-	fmt.Println("amazon TV shows found:", len(searchResults))
+	slog.Info("Amazon TV shows found", "count", len(searchResults))
 	return searchResults
 }
 
@@ -154,7 +155,7 @@ func ScrapeTitlesParallel(ctx context.Context, searchResults []types.TVSearchRes
 		}
 		return scrapeTVTitlesValue(sr, region)
 	})
-	fmt.Println("amazon TV titles scraped:", len(scrapedResults))
+	slog.Info("Amazon TV titles scraped", "count", len(scrapedResults))
 	return scrapedResults
 }
 
@@ -172,7 +173,7 @@ func ScrapeMovieTitlesParallel(ctx context.Context, searchResults []types.MovieS
 		}
 		return scrapeMovieTitlesValue(sr, region)
 	})
-	fmt.Println("amazon movies scraped:", len(scrapedResults))
+	slog.Info("Amazon movies scraped", "count", len(scrapedResults))
 	return scrapedResults
 }
 
@@ -241,14 +242,14 @@ func scrapeMovieTitlesValue(searchResult *types.MovieSearchResponse, region stri
 		}
 		rawData, err := makeRequest(searchResult.MovieSearchResults[i].URL, region)
 		if err != nil {
-			fmt.Println("scrapeTitle: Error making request:", err)
+			slog.Error("scrapeMovieTitles: error making request", "error", err)
 			return *searchResult
 		}
 
 		// Extract and parse the release date
 		releaseDate, err := extractReleaseDate(rawData)
 		if err != nil {
-			fmt.Printf("scrapeMovieTitles: %v\n", err)
+			slog.Warn("scrapeMovieTitles: could not extract release date", "error", err)
 			searchResult.MovieSearchResults[i].ReleaseDate = time.Time{} // default to zero time
 		} else {
 			searchResult.MovieSearchResults[i].ReleaseDate = releaseDate
@@ -273,14 +274,14 @@ func scrapeTVTitlesValue(searchResult *types.TVSearchResponse, region string) ty
 		}
 		rawData, err := makeRequest(searchResult.TVSearchResults[i].URL, region)
 		if err != nil {
-			fmt.Println("scrapeTitle: Error making request:", err)
+			slog.Error("scrapeTVTitles: error making request", "error", err)
 			return *searchResult
 		}
 
 		// Extract and parse the release date
 		releaseDate, err := extractReleaseDate(rawData)
 		if err != nil {
-			fmt.Printf("scrapeTVTitles: %v\n", err)
+			slog.Warn("scrapeTVTitles: could not extract release date", "error", err)
 			searchResult.TVSearchResults[i].ReleaseDate = time.Time{} // default to zero time
 		} else {
 			searchResult.TVSearchResults[i].ReleaseDate = releaseDate
@@ -312,7 +313,7 @@ func searchMovieValue(plexMovie *types.PlexMovie, language, region string) types
 	result.SearchURL = searchURL
 	rawData, err := makeRequest(searchURL, region)
 	if err != nil {
-		fmt.Println("searchMovie: Error making request:", err)
+		slog.Error("searchMovie: error making request", "error", err)
 		return result
 	}
 
@@ -340,7 +341,7 @@ func searchTVValue(plexTVShow *types.PlexTVShow, language, region string) types.
 	result.SearchURL = searchURL
 	rawData, err := makeRequest(searchURL, region)
 	if err != nil {
-		fmt.Println("searchTV: Error making request:", err)
+		slog.Error("searchTV: error making request", "error", err)
 		return result
 	}
 
@@ -448,14 +449,14 @@ func makeRequest(inputURL, region string) (response string, err error) {
 	req.Header.Set("Cookie", fmt.Sprintf("country=%s;", region))
 
 	if err != nil {
-		fmt.Println("makeRequest: error creating request:", err)
+		slog.Error("makeRequest: error creating request", "error", err)
 		return response, err
 	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("makeRequest: error sending request:", err)
+		slog.Error("makeRequest: error sending request", "error", err)
 		return response, err
 	}
 
@@ -463,13 +464,13 @@ func makeRequest(inputURL, region string) (response string, err error) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("makeRequest: error reading response body:", err)
+		slog.Error("makeRequest: error reading response body", "error", err)
 		return response, err
 	}
 
 	// check for a 200 status code
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("amazon: status code not OK, probably rate limited:", resp.StatusCode)
+		slog.Warn("Amazon: status code not OK, probably rate limited", "statusCode", resp.StatusCode)
 		return response, fmt.Errorf("amazon: status code not OK: %d", resp.StatusCode)
 	}
 

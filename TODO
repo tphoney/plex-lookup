@@ -15,9 +15,6 @@
 
 ## Bugs
 
-- Wellington+Paranormal is not being found on cinema paradiso tv search
-- vikings is bust, and it doesnt handle multi part series correctly, same with breaking bad
-
 ## Done
 
 - Implement Robust, Per-Job Progress Tracking

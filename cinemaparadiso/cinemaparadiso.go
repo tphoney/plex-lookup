@@ -12,7 +12,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/sourcegraph/conc/iter"
@@ -25,14 +24,8 @@ const (
 	cinemaparadisoSeriesURL = "https://www.cinemaparadiso.co.uk/ajax/CPMain.wsFilmDescription,CPMain.ashx?_method=ShowSeries&_session=r"
 )
 
-var (
-	numberMoviesProcessed atomic.Int32
-	numberTVProcessed     atomic.Int32
-)
-
 // nolint: dupl, nolintlint
-func MoviesInParallel(ctx context.Context, progressFunc func(int), plexMovies []types.PlexMovie) (searchResults []types.MovieSearchResponse) {
-	numberMoviesProcessed.Store(0)
+func MoviesInParallel(ctx context.Context, progressFunc func(), plexMovies []types.PlexMovie) (searchResults []types.MovieSearchResponse) {
 	mapper := iter.Mapper[types.PlexMovie, types.MovieSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
@@ -44,18 +37,15 @@ func MoviesInParallel(ctx context.Context, progressFunc func(int), plexMovies []
 		default:
 		}
 		result := searchCinemaParadisoMovieResponse(pm)
-		current := int(numberMoviesProcessed.Add(1))
 		if progressFunc != nil {
-			progressFunc(current)
+			progressFunc()
 		}
 		return result
 	})
-	numberMoviesProcessed.Store(0) // job is done
 	return searchResults
 }
 
-func ScrapeMoviesParallel(ctx context.Context, searchResults []types.MovieSearchResponse) []types.MovieSearchResponse {
-	numberMoviesProcessed.Store(0)
+func ScrapeMoviesParallel(ctx context.Context, progressFunc func(), searchResults []types.MovieSearchResponse) []types.MovieSearchResponse {
 	mapper := iter.Mapper[types.MovieSearchResponse, types.MovieSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
@@ -67,16 +57,16 @@ func ScrapeMoviesParallel(ctx context.Context, searchResults []types.MovieSearch
 		default:
 		}
 		res := scrapeMovieTitleResponseValue(result)
-		numberMoviesProcessed.Add(1)
+		if progressFunc != nil {
+			progressFunc()
+		}
 		return res
 	})
-	numberMoviesProcessed.Store(0) // job is done
 	return detailedSearchResults
 }
 
 // nolint: dupl, nolintlint
-func TVInParallel(ctx context.Context, progressFunc func(int), plexTVShows []types.PlexTVShow) (searchResults []types.TVSearchResponse) {
-	numberTVProcessed.Store(0)
+func TVInParallel(ctx context.Context, progressFunc func(), plexTVShows []types.PlexTVShow) (searchResults []types.TVSearchResponse) {
 	mapper := iter.Mapper[types.PlexTVShow, types.TVSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
@@ -88,13 +78,11 @@ func TVInParallel(ctx context.Context, progressFunc func(int), plexTVShows []typ
 		default:
 		}
 		result := searchTVShowResponseValue(tv)
-		current := int(numberTVProcessed.Add(1))
 		if progressFunc != nil {
-			progressFunc(current)
+			progressFunc()
 		}
 		return result
 	})
-	numberTVProcessed.Store(0) // job is done
 	return searchResults
 }
 
@@ -139,14 +127,6 @@ func searchTVShowResponseValue(plexTVShow *types.PlexTVShow) types.TVSearchRespo
 		}
 	}
 	return result
-}
-
-func GetMovieJobProgress() int {
-	return int(numberMoviesProcessed.Load())
-}
-
-func GetTVJobProgress() int {
-	return int(numberTVProcessed.Load())
 }
 
 func searchCinemaParadisoMovieResponse(plexMovie *types.PlexMovie) types.MovieSearchResponse {

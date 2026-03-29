@@ -3,10 +3,12 @@ package movies
 import (
 	_ "embed"
 	"fmt"
+	"html"
 	"html/template"
 	"log/slog"
 	"net/http"
-	"strconv"
+	"net/url"
+	"sync/atomic"
 	"time"
 
 	"github.com/tphoney/plex-lookup/amazon"
@@ -14,8 +16,6 @@ import (
 	"github.com/tphoney/plex-lookup/plex"
 	"github.com/tphoney/plex-lookup/types"
 )
-
-const maxRequestBodySize int64 = 1 << 20
 
 var (
 	//go:embed movies.html
@@ -38,8 +38,8 @@ func MoviesHandler(w http.ResponseWriter, _ *http.Request) {
 
 func (c MoviesConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
 	playlistHTML := `<fieldset id="playlist">
-	 <label for="All">
-		 <input type="radio" id="playlist" name="playlist" value="all" checked />
+	 <label for="playlist-all">
+		 <input type="radio" id="playlist-all" name="playlist" value="all" checked />
 		 All: dont use a playlist. (SLOW, only use for small libraries)
 	 </label>`
 	playlists, _ := plex.GetPlaylists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexMovieLibraryID)
@@ -47,9 +47,9 @@ func (c MoviesConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
 	for i := range playlists {
 		playlistHTML += fmt.Sprintf(
 			`<label for=%q>
-			<input type="radio" id="playlist" name="playlist" value=%q/>
+			<input type="radio" id=%q name="playlist" value=%q/>
 			%s</label>`,
-			playlists[i].Title, playlists[i].RatingKey, playlists[i].Title)
+			playlists[i].RatingKey, playlists[i].RatingKey, playlists[i].RatingKey, playlists[i].Title)
 	}
 
 	playlistHTML += `</fieldset>`
@@ -63,7 +63,8 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) //nolint:mnd // 1 MB limit
+
 	playlist := r.FormValue("playlist")
 	lookup := r.FormValue("lookup")
 	// lookup filters
@@ -84,29 +85,35 @@ func (c MoviesConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	jobID, ctx := tracker.CreateJob("movies", totalMovies)
 
 	// write initial progress bar
-	jobIDInt, _ := strconv.Atoi(jobID)
-	fmt.Fprintf(w, //nolint:gosec // jobID is generated from an atomic counter
-		`<div hx-get="/progress/%d" hx-trigger="every 250ms" class="container" id="progress">
-	<progress value="0" max="%d"></progress></div>`, jobIDInt, totalMovies)
+	fmt.Fprintf(w, `<div hx-get="/progress/%s" hx-trigger="every 250ms" class="container" id="progress"><progress value="0" max="%d"></progress></div>`, html.EscapeString(url.PathEscape(jobID)), totalMovies) //nolint:gosec // jobID is path-escaped then HTML-escaped
 
 	go func() {
 		startTime := time.Now()
 		var searchResults []types.MovieSearchResponse
 
-		progressFunc := func(current int) {
-			tracker.UpdateProgress(jobID, current, "Processing movies")
+		var count atomic.Int32
+		progressFunc := func() {
+			tracker.UpdateProgress(jobID, int(count.Add(1)), "Processing movies")
 		}
 
 		if lookup == "cinemaParadiso" {
 			searchResults = cinemaparadiso.MoviesInParallel(ctx, progressFunc, plexMovies)
 			if lookupFilters.NewerVersion {
-				searchResults = cinemaparadiso.ScrapeMoviesParallel(ctx, searchResults)
+				var scrapeCount atomic.Int32
+				scrapeProgressFunc := func() {
+					tracker.UpdateProgress(jobID, int(scrapeCount.Add(1)), "Scraping release dates")
+				}
+				searchResults = cinemaparadiso.ScrapeMoviesParallel(ctx, scrapeProgressFunc, searchResults)
 			}
 		} else {
 			searchResults = amazon.MoviesInParallel(ctx, progressFunc, plexMovies, lookupFilters.AudioLanguage, c.Config.AmazonRegion)
 			// if we are filtering by newer version, we need to search again
 			if lookupFilters.NewerVersion {
-				searchResults = amazon.ScrapeMovieTitlesParallel(ctx, searchResults, c.Config.AmazonRegion)
+				var scrapeCount atomic.Int32
+				scrapeProgressFunc := func() {
+					tracker.UpdateProgress(jobID, int(scrapeCount.Add(1)), "Scraping release dates")
+				}
+				searchResults = amazon.ScrapeMovieTitlesParallel(ctx, scrapeProgressFunc, searchResults, c.Config.AmazonRegion)
 			}
 		}
 

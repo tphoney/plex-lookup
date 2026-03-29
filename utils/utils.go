@@ -54,6 +54,8 @@ func MarkBestMatchMovieResponse(search *types.MovieSearchResponse) types.MovieSe
 }
 
 func matchTitleNoYear(plexTitle, foundTitle string) bool {
+	plexTitle = unidecode.Unidecode(plexTitle)
+	foundTitle = unidecode.Unidecode(foundTitle)
 	plexTitle = strings.ToLower(plexTitle)
 	foundTitle = strings.ToLower(foundTitle)
 	remove := []string{"the"}
@@ -72,6 +74,8 @@ func matchTitleNoYear(plexTitle, foundTitle string) bool {
 }
 
 func matchTitle(plexTitle, foundTitle string, foundYear, lowerBound, upperBound int) bool {
+	plexTitle = unidecode.Unidecode(plexTitle)
+	foundTitle = unidecode.Unidecode(foundTitle)
 	plexTitle = strings.ToLower(plexTitle)
 	foundTitle = strings.ToLower(foundTitle)
 	remove := []string{"the"}

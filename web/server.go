@@ -37,11 +37,10 @@ var (
 )
 
 const (
-	jobStatusRunning         = "running"
-	jobStatusComplete        = "complete"
-	jobStatusCancelled       = "cancelled"
-	cleanupInterval          = 5 * time.Minute
-	maxRequestBodySize int64 = 1 << 20
+	jobStatusRunning   = "running"
+	jobStatusComplete  = "complete"
+	jobStatusCancelled = "cancelled"
+	cleanupInterval    = 5 * time.Minute
 )
 
 // JobProgress represents the state of a running or completed job.
@@ -74,7 +73,7 @@ func NewJobTracker() *JobTracker {
 // CreateJob creates a new job and returns its ID and cancellable context.
 func (jt *JobTracker) CreateJob(jobType string, total int) (string, context.Context) {
 	id := fmt.Sprintf("%d", jt.jobCounter.Add(1))
-	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec // cancel stored in job.CancelFunc and called via CancelJob/CleanupOldJobs
+	ctx, cancel := context.WithCancel(context.Background()) //nolint:gosec // cancel is stored in job.CancelFunc and called via CancelJob/CleanupOldJobs
 
 	job := &JobProgress{
 		ID:         id,
@@ -170,7 +169,7 @@ func (jt *JobTracker) CleanupOldJobs() {
 func StartServer(startingConfig *types.Configuration) {
 	config = startingConfig
 	jobTracker = NewJobTracker()
-	cleanupCtx, cleanupCancel = context.WithCancel(context.Background()) //nolint:gosec // cleanupCancel is called in StopServer
+	cleanupCtx, cleanupCancel = context.WithCancel(context.Background()) //nolint:gosec // cleanupCancel is called by StopCleanup
 
 	// Start cleanup goroutine
 	cleanupShutdown.Add(1)
@@ -236,7 +235,7 @@ func indexHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func settingsSaveHandler(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) //nolint:mnd // 1 MB limit
 	oldConfig := *config
 	// Retrieve form fields (replace with proper values)
 	config.PlexIP = r.FormValue("plexIP")
@@ -252,11 +251,11 @@ func settingsSaveHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Settings saved",
 		"plexIP_changed", oldConfig.PlexIP != config.PlexIP,
 		"plexToken_changed", oldConfig.PlexToken != config.PlexToken,
-		"plexMovieLibraryID", config.PlexMovieLibraryID,
-		"plexTVLibraryID", config.PlexTVLibraryID,
-		"plexMusicLibraryID", config.PlexMusicLibraryID,
-		"amazonRegion", config.AmazonRegion,
-		"musicBrainzURL", config.MusicBrainzURL,
+		"plexMovieLibraryID_changed", oldConfig.PlexMovieLibraryID != config.PlexMovieLibraryID,
+		"plexTVLibraryID_changed", oldConfig.PlexTVLibraryID != config.PlexTVLibraryID,
+		"plexMusicLibraryID_changed", oldConfig.PlexMusicLibraryID != config.PlexMusicLibraryID,
+		"amazonRegion_changed", oldConfig.AmazonRegion != config.AmazonRegion,
+		"musicBrainzURL_changed", oldConfig.MusicBrainzURL != config.MusicBrainzURL,
 		"spotifyClientID_changed", oldConfig.SpotifyClientID != config.SpotifyClientID,
 		"spotifyClientSecret_changed", oldConfig.SpotifyClientSecret != config.SpotifyClientSecret,
 	)

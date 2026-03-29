@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/sourcegraph/conc/iter"
@@ -20,12 +19,6 @@ const (
 	spotifyAPIURL      = "https://api.spotify.com/v1"
 	lookupTimeout      = 10
 	spotifyConcurrency = 2
-	artistPhasePercent = 50 // Artists phase is 0-50%
-	albumsPhasePercent = 50 // Albums phase is 50-100%
-)
-
-var (
-	numberOfArtistsProcessed atomic.Int32
 )
 
 type ArtistResponse struct {
@@ -106,12 +99,10 @@ type SimilarArtistsResponse struct {
 	}
 }
 
-func GetArtistsInParallel(ctx context.Context, progressFunc func(int, string), plexArtists []types.PlexMusicArtist, token string) []types.MusicSearchResponse {
-	numberOfArtistsProcessed.Store(0)
+func GetArtistsInParallel(ctx context.Context, progressFunc func(), plexArtists []types.PlexMusicArtist, token string) []types.MusicSearchResponse {
 	mapper := iter.Mapper[types.PlexMusicArtist, types.MusicSearchResponse]{
 		MaxGoroutines: spotifyConcurrency,
 	}
-	totalArtists := len(plexArtists)
 	artistsSearchResults := mapper.Map(plexArtists, func(artist *types.PlexMusicArtist) types.MusicSearchResponse {
 		// Check for cancellation
 		select {
@@ -120,24 +111,19 @@ func GetArtistsInParallel(ctx context.Context, progressFunc func(int, string), p
 		default:
 		}
 		result := searchSpotifyArtistValue(ctx, artist, token)
-		current := int(numberOfArtistsProcessed.Add(1))
-		// Artists are 0-50% of total progress
 		if progressFunc != nil {
-			progressFunc(current*50/totalArtists, "Searching artists")
+			progressFunc()
 		}
 		fmt.Print(".")
 		return result
 	})
-	numberOfArtistsProcessed.Store(0)
 	return artistsSearchResults
 }
 
-func GetAlbumsInParallel(ctx context.Context, progressFunc func(int, string), artistsSearchResults []types.MusicSearchResponse, token string) []types.MusicSearchResponse {
-	numberOfArtistsProcessed.Store(0)
+func GetAlbumsInParallel(ctx context.Context, progressFunc func(), artistsSearchResults []types.MusicSearchResponse, token string) []types.MusicSearchResponse {
 	mapper := iter.Mapper[types.MusicSearchResponse, types.MusicSearchResponse]{
 		MaxGoroutines: spotifyConcurrency,
 	}
-	totalAlbums := len(artistsSearchResults)
 	enrichedArtistSearchResults := mapper.Map(artistsSearchResults, func(result *types.MusicSearchResponse) types.MusicSearchResponse {
 		// Check for cancellation
 		select {
@@ -146,15 +132,12 @@ func GetAlbumsInParallel(ctx context.Context, progressFunc func(int, string), ar
 		default:
 		}
 		res := searchSpotifyAlbumValue(ctx, result, token)
-		current := int(numberOfArtistsProcessed.Add(1))
-		// Albums are 50-100% of total progress
 		if progressFunc != nil {
-			progressFunc(artistPhasePercent+current*albumsPhasePercent/totalAlbums, "Fetching albums")
+			progressFunc()
 		}
 		fmt.Print(".")
 		return res
 	})
-	numberOfArtistsProcessed.Store(0)
 	return enrichedArtistSearchResults
 }
 
@@ -217,11 +200,6 @@ func searchSpotifyAlbumValue(ctx context.Context, m *types.MusicSearchResponse, 
 	return result
 }
 
-func GetJobProgress() int {
-	return int(numberOfArtistsProcessed.Load())
-}
-
-// function that gets an oauth token from spotify from the client id and secret
 func SpotifyOAuthToken(ctx context.Context, clientID, clientSecret string) (token string, err error) {
 	oauthURL := "https://accounts.spotify.com/api/token"
 	client := &http.Client{

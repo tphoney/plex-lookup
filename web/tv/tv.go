@@ -3,10 +3,12 @@ package tv
 import (
 	_ "embed"
 	"fmt"
+	"html"
 	"html/template"
 	"log/slog"
 	"net/http"
-	"strconv"
+	"net/url"
+	"sync/atomic"
 	"time"
 
 	"github.com/tphoney/plex-lookup/amazon"
@@ -14,8 +16,6 @@ import (
 	"github.com/tphoney/plex-lookup/plex"
 	"github.com/tphoney/plex-lookup/types"
 )
-
-const maxRequestBodySize int64 = 1 << 20
 
 var (
 	//go:embed tv.html
@@ -38,8 +38,8 @@ func TVHandler(w http.ResponseWriter, _ *http.Request) {
 
 func (c TVConfig) PlaylistHTML(w http.ResponseWriter, _ *http.Request) {
 	playlistHTML := `<fieldset id="playlist">
-	 <label for="All">
-		 <input type="radio" id="playlist" name="playlist" value="all" checked />
+	 <label for="playlist-all">
+		 <input type="radio" id="playlist-all" name="playlist" value="all" checked />
 		 All: dont use a playlist. (SLOW, only use for small libraries)
 	 </label>`
 	playlists, _ := plex.GetPlaylists(c.Config.PlexIP, c.Config.PlexToken, c.Config.PlexTVLibraryID)
@@ -62,7 +62,8 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) //nolint:mnd // 1 MB limit
+
 	playlist := r.FormValue("playlist")
 	lookup := r.FormValue("lookup")
 	// lookup filters
@@ -82,24 +83,26 @@ func (c TVConfig) ProcessHTML(w http.ResponseWriter, r *http.Request) {
 	totalTV := len(plexTV)
 	jobID, ctx := tracker.CreateJob("tv", totalTV)
 
-	jobIDInt, _ := strconv.Atoi(jobID)
-	fmt.Fprintf(w, //nolint:gosec // jobID is generated from an atomic counter
-		`<div hx-get="/progress/%d" hx-trigger="every 250ms" class="container" id="progress">
-		<progress value="0" max="%d"></progress></div>`, jobIDInt, totalTV)
+	fmt.Fprintf(w, `<div hx-get="/progress/%s" hx-trigger="every 250ms" class="container" id="progress"><progress value="0" max="%d"></progress></div>`, html.EscapeString(url.PathEscape(jobID)), totalTV) //nolint:gosec // jobID is path-escaped then HTML-escaped
 
 	go func() {
 		startTime := time.Now()
 		var tvSearchResults []types.TVSearchResponse
 
-		progressFunc := func(current int) {
-			tracker.UpdateProgress(jobID, current, "Processing TV shows")
+		var count atomic.Int32
+		progressFunc := func() {
+			tracker.UpdateProgress(jobID, int(count.Add(1)), "Processing TV shows")
 		}
 
 		if lookup == "cinemaParadiso" {
 			tvSearchResults = cinemaparadiso.TVInParallel(ctx, progressFunc, plexTV)
 		} else {
 			tvSearchResults = amazon.TVInParallel(ctx, progressFunc, plexTV, filters.AudioLanguage, c.Config.AmazonRegion)
-			tvSearchResults = amazon.ScrapeTitlesParallel(ctx, tvSearchResults, c.Config.AmazonRegion)
+			var scrapeCount atomic.Int32
+			scrapeProgressFunc := func() {
+				tracker.UpdateProgress(jobID, int(scrapeCount.Add(1)), "Scraping details")
+			}
+			tvSearchResults = amazon.ScrapeTitlesParallel(ctx, scrapeProgressFunc, tvSearchResults, c.Config.AmazonRegion)
 		}
 
 		resultsHTML := fmt.Sprintf(`<table class="table-sortable">%s</tbody></table>

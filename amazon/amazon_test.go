@@ -75,7 +75,7 @@ func TestSearchAmazonTV(t *testing.T) {
 }
 
 func TestScrapeTitlesParallel(t *testing.T) {
-	result := ScrapeTitlesParallel(t.Context(), []types.TVSearchResponse{
+	result := ScrapeTitlesParallel(t.Context(), nil, []types.TVSearchResponse{
 		{
 			PlexTVShow: types.PlexTVShow{
 				Title: "Some TV Show",

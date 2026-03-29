@@ -12,7 +12,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/sourcegraph/conc/iter"
@@ -26,8 +25,6 @@ const (
 )
 
 var (
-	numberMoviesProcessed atomic.Int32
-	numberTVProcessed     atomic.Int32
 	// Regex to match date patterns with abbreviated or full month names
 	// Note: May appears in both abbreviated and full month lists, but we don't need it twice
 	dateRegex = regexp.MustCompile(`(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)\s+(\d{1,2}),\s+(\d{4})`)
@@ -82,8 +79,7 @@ var (
 // MoviesInParallel processes movies in parallel with progress tracking.
 //
 //nolint:dupl // Cannot be unified with TVInParallel due to different generic types (PlexMovie vs PlexTVShow)
-func MoviesInParallel(ctx context.Context, progressFunc func(int), plexMovies []types.PlexMovie, language, region string) (searchResults []types.MovieSearchResponse) {
-	numberMoviesProcessed.Store(0)
+func MoviesInParallel(ctx context.Context, progressFunc func(), plexMovies []types.PlexMovie, language, region string) (searchResults []types.MovieSearchResponse) {
 	mapper := iter.Mapper[types.PlexMovie, types.MovieSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
@@ -95,13 +91,11 @@ func MoviesInParallel(ctx context.Context, progressFunc func(int), plexMovies []
 		default:
 		}
 		result := searchMovieValue(m, language, region)
-		current := int(numberMoviesProcessed.Add(1))
 		if progressFunc != nil {
-			progressFunc(current)
+			progressFunc()
 		}
 		return result
 	})
-	numberMoviesProcessed.Store(0) // job is done
 	slog.Info("Amazon movies found", "count", len(searchResults))
 	return searchResults
 }
@@ -109,8 +103,7 @@ func MoviesInParallel(ctx context.Context, progressFunc func(int), plexMovies []
 // TVInParallel processes TV shows in parallel with progress tracking.
 //
 //nolint:dupl // Cannot be unified with MoviesInParallel due to different generic types (PlexTVShow vs PlexMovie)
-func TVInParallel(ctx context.Context, progressFunc func(int), plexTVShows []types.PlexTVShow, language, region string) (searchResults []types.TVSearchResponse) {
-	numberTVProcessed.Store(0)
+func TVInParallel(ctx context.Context, progressFunc func(), plexTVShows []types.PlexTVShow, language, region string) (searchResults []types.TVSearchResponse) {
 	mapper := iter.Mapper[types.PlexTVShow, types.TVSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
@@ -122,27 +115,19 @@ func TVInParallel(ctx context.Context, progressFunc func(int), plexTVShows []typ
 		default:
 		}
 		result := searchTVValue(tv, language, region)
-		current := int(numberTVProcessed.Add(1))
 		if progressFunc != nil {
-			progressFunc(current)
+			progressFunc()
 		}
 		return result
 	})
-	numberTVProcessed.Store(0) // job is done
 	slog.Info("Amazon TV shows found", "count", len(searchResults))
 	return searchResults
 }
 
-func GetMovieJobProgress() int {
-	return int(numberMoviesProcessed.Load())
-}
-
-func GetTVJobProgress() int {
-	return int(numberTVProcessed.Load())
-}
-
 // ScrapeTitlesParallel now only handles TV. Use ScrapeMovieTitlesParallel for movies.
-func ScrapeTitlesParallel(ctx context.Context, searchResults []types.TVSearchResponse, region string) (scrapedResults []types.TVSearchResponse) {
+//
+//nolint:dupl
+func ScrapeTitlesParallel(ctx context.Context, progressFunc func(), searchResults []types.TVSearchResponse, region string) (scrapedResults []types.TVSearchResponse) {
 	mapper := iter.Mapper[types.TVSearchResponse, types.TVSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
@@ -153,14 +138,20 @@ func ScrapeTitlesParallel(ctx context.Context, searchResults []types.TVSearchRes
 			return types.TVSearchResponse{}
 		default:
 		}
-		return scrapeTVTitlesValue(sr, region)
+		result := scrapeTVTitlesValue(sr, region)
+		if progressFunc != nil {
+			progressFunc()
+		}
+		return result
 	})
 	slog.Info("Amazon TV titles scraped", "count", len(scrapedResults))
 	return scrapedResults
 }
 
 // ScrapeMovieTitlesParallel handles scraping movie titles for MovieSearchResponse.
-func ScrapeMovieTitlesParallel(ctx context.Context, searchResults []types.MovieSearchResponse, region string) (scrapedResults []types.MovieSearchResponse) {
+//
+//nolint:dupl
+func ScrapeMovieTitlesParallel(ctx context.Context, progressFunc func(), searchResults []types.MovieSearchResponse, region string) (scrapedResults []types.MovieSearchResponse) {
 	mapper := iter.Mapper[types.MovieSearchResponse, types.MovieSearchResponse]{
 		MaxGoroutines: types.ConcurrencyLimit,
 	}
@@ -171,7 +162,11 @@ func ScrapeMovieTitlesParallel(ctx context.Context, searchResults []types.MovieS
 			return types.MovieSearchResponse{}
 		default:
 		}
-		return scrapeMovieTitlesValue(sr, region)
+		result := scrapeMovieTitlesValue(sr, region)
+		if progressFunc != nil {
+			progressFunc()
+		}
+		return result
 	})
 	slog.Info("Amazon movies scraped", "count", len(scrapedResults))
 	return scrapedResults

@@ -1,6 +1,6 @@
 module github.com/tphoney/plex-lookup
 
-go 1.25.6
+go 1.26.3
 
 require (
 	github.com/lithammer/fuzzysearch v1.1.8
